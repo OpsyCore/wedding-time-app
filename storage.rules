@@ -1,0 +1,109 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function weddingDoc(weddingId) {
+      return firestore.get(
+        /databases/(default)/documents/weddings/$(weddingId)
+      ).data;
+    }
+
+    function weddingExists(weddingId) {
+      return firestore.exists(
+        /databases/(default)/documents/weddings/$(weddingId)
+      );
+    }
+
+    function isWeddingMember(weddingId) {
+      return isSignedIn()
+        && weddingExists(weddingId)
+        && (
+          ('brideUid' in weddingDoc(weddingId)
+            && weddingDoc(weddingId).brideUid == uid())
+          || ('groomUid' in weddingDoc(weddingId)
+            && weddingDoc(weddingId).groomUid == uid())
+        );
+    }
+
+    function isImage() {
+      return request.resource != null
+        && request.resource.contentType != null
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function isVideo() {
+      return request.resource != null
+        && request.resource.contentType != null
+        && request.resource.contentType.matches('video/.*');
+    }
+
+    function isImageOrVideo() {
+      return isImage() || isVideo();
+    }
+
+    function sizeOk() {
+      return request.resource != null
+        && (
+          (isImage() && request.resource.size <= 10 * 1024 * 1024)
+          || (isVideo() && request.resource.size <= 100 * 1024 * 1024)
+        );
+    }
+
+    function isValidMediaCreate() {
+      return isImageOrVideo() && sizeOk();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    match /weddings/{weddingId}/{allPaths=**} {
+      allow read: if isWeddingMember(weddingId);
+
+      allow create, update: if isWeddingMember(weddingId)
+        && isValidMediaCreate();
+
+      allow delete: if isWeddingMember(weddingId);
+    }
+
+    match /weddings/{weddingId}/guest_media/{fileName} {
+      allow read: if isWeddingMember(weddingId);
+
+      allow create: if isWeddingMember(weddingId)
+        && isValidMediaCreate()
+        && (
+          fileName.matches('.*\\.jpg')
+          || fileName.matches('.*\\.jpeg')
+          || fileName.matches('.*\\.png')
+          || fileName.matches('.*\\.webp')
+          || fileName.matches('.*\\.mp4')
+          || fileName.matches('.*\\.mov')
+        );
+
+      allow update: if isWeddingMember(weddingId)
+        && isValidMediaCreate();
+
+      allow delete: if isWeddingMember(weddingId);
+    }
+
+    match /weddings/{weddingId}/gallery/{fileName} {
+      allow read: if isWeddingMember(weddingId);
+      allow create, update: if isWeddingMember(weddingId) && isValidMediaCreate();
+      allow delete: if isWeddingMember(weddingId);
+    }
+
+    match /weddings/{weddingId}/camera/{fileName} {
+      allow read: if isWeddingMember(weddingId);
+      allow create, update: if isWeddingMember(weddingId) && isValidMediaCreate();
+      allow delete: if isWeddingMember(weddingId);
+    }
+  }
+}

@@ -1,0 +1,36 @@
+[debug] [2026-08-24T01:03:27.332Z] ----------------------------------------------------------------------
+[debug] [2026-08-24T01:03:27.334Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\pcgadjet\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only firestore:rules --debug
+[debug] [2026-08-24T01:03:27.335Z] CLI Version:   15.28.1
+[debug] [2026-08-24T01:03:27.336Z] Platform:      win32
+[debug] [2026-08-24T01:03:27.336Z] Node Version:  v24.18.1
+[debug] [2026-08-24T01:03:27.336Z] Detected Agent: unknown
+[debug] [2026-08-24T01:03:27.337Z] Time:          Mon Aug 24 2026 04:33:27 GMT+0330 (Iran Standard Time)
+[debug] [2026-08-24T01:03:27.337Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-24T01:03:27.347Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-08-24T01:03:28.395Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-24T01:03:28.396Z] > authorizing via signed-in user (mishe.nemishetube4@gmail.com)
+[debug] [2026-08-24T01:03:28.396Z] [iam] checking project wedding-time-8240d for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-08-24T01:03:28.397Z] Checked if tokens are valid: true, expires at: 1787536987286
+[debug] [2026-08-24T01:03:28.398Z] Checked if tokens are valid: true, expires at: 1787536987286
+[debug] [2026-08-24T01:03:28.398Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/wedding-time-8240d:testIamPermissions [none]
+[debug] [2026-08-24T01:03:28.398Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/wedding-time-8240d:testIamPermissions  x-goog-user-project=wedding-time-8240d
+[debug] [2026-08-24T01:03:28.399Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wedding-time-8240d:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-08-24T01:03:28.649Z] *** [apiv2] error from fetch(https://firebase-public.firebaseio.com/cli.json, {"headers":{},"method":"GET"}): Error: Client network socket disconnected before secure TLS connection was established
+[debug] [2026-08-24T01:03:28.649Z] *** [apiv2] retrying https://firebase-public.firebaseio.com/cli.json without keep-alive after a premature close error
+[debug] [2026-08-24T01:03:28.792Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/wedding-time-8240d:testIamPermissions 403
+[debug] [2026-08-24T01:03:28.793Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wedding-time-8240d:testIamPermissions "<!DOCTYPE html>\n<html lang=en>\n  <meta charset=utf-8>\n  <meta name=viewport content=\"initial-scale=1, minimum-scale=1, width=device-width\">\n  <title>Error 403 (Forbidden)!!1</title>\n  <style>\n    *{margin:0;padding:0}html,code{font:15px/22px arial,sans-serif}html{background:#fff;color:#222;padding:15px}body{margin:7% auto 0;max-width:390px;min-height:180px;padding:30px 0 15px}* > body{background:url(//www.google.com/images/errors/robot.png) 100% 5px no-repeat;padding-right:205px}p{margin:11px 0 22px;overflow:hidden}ins{color:#777;text-decoration:none}a img{border:0}@media screen and (max-width:772px){body{background:none;margin-top:0;max-width:none;padding-right:0}}#logo{background:url(//www.google.com/images/branding/googlelogo/1x/googlelogo_color_150x54dp.png) no-repeat;margin-left:-5px}@media only screen and (min-resolution:192dpi){#logo{background:url(//www.google.com/images/branding/googlelogo/2x/googlelogo_color_150x54dp.png) no-repeat 0% 0%/100% 100%;-moz-border-image:url(//www.google.com/images/branding/googlelogo/2x/googlelogo_color_150x54dp.png) 0}}@media only screen and (-webkit-min-device-pixel-ratio:2){#logo{background:url(//www.google.com/images/branding/googlelogo/2x/googlelogo_color_150x54dp.png) no-repeat;-webkit-background-size:100% 100%}}#logo{display:inline-block;height:54px;width:150px}\n  </style>\n  <a href=//www.google.com/><span id=logo aria-label=Google></span></a>\n  <p><b>403.</b> <ins>That’s an error.</ins>\n  <p>Your client does not have permission to get URL <code>/v1/projects/wedding-time-8240d:testIamPermissions</code> from this server.  <ins>That’s all we know.</ins>\n"
+[debug] [2026-08-24T01:03:28.794Z] [iam] error while checking permissions, command may fail: Unable to parse JSON: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+[info] 
+[info] === Deploying to 'wedding-time-8240d'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-08-24T01:03:28.797Z] Checked if tokens are valid: true, expires at: 1787536987286
+[debug] [2026-08-24T01:03:28.797Z] Checked if tokens are valid: true, expires at: 1787536987286
+[debug] [2026-08-24T01:03:28.797Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/wedding-time-8240d/services/firestore.googleapis.com [none]
+[debug] [2026-08-24T01:03:28.798Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/wedding-time-8240d/services/firestore.googleapis.com  x-goog-user-project=wedding-time-8240d
+[debug] [2026-08-24T01:03:29.111Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/wedding-time-8240d/services/firestore.googleapis.com 403
+[debug] [2026-08-24T01:03:29.111Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/wedding-time-8240d/services/firestore.googleapis.com [omitted]
+[error] 
+[error] Error: Unable to parse JSON: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON

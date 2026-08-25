@@ -1,0 +1,14 @@
+2026/08/23-22:18:50.935 1504 Reusing MANIFEST C:\Users\pcgadjet\AppData\Local\Temp\flutter_tools.b4ed814c\flutter_tools_chrome_device.3a4b10c2\Default\IndexedDB\https_wedding-time-app.netlify.app_0.indexeddb.leveldb/MANIFEST-000001
+2026/08/23-22:18:50.935 1504 Recovering log #14
+2026/08/23-22:18:50.935 1504 Reusing old log C:\Users\pcgadjet\AppData\Local\Temp\flutter_tools.b4ed814c\flutter_tools_chrome_device.3a4b10c2\Default\IndexedDB\https_wedding-time-app.netlify.app_0.indexeddb.leveldb/000014.log 
+2026/08/23-22:18:50.935 1504 Delete type=2 #12
+2026/08/23-22:18:50.949 3cfc Level-0 table #19: started
+2026/08/23-22:18:50.953 3cfc Level-0 table #19: 942 bytes OK
+2026/08/23-22:18:50.956 3cfc Delete type=0 #14
+2026/08/23-22:18:50.956 3cfc Manual compaction at level-0 from '\x00\x08\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x09\x00\x00\x00' @ 0 : 0; will stop at '\x00\x08\x00\x00\x05' @ 264 : 1
+2026/08/23-22:18:50.956 3cfc Compacting 1@0 + 1@1 files
+2026/08/23-22:18:50.959 3cfc Generated table #20@0: 46 keys, 1421 bytes
+2026/08/23-22:18:50.959 3cfc Compacted 1@0 + 1@1 files => 1421 bytes
+2026/08/23-22:18:50.960 3cfc compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/08/23-22:18:50.960 3cfc Delete type=2 #19
+2026/08/23-22:18:50.961 3cfc Manual compaction at level-0 from '\x00\x08\x00\x00\x05' @ 264 : 1 .. '\x00\x09\x00\x00\x00' @ 0 : 0; will stop at (end)

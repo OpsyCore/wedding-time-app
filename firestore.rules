@@ -1,0 +1,480 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function weddingDoc(weddingId) {
+      return get(/databases/$(database)/documents/weddings/$(weddingId)).data;
+    }
+
+    function isWeddingMember(weddingId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/weddings/$(weddingId))
+        && (
+          (weddingDoc(weddingId).keys().hasAny(['brideUid'])
+            && weddingDoc(weddingId).brideUid == uid())
+          || (weddingDoc(weddingId).keys().hasAny(['groomUid'])
+            && weddingDoc(weddingId).groomUid == uid())
+        );
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() in [
+          'mishe.nemishetube4@gmail.com'
+        ];
+    }
+
+    function isJoinBrideUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isSignedIn()
+        && after.keys().hasAny(['brideUid'])
+        && after.brideUid == uid()
+        && (
+          !before.keys().hasAny(['brideUid'])
+          || before.brideUid == null
+          || before.brideUid == ''
+        )
+        && after.diff(before).affectedKeys().hasOnly(['brideUid', 'updatedAt']);
+    }
+
+    function isJoinGroomUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isSignedIn()
+        && after.keys().hasAny(['groomUid'])
+        && after.groomUid == uid()
+        && (
+          !before.keys().hasAny(['groomUid'])
+          || before.groomUid == null
+          || before.groomUid == ''
+        )
+        && after.diff(before).affectedKeys().hasOnly(['groomUid', 'updatedAt']);
+    }
+
+    function isValidWeddingCreate() {
+      let d = request.resource.data;
+      let hasBride = d.keys().hasAny(['brideUid']) && d.brideUid == uid();
+      let hasGroom = d.keys().hasAny(['groomUid']) && d.groomUid == uid();
+      return isSignedIn()
+        && d.keys().hasAll(['brideName', 'groomName', 'weddingDate', 'inviteCode'])
+        && d.brideName is string
+        && d.groomName is string
+        && d.inviteCode is string
+        && (
+          (hasBride && !d.keys().hasAny(['groomUid']))
+          || (hasGroom && !d.keys().hasAny(['brideUid']))
+          || (hasBride && hasGroom && d.brideUid == d.groomUid)
+        );
+    }
+
+    function isValidRsvpCreate() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['name', 'status', 'source', 'createdAt'])
+        && d.name is string
+        && d.name.size() > 0
+        && d.name.size() <= 80
+        && d.status in ['yes', 'no']
+        && d.source == 'public_invite'
+        && (!('phone' in d) || (d.phone is string && d.phone.size() <= 30))
+        && (!('guestId' in d) || d.guestId is string);
+    }
+
+    function isValidPublicGuestWrite() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['name', 'status', 'rsvpSource'])
+        && d.name is string
+        && d.name.size() > 0
+        && d.name.size() <= 80
+        && d.status in ['confirmed', 'declined']
+        && d.rsvpSource == 'public_invite'
+        && (!('phone' in d) || (d.phone is string && d.phone.size() <= 30))
+        && (!('group' in d) || d.group is string)
+        && (!('note' in d) || (d.note is string && d.note.size() <= 200));
+    }
+
+    function isValidPublicRsvpNotification() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['type', 'title', 'body', 'read', 'createdAt'])
+        && d.type == 'rsvp'
+        && d.read == false
+        && d.title is string
+        && d.title.size() > 0
+        && d.title.size() <= 120
+        && d.body is string
+        && d.body.size() > 0
+        && d.body.size() <= 300
+        && (!('relatedId' in d) || d.relatedId is string);
+    }
+
+    function isValidPlanReviewCreate() {
+      let d = request.resource.data;
+      return isSignedIn()
+        && d.keys().hasAll(['name', 'rating', 'comment', 'approved', 'createdAt'])
+        && d.name is string
+        && d.name.size() > 0
+        && d.name.size() <= 80
+        && d.comment is string
+        && d.comment.size() > 0
+        && d.comment.size() <= 1000
+        && d.rating is number
+        && d.rating >= 1
+        && d.rating <= 5
+        && d.approved == true
+        && (!('planId' in d) || d.planId is string)
+        && (!('uid' in d) || d.uid == uid());
+    }
+
+    // پشتیبانی — claim با یا بدون لاگین (نام اجباری)
+    function isValidSupportClaim() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.status == 'open'
+        && after.status == 'claimed'
+        && after.claimedByName is string
+        && after.claimedByName.size() > 0
+        && after.claimedByName.size() <= 80
+        && after.diff(before).affectedKeys().hasOnly([
+          'status',
+          'claimedByName',
+          'claimedByUid',
+          'claimedByPhone',
+          'claimedNote',
+          'claimedAt',
+          'updatedAt'
+        ]);
+    }
+
+    // آپلود عکس مهمان بدون لاگین (ImgBB URL) — همیشه pending مگر زوج
+    function isValidPublicGuestMediaCreate() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['url', 'type', 'status', 'uploaderName', 'createdAt'])
+        && d.url is string
+        && d.url.size() > 8
+        && d.url.size() <= 2000
+        && d.url.matches('https://.*')
+        && d.type in ['photo', 'video']
+        && d.status == 'pending'
+        && d.uploaderName is string
+        && d.uploaderName.size() > 0
+        && d.uploaderName.size() <= 80
+        && (!('uploaderKey' in d) || (d.uploaderKey is string && d.uploaderKey.size() <= 120))
+        && (!('uploaderUid' in d) || d.uploaderUid == null || d.uploaderUid == '');
+    }
+
+    function isValidSignedInGuestMediaCreate() {
+      let d = request.resource.data;
+      return isSignedIn()
+        && d.keys().hasAll(['url', 'type', 'status', 'uploaderName', 'createdAt'])
+        && d.url is string
+        && d.url.size() > 0
+        && d.url.size() <= 2000
+        && d.type in ['photo', 'video']
+        && d.status in ['pending', 'approved']
+        && d.uploaderName is string
+        && d.uploaderName.size() > 0
+        && d.uploaderName.size() <= 80
+        && (!('uploaderUid' in d) || d.uploaderUid == uid())
+        && (!('uploaderKey' in d) || d.uploaderKey is string);
+    }
+
+    // رزرو هدیه بدون لاگین (با نام)
+    function isValidPublicGiftClaim() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.status == 'open'
+        && after.status == 'claimed'
+        && after.claimedByName is string
+        && after.claimedByName.size() > 0
+        && after.claimedByName.size() <= 80
+        && after.diff(before).affectedKeys().hasOnly([
+          'status',
+          'claimedByUid',
+          'claimedByName',
+          'claimedAt',
+          'updatedAt'
+        ]);
+    }
+
+    function isValidPublicGiftUnclaim() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.status == 'claimed'
+        && after.status == 'open'
+        && after.diff(before).affectedKeys().hasOnly([
+          'status',
+          'claimedByUid',
+          'claimedByName',
+          'claimedAt',
+          'updatedAt'
+        ]);
+    }
+
+    function isValidPublicWishCreate() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['name', 'message', 'createdAt'])
+        && d.name is string
+        && d.name.size() > 0
+        && d.name.size() <= 80
+        && d.message is string
+        && d.message.size() > 0
+        && d.message.size() <= 1000;
+    }
+
+    // ─── Plans ───
+    match /app_config/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /plan_reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isValidPlanReviewCreate();
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── Users ───
+    match /users/{userId} {
+      allow read: if isSignedIn() && uid() == userId;
+      allow create, update: if isSignedIn() && uid() == userId;
+      allow delete: if false;
+    }
+
+    match /invite_codes/{code} {
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasAll(['weddingId', 'inviteCode'])
+        && request.resource.data.weddingId is string
+        && request.resource.data.inviteCode is string
+        && request.resource.data.inviteCode == code
+        && isWeddingMember(request.resource.data.weddingId);
+
+      allow update, delete: if isSignedIn()
+        && resource.data.keys().hasAny(['weddingId'])
+        && isWeddingMember(resource.data.weddingId);
+    }
+
+    match /public_slugs/{slug} {
+      allow read: if true;
+
+      allow create, update: if isSignedIn()
+        && request.resource.data.keys().hasAll(['weddingId'])
+        && request.resource.data.weddingId is string
+        && isWeddingMember(request.resource.data.weddingId);
+
+      allow delete: if isSignedIn()
+        && resource.data.keys().hasAny(['weddingId'])
+        && isWeddingMember(resource.data.weddingId);
+    }
+
+    // ─── Weddings ───
+    match /weddings/{weddingId} {
+      // مهمان بدون لاگین هم spec را get کند (دوربین/خانه)
+      allow get: if true;
+      allow list: if isWeddingMember(weddingId);
+      allow create: if isValidWeddingCreate();
+      allow update: if isWeddingMember(weddingId)
+        || isJoinBrideUpdate()
+        || isJoinGroomUpdate();
+      allow delete: if false;
+
+      match /invitation/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /rsvps/{docId} {
+        allow read: if isWeddingMember(weddingId);
+        allow create: if isValidRsvpCreate();
+        allow update, delete: if isWeddingMember(weddingId);
+      }
+
+      match /guests/{docId} {
+        allow read: if isWeddingMember(weddingId);
+        allow create: if isWeddingMember(weddingId) || isValidPublicGuestWrite();
+        allow update: if isWeddingMember(weddingId)
+          || (
+            isValidPublicGuestWrite()
+            && (
+              (
+                'phone' in resource.data
+                && resource.data.phone is string
+                && resource.data.phone.size() > 0
+                && 'phone' in request.resource.data
+                && request.resource.data.phone == resource.data.phone
+              )
+              || (
+                'rsvpSource' in resource.data
+                && resource.data.rsvpSource == 'public_invite'
+              )
+            )
+          );
+        allow delete: if isWeddingMember(weddingId);
+      }
+
+      match /notifications/{docId} {
+        allow read: if isWeddingMember(weddingId);
+        allow create: if isWeddingMember(weddingId) || isValidPublicRsvpNotification();
+        allow update, delete: if isWeddingMember(weddingId);
+      }
+
+      match /supports/{docId} {
+        allow read: if true;
+        allow create, delete: if isWeddingMember(weddingId);
+        allow update: if isWeddingMember(weddingId) || isValidSupportClaim();
+      }
+
+      match /supportSettings/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /supportContribs/{docId} {
+        allow read: if isWeddingMember(weddingId);
+        allow create: if true;
+        allow update, delete: if isWeddingMember(weddingId);
+      }
+
+      match /checklist/{docId} {
+        allow read, write: if isWeddingMember(weddingId);
+      }
+
+      match /budgetGroups/{groupId} {
+        allow read, write: if isWeddingMember(weddingId);
+        match /expenses/{expenseId} {
+          allow read, write: if isWeddingMember(weddingId);
+        }
+      }
+
+      match /vendors/{docId} {
+        allow read, write: if isWeddingMember(weddingId);
+      }
+
+      match /vendorPayments/{docId} {
+        allow read, write: if isWeddingMember(weddingId);
+      }
+
+      match /calendarEvents/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      // تایم‌لاین عمومی فقط‌خواندنی
+      match /timeline/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      // گالری / دوربین مهمان
+      match /guestMedia/{docId} {
+        allow read: if isWeddingMember(weddingId)
+          || resource.data.status == 'approved'
+          || (isSignedIn()
+              && resource.data.keys().hasAny(['uploaderUid'])
+              && resource.data.uploaderUid == uid());
+
+        allow create: if isWeddingMember(weddingId)
+          || isValidSignedInGuestMediaCreate()
+          || isValidPublicGuestMediaCreate();
+
+        allow update, delete: if isWeddingMember(weddingId);
+      }
+
+      match /galleryPhotos/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /gallery/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /cameraSettings/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /cameraUsage/{docId} {
+        allow read: if true;
+        allow create, update: if true;
+        allow delete: if isWeddingMember(weddingId);
+      }
+
+      match /wishes/{docId} {
+        allow read: if true;
+        allow create: if isValidPublicWishCreate() || isSignedIn();
+        allow update, delete: if isWeddingMember(weddingId);
+      }
+
+      match /bridalParty/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /seating/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /seats/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /tables/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /halls/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /musicSettings/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /gifts/{giftId} {
+        allow read: if true;
+        allow create, delete: if isWeddingMember(weddingId);
+        allow update: if isWeddingMember(weddingId)
+          || isValidPublicGiftClaim()
+          || isValidPublicGiftUnclaim();
+      }
+
+      match /giftSettings/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /loveStory/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      match /loveStories/{docId} {
+        allow read: if true;
+        allow write: if isWeddingMember(weddingId);
+      }
+
+      // بقیه فقط عضو زوج
+      match /{sub=**} {
+        allow read, write: if isWeddingMember(weddingId);
+      }
+    }
+  }
+}

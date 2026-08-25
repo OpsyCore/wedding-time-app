@@ -1,0 +1,4 @@
+Analyzing wedding_time...                                       
+
+   info - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation - lib\main_navigation_screen.dart:83:19 - prefer_const_constructors
+

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "351828238865",
+    "project_id": "wedding-time-8240d",
+    "storage_bucket": "wedding-time-8240d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:351828238865:android:41c44881568a48ecd847b0",
+        "android_client_info": {
+          "package_name": "com.example.wedding_time"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD844Ur_j1c4zecyfvtAaylKqbdevLlMP0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
