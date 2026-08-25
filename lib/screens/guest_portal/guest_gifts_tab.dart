@@ -82,7 +82,7 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
       return true;
     }
     final mine = GuestLocalStore.normalizeName(_nameC.text);
-    final theirs = GuestLocalStore.normalizeName(g.claimedByByName ?? '');
+    final theirs = GuestLocalStore.normalizeName(g.claimedByName ?? '');
     return mine.isNotEmpty && theirs.isNotEmpty && mine == theirs;
   }
 
@@ -295,7 +295,7 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
                                     Text(
                                       mine
                                           ? _t('claimed_by_you', 'رزرو شما', 'Reserved by you')
-                                          : '${_t('claimed_by', 'رزرو:', 'Reserved:')} ${g.claimedByByName ?? '—'}',
+                                          : '${_t('claimed_by', 'رزرو:', 'Reserved:')} ${g.claimedByName ?? '—'}',
                                       style: TextStyle(
                                         color: AppTok.accentDeep(context),
                                         fontSize: 11.5,
