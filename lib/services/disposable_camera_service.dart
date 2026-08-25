@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
@@ -35,14 +36,23 @@ class DisposableCameraService {
           .collection('gallery')
           .doc('settings');
 
+  /// خواندن تنظیمات دوربین.
+  /// FIX-06: نوشتن تنظیمات فقط برای زوج مجاز است؛ مهمان بدون لاگین
+  /// اگر سندی نبیند فقط پیش‌فرض را می‌گیرد (چیزی نمی‌سازد).
   Future<CameraSettingsModel> ensureSettings() async {
     final snap = await settingsRef.get();
     if (!snap.exists) {
       final defaults = CameraSettingsModel.defaults();
-      await settingsRef.set({
-        ...defaults.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      if (FirebaseAuth.instance.currentUser != null) {
+        try {
+          await settingsRef.set({
+            ...defaults.toMap(),
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } catch (_) {
+          // نوشتن نشد (مثلاً هنوز عضو نشده) — همان پیش‌فرض کافی است.
+        }
+      }
       return defaults;
     }
     return CameraSettingsModel.fromMap(snap.data());
@@ -127,6 +137,9 @@ class DisposableCameraService {
     await prefs.setString('guest_camera_uploader_name', name.trim());
   }
 
+  /// شمارش آپلودهای این دستگاه — فقط برای کاربر لاگین‌شده از Firestore.
+  /// مهمان بدون لاگین اجازه خواندن این مجموعه را ندارد (rules)،
+  /// پس صفحه دوربین برای او از شمارنده محلی GuestLocalStore استفاده می‌کند.
   Future<Map<String, int>> getUsage(String uploaderKey) async {
     final snap =
         await mediaRef.where('uploaderKey', isEqualTo: uploaderKey).get();
@@ -161,19 +174,24 @@ class DisposableCameraService {
       fileName: '$id.jpg',
     );
 
-    final status = autoApprove ? 'approved' : 'pending';
+    // FIX-04: ایجاد عمومی (بدون لاگین) طبق rules همیشه 'pending' است.
+    // تأیید خودکار فقط برای کاربر لاگین‌شده (زوج/پیش‌نمایش) اعمال می‌شود.
+    final signedIn = FirebaseAuth.instance.currentUser != null;
+    final status = (autoApprove && signedIn) ? 'approved' : 'pending';
     final finalName = uploaderName.trim().isEmpty
         ? AppLang.tr('guest')
         : uploaderName.trim();
 
+    // FIX-09: deleteUrl ای‌ام‌بی‌بی در سند عمومی ذخیره نمی‌شود
+    // (سند approved برای همه خواندنی است و آن لینک امکان حذف عکس می‌داد).
     await mediaRef.doc(id).set({
       'url': uploaded.url,
       'storagePath': 'imgbb:${uploaded.providerId}',
-      'deleteUrl': uploaded.deleteUrl,
       'provider': 'imgbb',
       'type': 'photo',
       'status': status,
       'uploaderName': finalName,
+      if (signedIn) 'uploaderUid': FirebaseAuth.instance.currentUser!.uid,
       'uploaderKey': uploaderKey,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -186,8 +204,19 @@ class DisposableCameraService {
       );
     } catch (_) {}
 
-    final doc = await mediaRef.doc(id).get();
-    return GuestMediaModel.fromDoc(doc);
+    // FIX-03: خواندن مجدد سند بلافاصله بعد از ایجاد برای مهمان بدون
+    // لاگین طبق rules مجاز نیست (فقط approved خواندنی است)؛ مدل را
+    // مستقیم از همان دادهٔ نوشته‌شده می‌سازیم.
+    return GuestMediaModel(
+      id: id,
+      url: uploaded.url,
+      storagePath: 'imgbb:${uploaded.providerId}',
+      type: 'photo',
+      status: status,
+      uploaderName: finalName,
+      uploaderKey: uploaderKey,
+      createdAt: DateTime.now(),
+    );
   }
 
   Future<void> setStatus(String id, String status) {
@@ -198,7 +227,7 @@ class DisposableCameraService {
   }
 
   Future<void> deleteMedia(GuestMediaModel item) async {
-    // فقط سند Firestore — ImgBB delete_url اختیاری بعداً
+    // فقط سند Firestore — حذف از ImgBB دستی/اختیاری است.
     await mediaRef.doc(item.id).delete();
   }
 }

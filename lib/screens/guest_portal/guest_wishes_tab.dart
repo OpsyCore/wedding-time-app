@@ -316,7 +316,10 @@ class _GuestWishesTabState extends State<GuestWishesTab> {
                 ),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    // FIX-07: rules خواندن عمومی را فقط برای approved مجاز
+                    // می‌داند؛ کوئری باید قید وضعیت را داشته باشد.
                     stream: _ref
+                        .where('status', isEqualTo: 'approved')
                         .orderBy('createdAt', descending: true)
                         .snapshots(),
                     builder: (context, snap) {
@@ -324,7 +327,9 @@ class _GuestWishesTabState extends State<GuestWishesTab> {
                         // fallback بدون orderBy (اگر ایندکس/permission)
                         return StreamBuilder<
                             QuerySnapshot<Map<String, dynamic>>>(
-                          stream: _ref.snapshots(),
+                          stream: _ref
+                              .where('status', isEqualTo: 'approved')
+                              .snapshots(),
                           builder: (context, s2) {
                             if (s2.hasError) {
                               return _centerMsg(

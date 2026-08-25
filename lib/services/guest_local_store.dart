@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// وضعیت مهمان روی همین دستگاه (بدون لاگین)
-/// RSVP یک‌بار + نام برای «میز من»
+/// RSVP یک‌بار + نام برای «میز من» + سهمیه دوربین مهمان
 class GuestLocalStore {
   GuestLocalStore._();
 
@@ -13,6 +13,11 @@ class GuestLocalStore {
 
   static String _displayNameKey(String weddingId) =>
       'guest_display_name_${weddingId.trim()}';
+
+  /// FIX-03: مهمان بدون لاگین نمی‌تواند عکس‌های در انتظار خودش را
+  /// از Firestore بخواند (rules)، پس شمارنده سهمیه دوربین محلی است.
+  static String _cameraUsageKey(String weddingId) =>
+      'guest_camera_usage_${weddingId.trim()}';
 
   /// status: yes | no
   static Future<void> saveRsvp({
@@ -69,6 +74,25 @@ class GuestLocalStore {
     final n = prefs.getString(_displayNameKey(wid))?.trim();
     if (n != null && n.isNotEmpty) return n;
     return prefs.getString(_rsvpNameKey(wid))?.trim();
+  }
+
+  // ─── سهمیه دوربین مهمان (بدون لاگین) ───
+
+  static Future<int> loadCameraUsage(String weddingId) async {
+    final wid = weddingId.trim();
+    if (wid.isEmpty) return 0;
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_cameraUsageKey(wid)) ?? 0;
+  }
+
+  /// یک عکس موفق به شمارنده اضافه می‌کند و مقدار جدید را برمی‌گرداند.
+  static Future<int> bumpCameraUsage(String weddingId) async {
+    final wid = weddingId.trim();
+    if (wid.isEmpty) return 0;
+    final prefs = await SharedPreferences.getInstance();
+    final next = (prefs.getInt(_cameraUsageKey(wid)) ?? 0) + 1;
+    await prefs.setInt(_cameraUsageKey(wid), next);
+    return next;
   }
 
   /// نرمال برای match نام روی میز

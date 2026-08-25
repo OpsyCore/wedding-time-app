@@ -61,15 +61,16 @@ service cloud.firestore {
         && after.diff(before).affectedKeys().hasOnly(['groomUid', 'updatedAt']);
     }
 
+    // FIX-02: کد پیوستن (inviteCode) دیگر روی سند عمومی مراسم ذخیره نمی‌شود؛
+    // فقط در invite_codes/{code} و سند خصوصی users/{uid}.
     function isValidWeddingCreate() {
       let d = request.resource.data;
       let hasBride = d.keys().hasAny(['brideUid']) && d.brideUid == uid();
       let hasGroom = d.keys().hasAny(['groomUid']) && d.groomUid == uid();
       return isSignedIn()
-        && d.keys().hasAll(['brideName', 'groomName', 'weddingDate', 'inviteCode'])
+        && d.keys().hasAll(['brideName', 'groomName', 'weddingDate'])
         && d.brideName is string
         && d.groomName is string
-        && d.inviteCode is string
         && (
           (hasBride && !d.keys().hasAny(['groomUid']))
           || (hasGroom && !d.keys().hasAny(['brideUid']))
@@ -281,6 +282,7 @@ service cloud.firestore {
     // ─── Weddings ───
     match /weddings/{weddingId} {
       // مهمان بدون لاگین هم spec را get کند (دوربین/خانه)
+      // توجه: سند مراسم دیگر شامل inviteCode نیست (FIX-02)
       allow get: if true;
       allow list: if isWeddingMember(weddingId);
       allow create: if isValidWeddingCreate();
@@ -401,6 +403,7 @@ service cloud.firestore {
         allow write: if isWeddingMember(weddingId);
       }
 
+      // FIX-06: تنظیمات دوربین فقط توسط زوج نوشته شود (قبلاً عمومی بود)
       match /cameraSettings/{docId} {
         allow read: if true;
         allow write: if isWeddingMember(weddingId);
@@ -412,9 +415,13 @@ service cloud.firestore {
         allow delete: if isWeddingMember(weddingId);
       }
 
+      // FIX-07: آرزوها
+      // - خواندن عمومی فقط برای آرزوهای approved (در انتظار/ردشده محرمانه است)
+      // - ایجاد: یا شکل عمومی معتبر (بدون لاگین) یا خود زوج
       match /wishes/{docId} {
-        allow read: if true;
-        allow create: if isValidPublicWishCreate() || isSignedIn();
+        allow read: if isWeddingMember(weddingId)
+          || resource.data.status == 'approved';
+        allow create: if isValidPublicWishCreate() || isWeddingMember(weddingId);
         allow update, delete: if isWeddingMember(weddingId);
       }
 

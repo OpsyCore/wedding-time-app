@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +10,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/guest_media_model.dart';
 import '../services/disposable_camera_service.dart';
+import '../services/guest_local_store.dart';
 
 /// دوربین یک‌بارمصرف مهمان — UI لوکس + آپلود ImgBB
 class GuestCameraScreen extends StatefulWidget {
@@ -77,13 +79,13 @@ class _GuestCameraScreenState extends State<GuestCameraScreen>
       _albumUrl = await _service.getExternalAlbumUrl();
       _uploaderKey = await _service.getUploaderKey();
       final name = await _service.getUploaderName();
-      final usage = await _service.getUsage(_uploaderKey);
+      final usage = await _readUsage();
 
       if (!mounted) return;
       setState(() {
         _nameC.text =
             (name == 'مهمان' || name == AppLang.tr('guest')) ? '' : name;
-        _usedPhotos = usage['photos'] ?? 0;
+        _usedPhotos = usage;
         if (bride.isEmpty && groom.isEmpty) {
           _coupleTitle = AppLang.tr('bride_and_groom');
         } else if (bride.isEmpty) {
@@ -128,6 +130,36 @@ class _GuestCameraScreenState extends State<GuestCameraScreen>
   Future<void> _persistName() async {
     final n = _nameC.text.trim();
     if (n.isNotEmpty) await _service.setUploaderName(n);
+  }
+
+  /// FIX-03: مهمان بدون لاگین اجازه خواندن عکس‌های در انتظار خودش را
+  /// در Firestore ندارد (rules)، پس سهمیه او محلی شمرده می‌شود.
+  Future<int> _readUsage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return GuestLocalStore.loadCameraUsage(widget.weddingId);
+    }
+    try {
+      final usage = await _service.getUsage(_uploaderKey);
+      return usage['photos'] ?? 0;
+    } catch (_) {
+      return GuestLocalStore.loadCameraUsage(widget.weddingId);
+    }
+  }
+
+  /// بعد از آپلود موفق: عضو زوج از Firestore می‌خواند؛ مهمان بدون
+  /// لاگین شمارنده محلی را یکی جلو می‌برد.
+  Future<int> _bumpUsage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return GuestLocalStore.bumpCameraUsage(widget.weddingId);
+    }
+    try {
+      final usage = await _service.getUsage(_uploaderKey);
+      return usage['photos'] ?? (_usedPhotos + 1);
+    } catch (_) {
+      return _usedPhotos + 1;
+    }
   }
 
   Future<void> _capture(ImageSource source) async {
@@ -190,10 +222,10 @@ class _GuestCameraScreenState extends State<GuestCameraScreen>
         autoApprove: _settings.autoApprove || widget.isHostPreview,
       );
 
-      final usage = await _service.getUsage(_uploaderKey);
+      final usage = await _bumpUsage();
       if (!mounted) return;
       setState(() {
-        _usedPhotos = usage['photos'] ?? _usedPhotos + 1;
+        _usedPhotos = usage;
         _uploadSuccess = true;
         _busy = false;
       });

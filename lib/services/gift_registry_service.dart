@@ -59,32 +59,32 @@ class GiftRegistryService {
     await _gifts.doc(id).delete();
   }
 
+  /// رزرو هدیه — با یا بدون لاگین (نام اجباری).
+  /// FIX-01: مطابق firestore.rules (isValidPublicGiftClaim) مهمانِ
+  /// بدون حساب هم می‌تواند فقط با نام هدیه را رزرو کند.
+  /// فیلدهای لمس‌شده دقیقاً همان‌هایی است که rules مجاز می‌داند.
   Future<void> claimGift({
     required String giftId,
     required String guestName,
   }) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception('login_required');
-    }
     final name = guestName.trim();
     if (name.isEmpty) {
       throw Exception('name_required');
     }
 
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
     await _gifts.doc(giftId).update({
       'status': 'claimed',
-      'claimedByUid': user.uid,
+      'claimedByUid': uid,
       'claimedByName': name,
       'claimedAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
+  /// لغو رزرو هدیه — با یا بدون لاگین.
   Future<void> unclaimGift(String giftId) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw Exception('login_required');
-
     await _gifts.doc(giftId).update({
       'status': 'open',
       'claimedByUid': null,
