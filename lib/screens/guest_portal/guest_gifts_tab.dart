@@ -6,7 +6,11 @@ import '../../core/app_lang.dart';
 import '../../core/app_theme.dart';
 import '../../models/gift_item_model.dart';
 import '../../services/gift_registry_service.dart';
+import '../../services/guest_local_store.dart';
 
+/// هدایا برای مهمان — با یا بدون لاگین.
+/// FIX-01: رزرو/لغو رزرو فقط با نام (مطابق rules) انجام می‌شود؛
+/// «رزرو شما» از روی نام ذخیره‌شده محلی تشخیص داده می‌شود.
 class GuestGiftsTab extends StatefulWidget {
   const GuestGiftsTab({super.key, required this.weddingId});
 
@@ -25,9 +29,23 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
     super.initState();
     _service = GiftRegistryService(widget.weddingId);
     final u = FirebaseAuth.instance.currentUser;
-    _nameC.text = u?.displayName?.trim().isNotEmpty == true
+    final fallback = u?.displayName?.trim().isNotEmpty == true
         ? u!.displayName!.trim()
         : (u?.email?.split('@').first ?? '');
+    if (fallback.isNotEmpty) {
+      _nameC.text = fallback;
+    }
+    _loadSavedName();
+  }
+
+  /// نامی که مهمان قبلاً (RSVP / میز من / رزرو هدیه) وارد کرده
+  Future<void> _loadSavedName() async {
+    final n = await GuestLocalStore.loadDisplayName(widget.weddingId);
+    if (!mounted) return;
+    if ((n ?? '').trim().isNotEmpty) {
+      _nameC.text = n!.trim();
+      setState(() {});
+    }
   }
 
   @override
@@ -52,14 +70,38 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
     );
   }
 
+  /// آیا این رزرو مالِ همین دستگاه/مهمان است؟
+  /// - با uid اگر لاگین کرده باشد
+  /// - وگرنه با تطبیق نام رزرو با نام واردشده (نرمال‌شده)
+  bool _isMine(GiftItemModel g, String? uid) {
+    if (!g.isClaimed) return false;
+    if (uid != null &&
+        g.claimedByUid != null &&
+        g.claimedByUid!.isNotEmpty &&
+        g.claimedByUid == uid) {
+      return true;
+    }
+    final mine = GuestLocalStore.normalizeName(_nameC.text);
+    final theirs = GuestLocalStore.normalizeName(g.claimedByByName ?? '');
+    return mine.isNotEmpty && theirs.isNotEmpty && mine == theirs;
+  }
+
   Future<void> _claim(GiftItemModel g) async {
     final name = _nameC.text.trim();
     if (name.isEmpty) {
       _toast(_t('enter_your_name', 'نام خود را وارد کنید', 'Enter your name'), error: true);
       return;
     }
+    if (name.length > 80) {
+      _toast(_t('wish_name_long', 'نام خیلی بلند است', 'Name is too long'), error: true);
+      return;
+    }
     try {
       await _service.claimGift(giftId: g.id, guestName: name);
+      await GuestLocalStore.saveDisplayName(
+        weddingId: widget.weddingId,
+        name: name,
+      );
       _toast(_t('gift_claimed', 'هدیه رزرو شد', 'Gift reserved'));
     } catch (e) {
       _toast('${_t('error', 'خطا', 'Error')}: $e', error: true);
@@ -208,7 +250,7 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, i) {
                       final g = items[i];
-                      final mine = g.claimedByUid != null && g.claimedByUid == uid;
+                      final mine = _isMine(g, uid);
                       return Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -253,7 +295,7 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
                                     Text(
                                       mine
                                           ? _t('claimed_by_you', 'رزرو شما', 'Reserved by you')
-                                          : '${_t('claimed_by', 'رزرو:', 'Reserved:')} ${g.claimedByName ?? '—'}',
+                                          : '${_t('claimed_by', 'رزرو:', 'Reserved:')} ${g.claimedByByName ?? '—'}',
                                       style: TextStyle(
                                         color: AppTok.accentDeep(context),
                                         fontSize: 11.5,

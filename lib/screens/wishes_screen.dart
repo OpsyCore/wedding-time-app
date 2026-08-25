@@ -120,7 +120,7 @@ class _WishesScreenState extends State<WishesScreen> {
         'text': text,
         'authorName': authorName,
         'authorUid': user?.uid,
-        'authorEmail': user?.email,
+        // FIX-07: ایمیل زوج هرگز ذخیره نمی‌شود (آرزوهای تأییدشده عمومی‌خواندنی‌اند)
         'status': status, // pending | approved | rejected
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),

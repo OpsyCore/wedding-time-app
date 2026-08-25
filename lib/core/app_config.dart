@@ -6,9 +6,9 @@ class AppConfig {
   AppConfig._();
 
   /// دامنه پیش‌فرض (موبایل / وقتی origin در دسترس نیست)
-  /// سایت جدید Netlify:
+  /// سایت رسمی Netlify (FIX-05: دامنه صحیح بدون «2»)
   static const String defaultPublicBaseUrl =
-      'https://wedding-time-app2.netlify.app';
+      'https://wedding-time-app.netlify.app';
 
   /// دامنه فعال:
   /// - روی وب: همان دامنه مرورگر (هر Netlify که دیپلوی کردی)
@@ -33,7 +33,7 @@ class AppConfig {
   }
 
   /// لینک پورتال مهمان مخصوص هر عروسی
-  /// مثال: https://wedding-time-app2.netlify.app/invite/zaza-sara
+  /// مثال: https://wedding-time-app.netlify.app/invite/zaza-sara
   static String inviteUrl(String slug) {
     final s = slug.trim().toLowerCase();
     final clean = s.isEmpty ? 'invite' : s;

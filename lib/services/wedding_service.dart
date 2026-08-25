@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/app_lang.dart';
@@ -48,13 +49,14 @@ class WeddingService {
     final codeRef = _inviteCodeRef(inviteCode);
 
     // مرحله ۱: wedding + user (عضویت از brideUid/groomUid)
+    // FIX-02: کد پیوستن روی سند عمومی مراسم ذخیره نمی‌شود؛
+    // کد فقط در سند خصوصی کاربر و در invite_codes نگه داشته می‌شود.
     final batch = _firestore.batch();
 
     batch.set(weddingRef, {
       'brideName': brideName.trim(),
       'groomName': groomName.trim(),
       'weddingDate': Timestamp.fromDate(weddingDate),
-      'inviteCode': inviteCode,
       if (role == 'bride') 'brideUid': uid,
       if (role == 'groom') 'groomUid': uid,
       'createdAt': FieldValue.serverTimestamp(),
@@ -69,6 +71,7 @@ class WeddingService {
         'role': role,
         'plan': 'free',
         'language': AppLang.I.code,
+        'inviteCode': inviteCode,
         'updatedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       },
@@ -154,6 +157,8 @@ class WeddingService {
         'role': role,
         'plan': 'free',
         'language': AppLang.I.code,
+        // FIX-02: کد پیوستن برای نمایش در پروفایل هر دو طرف
+        'inviteCode': normalized,
         'updatedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       },
@@ -197,7 +202,40 @@ class WeddingService {
   static Future<WeddingModel?> getWedding(String weddingId) async {
     final doc = await _firestore.collection('weddings').doc(weddingId).get();
     if (!doc.exists) return null;
+
+    // FIX-02: پاک‌سازی خودبه‌خودی مراسم‌های قدیمی که هنوز کد پیوستن
+    // روی سند عمومی آن‌ها مانده است.
+    await _stripLeakedInviteCode(doc);
+
     return WeddingModel.fromDoc(doc);
+  }
+
+  /// اگر سند مراسم هنوز inviteCode دارد، اول آن را برای عضو زوج
+  /// در سند خصوصی کاربرش حفظ کن و سپس از سند عمومی حذف کن.
+  static Future<void> _stripLeakedInviteCode(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) async {
+    try {
+      final data = doc.data() ?? {};
+      if (!data.containsKey('inviteCode')) return;
+
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      final isMember = data['brideUid'] == uid || data['groomUid'] == uid;
+      if (!isMember) return;
+
+      final code = (data['inviteCode'] ?? '').toString();
+      if (code.isNotEmpty) {
+        await _firestore.collection('users').doc(uid).set(
+          {'inviteCode': code},
+          SetOptions(merge: true),
+        );
+      }
+      await doc.reference.update({'inviteCode': FieldValue.delete()});
+    } catch (_) {
+      // پاک‌سازی بهترین‌تلاش است؛ نباید جریان اصلی را خراب کند.
+    }
   }
 
   static Future<bool> userWeddingIsValid(String uid) async {
