@@ -123,6 +123,8 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
           GuestHomeTab(
             weddingId: widget.weddingId,
             invitation: widget.invitation,
+            // خانه مهمان برای «جزئیات/مسیر مهمان» به تب‌های شل می‌رود
+            onOpenTab: (i) => setState(() => _index = i),
           ),
           PublicInviteScreen(
             weddingId: widget.weddingId,
