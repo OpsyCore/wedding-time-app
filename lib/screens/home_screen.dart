@@ -13,6 +13,7 @@ import '../widgets/app_drawer.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/floral_decor.dart';
 import '../widgets/page_glass.dart';
+import '../widgets/wedding_progress_bar.dart';
 import '../widgets/wedding_time_header.dart';
 import 'couple_profile_screen.dart';
 import 'vendors_screen.dart';
@@ -481,64 +482,113 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProfileNudge() {
-    final pct = ((_profileComplete ?? 0) * 100).round().clamp(0, 100);
+    // TASK 3 — dual profile nudge uses premium thin progress bar + live binding
+    final progress = (_profileComplete ?? 0).clamp(0.0, 1.0);
+    final pct = (progress * 100).round().clamp(0, 100);
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
     final accent = AppTok.accent(context);
     final accentSoft = AppTok.accentSoft(context);
+    final isDark = AppTok.isDark(context);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: _openCoupleProfile,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: PageGlass(
-          opacity: 0.84,
-          blurSigma: 12,
-          borderRadius: 16,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
+          opacity: isDark ? 0.86 : 0.90,
+          blurSigma: 14,
+          borderRadius: 18,
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: _brandBlushSoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.favorite_outline_rounded,
-                  color: accentSoft,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppLang.tr('couple_profile'),
-                      style: TextStyle(
-                        color: text,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          _brandBlushSoft.withValues(alpha: 0.9),
+                          AppTok.accent(context).withValues(alpha: 0.18),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTok.accent(context).withValues(alpha: 0.18),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${_displayNum(pct)}${AppLang.tr('percent_unit')} · ${_progressMessage(_profileComplete ?? 0)}',
-                      style: TextStyle(
-                        color: textSoft,
-                        fontSize: 11,
-                      ),
+                    child: Icon(
+                      Icons.favorite_rounded,
+                      color: accentSoft,
+                      size: 20,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                AppLang.tr('couple_profile'),
+                                style: TextStyle(
+                                  color: text,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                AppLang.I.isFa
+                                    ? '${_displayNum(pct)}${AppLang.tr('percent_unit')}'
+                                    : '$pct${AppLang.tr('percent_unit')}',
+                                style: TextStyle(
+                                  color: AppTok.accentDeep(context),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _progressMessage(progress),
+                          style: TextStyle(
+                            color: textSoft,
+                            fontSize: 11.5,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    AppLang.I.isFa ? Icons.chevron_left : Icons.chevron_right,
+                    color: accent,
+                    size: 20,
+                  ),
+                ],
               ),
-              Icon(
-                AppLang.I.isFa ? Icons.chevron_left : Icons.chevron_right,
-                color: accent,
+              const SizedBox(height: 12),
+              WeddingProgressBar(
+                value: progress,
+                size: WeddingProgressSize.thin,
+                animate: true,
               ),
             ],
           ),
@@ -1401,6 +1451,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProgressCard() {
+    // TASK 3 — premium wedding progress card with shared WeddingProgressBar
+    final isDark = AppTok.isDark(context);
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
     final border = AppTok.border(context);
@@ -1476,64 +1528,140 @@ class _HomeScreenState extends State<HomeScreen> {
                                 guestPercent) /
                             4;
 
+                        final statusKey = overall <= 0
+                            ? 'progress_status_not_started'
+                            : overall < 0.4
+                                ? 'progress_status_in_progress'
+                                : overall < 0.85
+                                    ? 'progress_status_almost_done'
+                                    : 'progress_status_completed';
+
                         return PageGlass(
-                          opacity: 0.86,
-                          blurSigma: 12,
+                          opacity: isDark ? 0.88 : 0.92,
+                          blurSigma: 16,
                           borderRadius: 22,
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
                           child: Column(
                             children: [
                               Row(
                                 children: [
                                   SizedBox(
-                                    width: 64,
-                                    height: 64,
+                                    width: 72,
+                                    height: 72,
                                     child: Stack(
                                       alignment: Alignment.center,
                                       children: [
                                         SizedBox(
-                                          width: 64,
-                                          height: 64,
+                                          width: 72,
+                                          height: 72,
                                           child: CircularProgressIndicator(
                                             value: 1,
-                                            strokeWidth: 5.5,
+                                            strokeWidth: 6,
                                             color: ringTrack,
                                           ),
                                         ),
-                                        SizedBox(
-                                          width: 64,
-                                          height: 64,
-                                          child: CircularProgressIndicator(
-                                            value: overall,
-                                            strokeWidth: 5.5,
-                                            color: accent,
-                                            strokeCap: StrokeCap.round,
+                                        TweenAnimationBuilder<double>(
+                                          tween: Tween<double>(
+                                              begin: 0, end: overall),
+                                          duration:
+                                              const Duration(milliseconds: 520),
+                                          curve: Curves.easeOutCubic,
+                                          builder: (context, anim, _) =>
+                                              SizedBox(
+                                            width: 72,
+                                            height: 72,
+                                            child: CircularProgressIndicator(
+                                              value: anim,
+                                              strokeWidth: 6,
+                                              strokeCap: StrokeCap.round,
+                                              color: accent,
+                                              backgroundColor:
+                                                  Colors.transparent,
+                                            ),
                                           ),
                                         ),
-                                        Text(
-                                          '${_displayNum((overall * 100).round())}%',
-                                          style: TextStyle(
-                                            color: text,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                        Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TweenAnimationBuilder<double>(
+                                              tween: Tween<double>(
+                                                  begin: 0,
+                                                  end: (overall * 100)),
+                                              duration: const Duration(
+                                                  milliseconds: 500),
+                                              curve: Curves.easeOutCubic,
+                                              builder: (context, animPct, _) =>
+                                                  Text(
+                                                AppLang.I.isFa
+                                                    ? '${_displayNum(animPct.round())}${AppLang.tr('percent_unit')}'
+                                                    : '${_displayNum(animPct.round())}${AppLang.tr('percent_unit')}',
+                                                style: TextStyle(
+                                                  color: text,
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 1),
+                                            Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: BoxDecoration(
+                                                color: accent.withValues(
+                                                    alpha: 0.9),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 14),
+                                  const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          AppLang.tr('wedding_progress'),
-                                          style: TextStyle(
-                                            color: text,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                AppLang.tr(
+                                                    'wedding_progress'),
+                                                style: TextStyle(
+                                                  color: text,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: accent.withValues(
+                                                    alpha: 0.12),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                border: Border.all(
+                                                  color: accent.withValues(
+                                                      alpha: 0.18),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                AppLang.tr(statusKey),
+                                                style: TextStyle(
+                                                  color:
+                                                      AppTok.accentDeep(context),
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
@@ -1541,18 +1669,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                           style: TextStyle(
                                             color: textSoft,
                                             fontSize: 12,
+                                            height: 1.35,
                                           ),
                                         ),
-                                        const SizedBox(height: 8),
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          child: LinearProgressIndicator(
-                                            value: overall,
-                                            minHeight: 5,
-                                            backgroundColor: ringTrack,
-                                            color: accent,
-                                          ),
+                                        const SizedBox(height: 10),
+                                        WeddingProgressBar(
+                                          value: overall,
+                                          size: WeddingProgressSize.thin,
+                                          animate: true,
                                         ),
                                       ],
                                     ),
@@ -1563,7 +1687,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               Container(
                                 width: double.infinity,
                                 height: 1,
-                                color: border,
+                                color: border.withValues(alpha: 0.7),
                               ),
                               const SizedBox(height: 14),
                               Row(
