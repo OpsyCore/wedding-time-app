@@ -8,7 +8,7 @@ class AppConfig {
   /// دامنه پیش‌فرض (موبایل / وقتی origin در دسترس نیست)
   /// سایت رسمی Netlify (FIX-05: دامنه صحیح بدون «2»)
   static const String defaultPublicBaseUrl =
-      'https://wedding-time-app.netlify.app';
+      'https://wedding-time-app2.netlify.app';
 
   /// دامنه فعال:
   /// - روی وب: همان دامنه مرورگر (هر Netlify که دیپلوی کردی)
