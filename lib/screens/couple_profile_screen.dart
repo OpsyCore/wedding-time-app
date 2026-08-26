@@ -15,6 +15,7 @@ import '../widgets/ambient_music_controls.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/effect_picker.dart';
 import '../widgets/page_glass.dart';
+import '../widgets/wedding_progress_bar.dart';
 
 /// پروفایل عروس و داماد
 class CoupleProfileScreen extends StatefulWidget {
@@ -568,89 +569,11 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
   }
 
   Widget _progressHeader(BuildContext context) {
-    final pct = (_completePercent * 100).round().clamp(0, 100);
-    final label = pct == 0
-        ? AppLang.tr('progress_start')
-        : pct < 40
-            ? AppLang.tr('progress_good_start')
-            : pct < 70
-                ? AppLang.tr('progress_taking_shape')
-                : pct < 100
-                    ? AppLang.tr('progress_almost')
-                    : AppLang.tr('progress_ready');
-
-    return PageGlass(
-      opacity: 0.84,
-      blurSigma: 12,
-      borderRadius: 22,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 64,
-            height: 64,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: 1,
-                  strokeWidth: 5,
-                  color: AppTok.cardSoft(context),
-                ),
-                CircularProgressIndicator(
-                  value: _completePercent.clamp(0.0, 1.0),
-                  strokeWidth: 5,
-                  color: AppTok.accent(context),
-                  backgroundColor: Colors.transparent,
-                ),
-                Text(
-                  '$pct${AppLang.tr('percent_unit')}',
-                  style: TextStyle(
-                    color: AppTok.text(context),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppLang.tr('wedding_progress'),
-                  style: TextStyle(
-                    color: AppTok.text(context),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: AppTok.textSoft(context),
-                    fontSize: 12,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: _completePercent.clamp(0.0, 1.0),
-                    minHeight: 6,
-                    backgroundColor: AppTok.cardSoft(context),
-                    color: AppTok.accent(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    // TASK 3 — dual profile top progress bar → premium CoupleProgressHeader
+    // Uses real _completePercent binding (9 fields), animated gradient, status chip
+    return CoupleProgressHeader(
+      progress: _completePercent.clamp(0.0, 1.0),
+      showCircular: true,
     );
   }
 

@@ -10,6 +10,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../services/weather_service.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/page_glass.dart';
 import '../widgets/wedding_time_header.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -216,6 +217,43 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final m = d.month.toString().padLeft(2, '0');
     final day = d.day.toString().padLeft(2, '0');
     return _displayNum('$y/$m/$day');
+  }
+
+  String _formatMonthYear(DateTime d) {
+    // Premium month header — use AppLang for month? For simplicity, English month + year with fa digits
+    // We have weekday keys but not month keys; use numeric month/year with refined typography
+    // If fa, show Persian month approximate via Gregorian month name translated? Keep simple: y/m with fa digits
+    const enMonths = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+    const faMonths = [
+      'ژانویه',
+      'فوریه',
+      'مارس',
+      'آوریل',
+      'مه',
+      'ژوئن',
+      'ژوئیه',
+      'اوت',
+      'سپتامبر',
+      'اکتبر',
+      'نوامبر',
+      'دسامبر'
+    ];
+    final monthName = AppLang.I.isFa ? faMonths[d.month - 1] : enMonths[d.month - 1];
+    final year = _displayNum(d.year);
+    return '$monthName $year';
   }
 
   String _dayTitle(DateTime d, int index) {
@@ -469,6 +507,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
+  void _goPrevMonth() {
+    setState(() {
+      focusedDay = DateTime(focusedDay.year, focusedDay.month - 1, 1);
+    });
+  }
+
+  void _goNextMonth() {
+    setState(() {
+      focusedDay = DateTime(focusedDay.year, focusedDay.month + 1, 1);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -522,56 +572,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 10, 16, 90),
                           children: [
                             _buildWeddingBanner(context),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 16),
                             _buildCalendar(context, allDocs),
                             const SizedBox(height: 16),
                             _buildWeatherCard(context),
-                            const SizedBox(height: 18),
-                            Text(
-                              AppLang.tr('selected_day_events'),
-                              style: TextStyle(
-                                color: AppTok.text(context),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
+                            const SizedBox(height: 20),
+                            _buildSectionTitle(
+                              context,
+                              icon: Icons.event_note_rounded,
+                              title: AppLang.tr('selected_day_events'),
+                              subtitle: _formatDate(selectedDay),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
                             if (dayEvents.isEmpty)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                child: Text(
-                                  AppLang.tr('no_events_this_day'),
-                                  style: TextStyle(
-                                    color: AppTok.textSoft(context),
-                                    fontSize: 13,
-                                  ),
-                                ),
+                              _buildEmptyState(
+                                context,
+                                message: AppLang.tr('no_events_this_day'),
+                                icon: Icons.event_busy_outlined,
                               )
                             else
                               ...dayEvents
                                   .map((d) => _buildEventCard(context, d)),
-                            const SizedBox(height: 22),
-                            Text(
-                              AppLang.tr('upcoming_events'),
-                              style: TextStyle(
-                                color: AppTok.text(context),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
+                            const SizedBox(height: 24),
+                            _buildSectionTitle(
+                              context,
+                              icon: Icons.upcoming_rounded,
+                              title: AppLang.tr('upcoming_events'),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
                             if (upcoming.isEmpty)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                child: Text(
-                                  AppLang.tr('no_upcoming_events'),
-                                  style: TextStyle(
-                                    color: AppTok.textSoft(context),
-                                    fontSize: 13,
-                                  ),
-                                ),
+                              _buildEmptyState(
+                                context,
+                                message: AppLang.tr('no_upcoming_events'),
+                                icon: Icons.calendar_today_outlined,
                               )
                             else
                               ...upcoming
@@ -597,129 +630,287 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildWeddingBanner(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTok.card(context),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: AppTok.accent(context).withValues(alpha: 0.25),
+  Widget _buildSectionTitle(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppTok.accent(context).withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppTok.accent(context), size: 18),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.favorite, color: AppTok.accent(context), size: 16),
-              const SizedBox(width: 8),
               Text(
-                AppLang.tr('your_wedding_date'),
+                title,
                 style: TextStyle(
                   color: AppTok.text(context),
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14.5,
                 ),
               ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: AppTok.textSoft(context),
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            weddingDate == null
-                ? AppLang.tr('loading_ellipsis')
-                : _formatDate(weddingDate!),
-            style: TextStyle(
-              color: AppTok.accent(context),
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(
+    BuildContext context, {
+    required String message,
+    required IconData icon,
+  }) {
+    return PageGlass(
+      opacity: 0.82,
+      blurSigma: 10,
+      borderRadius: 16,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTok.cardSoft(context),
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(icon, color: AppTok.textSoft(context), size: 20),
           ),
-          const SizedBox(height: 6),
-          Text(
-            '${_displayNum(daysLeft)}${AppLang.tr('days_remaining')}',
-            style: TextStyle(color: AppTok.textSoft(context), fontSize: 13),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: AppTok.textSoft(context),
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildWeatherCard(BuildContext context) {
-    final hasLocation = _venueLat != null && _venueLng != null;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTok.card(context),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: AppTok.border(context).withValues(alpha: 0.5),
+  Widget _buildWeddingBanner(BuildContext context) {
+    final isDark = AppTok.isDark(context);
+    return PageGlass(
+      opacity: isDark ? 0.86 : 0.90,
+      blurSigma: 14,
+      borderRadius: 22,
+      padding: EdgeInsets.zero,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [
+                    AppDarkPalette.cardSoft.withValues(alpha: 0.9),
+                    AppDarkPalette.card.withValues(alpha: 0.95),
+                  ]
+                : [
+                    Colors.white.withValues(alpha: 0.95),
+                    AppPalette.cardSoft.withValues(alpha: 0.9),
+                  ],
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppTok.accent(context).withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTok.accent(context).withValues(alpha: 0.18),
+                ),
+              ),
+              child: Icon(
+                Icons.favorite_rounded,
+                color: AppTok.accent(context),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppLang.tr('your_wedding_date'),
+                    style: TextStyle(
+                      color: AppTok.textSoft(context),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    weddingDate == null
+                        ? AppLang.tr('loading_ellipsis')
+                        : _formatDate(weddingDate!),
+                    style: TextStyle(
+                      color: AppTok.text(context),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTok.accent(context).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppTok.accent(context).withValues(alpha: 0.20),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.hourglass_bottom_rounded,
+                    size: 14,
+                    color: AppTok.accentDeep(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${_displayNum(daysLeft)}${AppLang.tr('days_remaining')}',
+                    style: TextStyle(
+                      color: AppTok.accentDeep(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildWeatherCard(BuildContext context) {
+    final hasLocation = _venueLat != null && _venueLng != null;
+    final isDark = AppTok.isDark(context);
+
+    return PageGlass(
+      opacity: isDark ? 0.86 : 0.90,
+      blurSigma: 14,
+      borderRadius: 22,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.wb_cloudy_outlined,
-                color: AppTok.accent(context),
-                size: 18,
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppTok.accent(context).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.wb_cloudy_outlined,
+                  color: AppTok.accent(context),
+                  size: 18,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  AppLang.tr('venue_weather'),
-                  style: TextStyle(
-                    color: AppTok.text(context),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLang.tr('venue_weather'),
+                      style: TextStyle(
+                        color: AppTok.text(context),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                    if (_venueCity != null)
+                      Text(
+                        _venueCity!,
+                        style: TextStyle(
+                          color: AppTok.textSoft(context),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               if (hasLocation)
-                IconButton(
-                  tooltip: AppLang.tr('refresh'),
-                  onPressed: _weatherLoading ? null : _loadWeather,
-                  icon: Icon(
-                    Icons.refresh,
-                    color: AppTok.textSoft(context),
-                    size: 20,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: _weatherLoading ? null : _loadWeather,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppTok.cardSoft(context),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTok.border(context)),
+                      ),
+                      child: _weatherLoading
+                          ? Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTok.accent(context),
+                              ),
+                            )
+                          : Icon(
+                              Icons.refresh_rounded,
+                              color: AppTok.textSoft(context),
+                              size: 18,
+                            ),
+                    ),
                   ),
                 ),
             ],
           ),
-          if (_venueCity != null) ...[
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 14,
-                  color: AppTok.accent(context),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  _venueCity!,
-                  style: TextStyle(
-                    color: AppTok.accent(context),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           if (!hasLocation)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppTok.background(context),
+                color: AppTok.cardSoft(context),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
@@ -792,16 +983,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 AppLang.tr('current_conditions'),
                 style: TextStyle(
                   color: AppTok.textSoft(context),
-                  fontSize: 12,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(
-                    _weatherIcon(w.weatherCode),
-                    color: const Color(0xFFE8C29A),
-                    size: 40,
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8C29A).withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _weatherIcon(w.weatherCode),
+                      color: const Color(0xFFE8C29A),
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Column(
@@ -811,22 +1011,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         '$temp°',
                         style: TextStyle(
                           color: AppTok.text(context),
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       Text(
                         _weatherLabel(w.weatherCode),
                         style: TextStyle(
                           color: AppTok.textSoft(context),
-                          fontSize: 12,
+                          fontSize: 11.5,
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               _metaRow(
                 context,
                 Icons.water_drop_outlined,
@@ -841,24 +1041,38 @@ class _CalendarScreenState extends State<CalendarScreen> {
               const SizedBox(height: 6),
               _metaRow(
                 context,
-                Icons.air,
+                Icons.air_rounded,
                 '$wind${AppLang.tr('km_unit')}',
               ),
             ],
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 12),
         Expanded(
           flex: 6,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = 0; i < w.daily.length; i++)
-                  _dayColumn(context, w.daily[i], i),
-              ],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppLang.I.isFa ? '۷ روز آینده' : 'Next 7 days',
+                style: TextStyle(
+                  color: AppTok.textSoft(context),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < w.daily.length; i++)
+                      _dayColumn(context, w.daily[i], i),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -868,36 +1082,60 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _metaRow(BuildContext context, IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 15, color: AppTok.textSoft(context)),
-        const SizedBox(width: 6),
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: AppTok.cardSoft(context),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(icon, size: 12, color: AppTok.textSoft(context)),
+        ),
+        const SizedBox(width: 8),
         Text(
           text,
-          style: TextStyle(color: AppTok.textSoft(context), fontSize: 12),
+          style: TextStyle(color: AppTok.textSoft(context), fontSize: 11.5),
         ),
       ],
     );
   }
 
   Widget _dayColumn(BuildContext context, WeatherDay day, int index) {
+    final isToday = index == 0;
     return Container(
-      width: 70,
-      margin: const EdgeInsets.only(left: 6),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      width: 62,
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      decoration: BoxDecoration(
+        color: isToday
+            ? AppTok.accent(context).withValues(alpha: 0.10)
+            : AppTok.cardSoft(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isToday
+              ? AppTok.accent(context).withValues(alpha: 0.22)
+              : AppTok.border(context).withValues(alpha: 0.6),
+        ),
+      ),
       child: Column(
         children: [
           Text(
             _dayTitle(day.date, index),
             style: TextStyle(
-              color: AppTok.textSoft(context),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+              color: isToday
+                  ? AppTok.accentDeep(context)
+                  : AppTok.textSoft(context),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
           Icon(
             _weatherIcon(day.weatherCode),
-            color: const Color(0xFFE8C29A),
-            size: 26,
+            color: isToday
+                ? AppTok.accent(context)
+                : const Color(0xFFE8C29A),
+            size: 22,
           ),
           const SizedBox(height: 6),
           Text(
@@ -907,8 +1145,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: AppTok.text(context),
-              fontSize: 10,
+              fontSize: 9.5,
               height: 1.2,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
@@ -916,8 +1155,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             '${_displayNum(day.tempMax.round())}°',
             style: const TextStyle(
               color: Color(0xFFFF8A80),
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 2),
@@ -925,8 +1164,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             '${_displayNum(day.tempMin.round())}°',
             style: const TextStyle(
               color: Color(0xFF80CBC4),
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -938,101 +1177,208 @@ class _CalendarScreenState extends State<CalendarScreen> {
     BuildContext context,
     List<QueryDocumentSnapshot> allDocs,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppTok.card(context),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: TableCalendar(
-        firstDay: DateTime(2020),
-        lastDay: DateTime(2035),
-        focusedDay: focusedDay,
-        selectedDayPredicate: (day) => isSameDay(selectedDay, day),
-        onDaySelected: (selected, focused) {
-          setState(() {
-            selectedDay = selected;
-            focusedDay = focused;
-          });
-        },
-        calendarStyle: CalendarStyle(
-          outsideDaysVisible: false,
-          defaultTextStyle: TextStyle(color: AppTok.text(context)),
-          weekendTextStyle: TextStyle(color: AppTok.textSoft(context)),
-          todayDecoration: BoxDecoration(
-            color: AppTok.accent(context).withValues(alpha: 0.25),
-            shape: BoxShape.circle,
-          ),
-          selectedDecoration: BoxDecoration(
-            color: AppTok.accent(context),
-            shape: BoxShape.circle,
-          ),
-          todayTextStyle: TextStyle(
-            color: AppTok.text(context),
-            fontWeight: FontWeight.bold,
-          ),
-          selectedTextStyle: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          markerDecoration: BoxDecoration(
-            color: AppTok.accent(context),
-            shape: BoxShape.circle,
-          ),
-        ),
-        headerStyle: HeaderStyle(
-          formatButtonVisible: false,
-          titleCentered: true,
-          titleTextStyle: TextStyle(
-            color: AppTok.text(context),
-            fontWeight: FontWeight.bold,
-          ),
-          leftChevronIcon: Icon(
-            Icons.chevron_left,
-            color: AppTok.textSoft(context),
-          ),
-          rightChevronIcon: Icon(
-            Icons.chevron_right,
-            color: AppTok.textSoft(context),
-          ),
-        ),
-        daysOfWeekStyle: DaysOfWeekStyle(
-          weekdayStyle: TextStyle(
-            color: AppTok.textSoft(context),
-            fontSize: 12,
-          ),
-          weekendStyle: TextStyle(
-            color: AppTok.textSoft(context),
-            fontSize: 12,
-          ),
-        ),
-        calendarBuilders: CalendarBuilders(
-          markerBuilder: (context, date, events) {
-            final has = allDocs.any((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              final ts = data['date'] as Timestamp?;
-              if (ts == null) return false;
-              final d = ts.toDate();
-              return d.year == date.year &&
-                  d.month == date.month &&
-                  d.day == date.day;
-            });
+    final isDark = AppTok.isDark(context);
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+    final accent = AppTok.accent(context);
+    final accentDeep = AppTok.accentDeep(context);
+    final border = AppTok.border(context);
+    final cardSoft = AppTok.cardSoft(context);
+    final ringTrack = AppTok.ringTrack(context);
 
-            if (!has) return null;
+    // Precompute events per day for dot colors
+    Map<DateTime, int> eventsCount = {};
+    for (final doc in allDocs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final ts = data['date'] as Timestamp?;
+      if (ts == null) continue;
+      final d = DateTime(ts.toDate().year, ts.toDate().month, ts.toDate().day);
+      eventsCount[d] = (eventsCount[d] ?? 0) + 1;
+    }
 
-            return Positioned(
-              bottom: 1,
-              child: Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: AppTok.accent(context),
-                  shape: BoxShape.circle,
+    return PageGlass(
+      opacity: isDark ? 0.86 : 0.92,
+      blurSigma: 16,
+      borderRadius: 22,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      child: Column(
+        children: [
+          // ── Premium month header ──
+          Row(
+            children: [
+              _GlassIconButton(
+                icon: AppLang.I.isFa
+                    ? Icons.chevron_right_rounded
+                    : Icons.chevron_left_rounded,
+                onTap: _goPrevMonth,
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      AppLang.tr('calendar_month_title'),
+                      style: TextStyle(
+                        color: textSoft,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatMonthYear(focusedDay),
+                      style: TextStyle(
+                        color: text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            );
-          },
-        ),
+              _GlassIconButton(
+                icon: AppLang.I.isFa
+                    ? Icons.chevron_left_rounded
+                    : Icons.chevron_right_rounded,
+                onTap: _goNextMonth,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 1,
+            color: border.withValues(alpha: 0.7),
+          ),
+          const SizedBox(height: 8),
+          TableCalendar(
+            firstDay: DateTime(2020),
+            lastDay: DateTime(2035),
+            focusedDay: focusedDay,
+            selectedDayPredicate: (day) => isSameDay(selectedDay, day),
+            onDaySelected: (selected, focused) {
+              setState(() {
+                selectedDay = selected;
+                focusedDay = focused;
+              });
+            },
+            onPageChanged: (focused) {
+              setState(() => focusedDay = focused);
+            },
+            headerVisible: false,
+            locale: AppLang.I.code,
+            startingDayOfWeek: StartingDayOfWeek.saturday,
+            daysOfWeekHeight: 36,
+            rowHeight: 56,
+            calendarStyle: CalendarStyle(
+              outsideDaysVisible: false,
+              cellMargin: const EdgeInsets.all(4),
+              cellPadding: EdgeInsets.zero,
+              defaultTextStyle: TextStyle(
+                color: text,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              weekendTextStyle: TextStyle(
+                color: textSoft,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              outsideTextStyle: TextStyle(
+                color: textSoft.withValues(alpha: 0.35),
+                fontSize: 13,
+              ),
+              todayDecoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.35),
+                  width: 1.2,
+                ),
+              ),
+              todayTextStyle: TextStyle(
+                color: accentDeep,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: accent,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.28),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              selectedTextStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+              markerDecoration: BoxDecoration(
+                color: accent,
+                shape: BoxShape.circle,
+              ),
+            ),
+            daysOfWeekStyle: DaysOfWeekStyle(
+              weekdayStyle: TextStyle(
+                color: textSoft,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+              ),
+              weekendStyle: TextStyle(
+                color: textSoft.withValues(alpha: 0.8),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            calendarBuilders: CalendarBuilders(
+              // Custom today with sage ring
+              todayBuilder: (context, day, focused) {
+                final count = eventsCount[DateTime(day.year, day.month, day.day)] ?? 0;
+                return _DayCell(
+                  day: day,
+                  isToday: true,
+                  isSelected: false,
+                  eventsCount: count,
+                );
+              },
+              selectedBuilder: (context, day, focused) {
+                final count = eventsCount[DateTime(day.year, day.month, day.day)] ?? 0;
+                return _DayCell(
+                  day: day,
+                  isToday: isSameDay(day, DateTime.now()),
+                  isSelected: true,
+                  eventsCount: count,
+                );
+              },
+              defaultBuilder: (context, day, focused) {
+                final count = eventsCount[DateTime(day.year, day.month, day.day)] ?? 0;
+                final isWeekend = day.weekday == DateTime.friday;
+                return _DayCell(
+                  day: day,
+                  isToday: false,
+                  isSelected: false,
+                  isWeekend: isWeekend,
+                  eventsCount: count,
+                );
+              },
+              outsideBuilder: (context, day, focused) {
+                return Center(
+                  child: Text(
+                    '${day.day}',
+                    style: TextStyle(
+                      color: textSoft.withValues(alpha: 0.28),
+                      fontSize: 13,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1043,78 +1389,260 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final desc = (data['desc'] ?? '').toString();
     final ts = data['date'] as Timestamp?;
     final dateText = ts == null ? '--' : _formatDate(ts.toDate());
+    final isDark = AppTok.isDark(context);
 
-    return Dismissible(
-      key: ValueKey(doc.id),
-      direction: DismissDirection.endToStart,
-      confirmDismiss: (_) async {
-        await deleteEvent(doc);
-        return false;
-      },
-      background: Container(
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
-        child: Icon(Icons.delete_outline, color: AppTok.danger(context)),
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: AppTok.card(context),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: ListTile(
-          onTap: () => openAddEvent(eventDoc: doc),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTok.accent(context).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.event_outlined,
-              color: AppTok.accent(context),
-              size: 20,
-            ),
-          ),
-          title: Text(
-            title,
-            style: TextStyle(
-              color: AppTok.text(context),
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 2),
-              Text(
-                dateText,
-                style: TextStyle(
-                  color: AppTok.accent(context),
-                  fontSize: 12,
-                ),
-              ),
-              if (desc.isNotEmpty)
-                Text(
-                  desc,
-                  style: TextStyle(
-                    color: AppTok.textSoft(context),
-                    fontSize: 12,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: PageGlass(
+        opacity: isDark ? 0.84 : 0.90,
+        blurSigma: 12,
+        borderRadius: 16,
+        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => openAddEvent(eventDoc: doc),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppTok.accent(context).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTok.accent(context).withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.event_rounded,
+                      color: AppTok.accent(context),
+                      size: 20,
+                    ),
                   ),
-                ),
-            ],
-          ),
-          trailing: Icon(
-            Icons.edit_outlined,
-            color: AppTok.textSoft(context),
-            size: 18,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppTok.text(context),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppTok.cardSoft(context),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                dateText,
+                                style: TextStyle(
+                                  color: AppTok.accentDeep(context),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (desc.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  desc,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppTok.textSoft(context),
+                                    fontSize: 11.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.edit_outlined,
+                    color: AppTok.textSoft(context),
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
+  }
+}
+
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: AppTok.cardSoft(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTok.border(context)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: AppTok.isDark(context) ? 0.14 : 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            color: AppTok.textSoft(context),
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DayCell extends StatelessWidget {
+  const _DayCell({
+    required this.day,
+    required this.isToday,
+    required this.isSelected,
+    this.isWeekend = false,
+    required this.eventsCount,
+  });
+
+  final DateTime day;
+  final bool isToday;
+  final bool isSelected;
+  final bool isWeekend;
+  final int eventsCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+    final accent = AppTok.accent(context);
+    final accentDeep = AppTok.accentDeep(context);
+    final accentSoft = AppTok.accentSoft(context);
+    final isDark = AppTok.isDark(context);
+
+    Color bg;
+    Color txt;
+    Border? border;
+    List<BoxShadow>? shadow;
+
+    if (isSelected) {
+      bg = accent;
+      txt = Colors.white;
+      shadow = [
+        BoxShadow(
+          color: accent.withValues(alpha: 0.32),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ];
+    } else if (isToday) {
+      bg = accent.withValues(alpha: 0.14);
+      txt = accentDeep;
+      border = Border.all(color: accent.withValues(alpha: 0.38), width: 1.3);
+    } else {
+      bg = Colors.transparent;
+      txt = isWeekend ? textSoft : text;
+    }
+
+    final dayNum = day.day.toString();
+
+    return Center(
+      child: Container(
+        width: 40,
+        height: 48,
+        decoration: BoxDecoration(
+          color: bg,
+          shape: BoxShape.rectangle,
+          borderRadius: BorderRadius.circular(12),
+          border: border,
+          boxShadow: shadow,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              AppLang.I.isFa
+                  ? _toFa(day.day)
+                  : dayNum,
+              style: TextStyle(
+                color: txt,
+                fontWeight: isSelected || isToday ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 4),
+            if (eventsCount > 0)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  eventsCount.clamp(1, 3),
+                  (i) {
+                    final colors = [
+                      isSelected ? Colors.white : accent,
+                      isSelected ? Colors.white.withValues(alpha: 0.8) : accentSoft,
+                      isSelected ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF8E9C6B),
+                    ];
+                    return Container(
+                      width: 4.5,
+                      height: 4.5,
+                      margin: EdgeInsets.only(left: i == 0 ? 0 : 2),
+                      decoration: BoxDecoration(
+                        color: colors[i],
+                        shape: BoxShape.circle,
+                      ),
+                    );
+                  },
+                ),
+              )
+            else
+              const SizedBox(height: 4.5),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static const _fa = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  static String _toFa(int n) {
+    final s = n.toString();
+    if (!AppLang.I.isFa) return s;
+    return s.split('').map((c) {
+      final i = int.tryParse(c);
+      return i != null ? _fa[i] : c;
+    }).join();
   }
 }

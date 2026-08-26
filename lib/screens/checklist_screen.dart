@@ -5,6 +5,7 @@ import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/wedding_progress_bar.dart';
 import '../widgets/wedding_time_header.dart';
 
 enum _StatusFilter { all, pending, done }
@@ -1161,112 +1162,15 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
-  // TASK 3 — progress % at bottom of checklist
+  // TASK 1 — premium checklist progress footer
   Widget _buildProgressFooter(
     BuildContext context, {
     required int doneCount,
     required int total,
   }) {
-    final percent = total == 0 ? 0 : ((doneCount / total) * 100).round();
-    final percentClamped = percent.clamp(0, 100);
-    final progress = total == 0 ? 0.0 : doneCount / total;
-
-    final text = AppTok.text(context);
-    final textSoft = AppTok.textSoft(context);
-    final accent = AppTok.accent(context);
-    final accentDeep = AppTok.accentDeep(context);
-    final card = AppTok.card(context);
-    final border = AppTok.border(context);
-    final track = AppTok.ringTrack(context);
-
-    // Use AppLang for percent text — «۴۲٪» / "42%"
-    final percentText = '${_displayNum(percentClamped)}${AppLang.tr('percent_unit')}';
-    final title = AppLang.tr('checklist_progress');
-    final doneLabel = AppLang.tr('checklist_progress_done');
-    final ofLabel = AppLang.tr('checklist_progress_of');
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: AppTok.isDark(context) ? 0.14 : 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.task_alt_rounded, color: accent, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: text,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13.5,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${_displayNum(doneCount)} $ofLabel ${_displayNum(total)} $doneLabel',
-                      style: TextStyle(
-                        color: textSoft,
-                        fontSize: 11.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  percentText,
-                  style: TextStyle(
-                    color: accentDeep,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress.clamp(0.0, 1.0),
-              minHeight: 8,
-              backgroundColor: track,
-              valueColor: AlwaysStoppedAnimation<Color>(accent),
-            ),
-          ),
-        ],
-      ),
+    return ChecklistProgressFooter(
+      doneCount: doneCount,
+      total: total,
     );
   }
 
