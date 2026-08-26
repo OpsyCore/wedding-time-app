@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/app_effect.dart';
 import '../../core/app_effect_controller.dart';
 import '../../core/app_effects.dart';
 import '../../core/app_lang.dart';
@@ -14,14 +13,9 @@ import '../../widgets/effect_picker.dart';
 import '../../widgets/page_glass.dart';
 import '../guest_camera_screen.dart';
 import '../public_invite_screen.dart';
-import 'guest_gallery_tab.dart';
-import 'guest_gifts_tab.dart';
 import 'guest_home_tab.dart';
-import 'guest_love_story_tab.dart';
 import 'guest_seating_tab.dart';
-import '../supports_guest_screen.dart';
 import 'guest_timeline_tab.dart';
-import 'guest_wishes_tab.dart';
 
 class GuestPortalShell extends StatefulWidget {
   const GuestPortalShell({
@@ -114,46 +108,6 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
     return v;
   }
 
-  void _openPage(Widget page) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => page),
-    );
-  }
-
-  void _openLoveStory() => _openPage(GuestLoveStoryTab(weddingId: widget.weddingId));
-  void _openWishes() => _openPage(GuestWishesTab(weddingId: widget.weddingId));
-  void _openGallery() => _openPage(
-        Scaffold(
-          backgroundColor: AppTok.background(context),
-          appBar: AppBar(
-            backgroundColor: AppTok.background(context),
-            elevation: 0,
-            title: Text(
-              _t('gallery', 'گالری', 'Gallery'),
-              style: TextStyle(color: AppTok.text(context)),
-            ),
-            iconTheme: IconThemeData(color: AppTok.text(context)),
-          ),
-          body: GuestGalleryTab(weddingId: widget.weddingId),
-        ),
-      );
-  void _openSupports() => _openPage(SupportsGuestScreen(weddingId: widget.weddingId));
-  void _openGifts() => _openPage(
-        Scaffold(
-          backgroundColor: AppTok.background(context),
-          appBar: AppBar(
-            backgroundColor: AppTok.background(context),
-            elevation: 0,
-            title: Text(
-              _t('gifts', 'هدایا', 'Gifts'),
-              style: TextStyle(color: AppTok.text(context)),
-            ),
-            iconTheme: IconThemeData(color: AppTok.text(context)),
-          ),
-          body: GuestGiftsTab(weddingId: widget.weddingId),
-        ),
-      );
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -182,15 +136,6 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
           ),
           GuestCameraScreen(weddingId: widget.weddingId),
           GuestSeatingTab(weddingId: widget.weddingId),
-        ];
-
-        // For quick access menu (replaces drawer)
-        final extraMenuItems = [
-          {'icon': Icons.auto_stories_outlined, 'label': _t('love_story', 'داستان عشق', 'Love story'), 'onTap': _openLoveStory},
-          {'icon': Icons.favorite_border, 'label': _t('wishes', 'آرزوها', 'Wishes'), 'onTap': _openWishes},
-          {'icon': Icons.photo_library_outlined, 'label': _t('gallery', 'گالری', 'Gallery'), 'onTap': _openGallery},
-          {'icon': Icons.volunteer_activism_outlined, 'label': _t('supports_title', 'حمایت‌ها', 'Supports'), 'onTap': _openSupports},
-          {'icon': Icons.card_giftcard_outlined, 'label': _t('gifts', 'هدایا', 'Gifts'), 'onTap': _openGifts},
         ];
 
         return Directionality(
@@ -242,37 +187,6 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
                   ),
                   const EffectActionButton(),
                   const AmbientMusicActionButton(),
-                  PopupMenuButton<int>(
-                    tooltip: AppLang.tr('menu'),
-                    icon: Icon(Icons.more_vert_rounded, color: AppTok.text(context)),
-                    color: AppTok.card(context),
-                    onSelected: (v) {
-                      if (v >= 0 && v < extraMenuItems.length) {
-                        (extraMenuItems[v]['onTap'] as VoidCallback)();
-                      }
-                    },
-                    itemBuilder: (ctx) => List.generate(
-                      extraMenuItems.length,
-                      (i) => PopupMenuItem<int>(
-                        value: i,
-                        child: Row(
-                          children: [
-                            Icon(extraMenuItems[i]['icon'] as IconData,
-                                color: AppTok.accent(context), size: 20),
-                            const SizedBox(width: 10),
-                            Text(
-                              extraMenuItems[i]['label'] as String,
-                              style: TextStyle(
-                                color: AppTok.text(context),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                   const SizedBox(width: 4),
                 ],
               ),
@@ -281,9 +195,8 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
                   Positioned.fill(
                     child: IndexedStack(index: _index, children: pages),
                   ),
-                  // legacy effect overlay (very subtle) if global effect is none
-                  if (_legacyEffectId != AppEffectStyle.noneId &&
-                      AppEffectController.I.isNone)
+                  if (AppEffectController.I.isNone &&
+                      _legacyEffectId != AppEffectStyle.noneId)
                     Positioned.fill(
                       child: IgnorePointer(
                         child: Opacity(

@@ -141,7 +141,7 @@ class _EffectSheet extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([AppLang.I, AppEffectController.I]),
       builder: (context, _) {
-        final all = AppEffect.all;
+        const all = AppEffect.all;
         return Directionality(
           textDirection: AppLang.I.direction,
           child: SafeArea(

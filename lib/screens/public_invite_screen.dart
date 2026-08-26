@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../core/app_config.dart';
@@ -19,13 +18,11 @@ import '../services/guest_local_store.dart';
 import '../services/invitation_service.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/floral_decor.dart';
-import '../widgets/page_glass.dart';
 import 'guest_portal/guest_portal_shell.dart';
 
-/// Public invite — 5 phones redesign FROM ZERO
-/// Always light elegant (phone1 dark cinematic allowed over cover photo)
-/// Glass chrome: cards, AppBar, bottom nav
-/// Effect wash behind, glass above
+/// Public invite — one light floral glass card.
+/// Background effects show through the frosted card.
+/// RSVP stays on the card; guest panel is a manual CTA only.
 class PublicInviteScreen extends StatefulWidget {
   final String weddingId;
   final InvitationModel? invitation;
@@ -49,25 +46,24 @@ class PublicInviteScreen extends StatefulWidget {
 }
 
 class _PublicInviteScreenState extends State<PublicInviteScreen> {
+  static const Color _rsvpYes = Color(0xFF2E7D32);
+  static const Color _rsvpMaybe = Color(0xFFF9A825);
+  static const Color _rsvpNo = Color(0xFFC62828);
+
   InvitationModel? _inv;
   bool _loading = true;
   String? _error;
 
-  // enriched
   String _couplePhotoUrl = '';
   String _coverImageUrl = '';
+  String _bridePhotoUrl = '';
+  String _groomPhotoUrl = '';
   String _message = '';
 
-  // page view
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-
-  // countdown
   Timer? _timer;
   Duration _remaining = Duration.zero;
   DateTime? _targetDateTime;
 
-  // rsvp
   final _nameC = TextEditingController();
   final _phoneC = TextEditingController();
   bool _submitting = false;
@@ -84,7 +80,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _pageController.dispose();
     _nameC.dispose();
     _phoneC.dispose();
     super.dispose();
@@ -100,19 +95,16 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     try {
       InvitationModel? inv = widget.invitation;
 
-      // if no invitation passed, try to load by weddingId (should not happen in normal flow,
-      // but for safety)
       if (inv == null) {
-        // try to load from firestore directly (invitation/main)
         final snap = await FirebaseFirestore.instance
             .collection('weddings')
             .doc(widget.weddingId)
             .collection('invitation')
             .doc('main')
             .get();
-        if (snap.exists) {
-          inv = InvitationModel.fromMap(
-              Map<String, dynamic>.from(snap.data() as Map? ?? {}));
+        final data = snap.data();
+        if (data != null) {
+          inv = InvitationModel.fromMap(Map<String, dynamic>.from(data));
         }
       }
 
@@ -120,15 +112,19 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
         if (!mounted) return;
         setState(() {
           _loading = false;
-          _error = _t('invite_not_found', 'دعوت‌نامه پیدا نشد',
-              'Invitation not found');
+          _error = _t(
+            'invite_not_found',
+            'دعوت‌نامه پیدا نشد',
+            'Invitation not found',
+          );
         });
         return;
       }
 
-      // enrich from wedding doc + profile
       String couplePhoto = inv.couplePhotoUrl.trim();
       String coverImage = inv.coverImageUrl.trim();
+      String bridePhoto = '';
+      String groomPhoto = '';
       String message = inv.message.trim();
 
       try {
@@ -136,8 +132,7 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
             .collection('weddings')
             .doc(widget.weddingId)
             .get();
-        final wData = weddingDoc.data() as Map<String, dynamic>? ?? {};
-        // cover image candidates
+        final wData = weddingDoc.data() ?? {};
         final coverCandidates = [
           wData['coverImageUrl'],
           wData['coverPhotoUrl'],
@@ -149,7 +144,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
           final s = (c ?? '').toString().trim();
           if (s.isNotEmpty && coverImage.isEmpty) coverImage = s;
         }
-        // couple photo from wedding doc
         final coupleCandidates = [
           wData['couplePhotoUrl'],
           wData['couplePhoto'],
@@ -159,7 +153,26 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
           final s = (c ?? '').toString().trim();
           if (s.isNotEmpty && couplePhoto.isEmpty) couplePhoto = s;
         }
-        // message from wedding doc
+        final brideCandidates = [
+          wData['bridePhotoUrl'],
+          wData['bridePhoto'],
+          wData['brideImage'],
+          wData['brideAvatar'],
+        ];
+        for (final c in brideCandidates) {
+          final s = (c ?? '').toString().trim();
+          if (s.isNotEmpty && bridePhoto.isEmpty) bridePhoto = s;
+        }
+        final groomCandidates = [
+          wData['groomPhotoUrl'],
+          wData['groomPhoto'],
+          wData['groomImage'],
+          wData['groomAvatar'],
+        ];
+        for (final c in groomCandidates) {
+          final s = (c ?? '').toString().trim();
+          if (s.isNotEmpty && groomPhoto.isEmpty) groomPhoto = s;
+        }
         final msgCandidates = [
           wData['invitationMessage'],
           wData['message'],
@@ -178,7 +191,7 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
             .collection('profile')
             .doc('main')
             .get();
-        final pData = profileDoc.data() as Map<String, dynamic>? ?? {};
+        final pData = profileDoc.data() ?? {};
         final candidates = [
           pData['couplePhotoUrl'],
           pData['couplePhoto'],
@@ -201,9 +214,20 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
               .trim();
           if (cv.isNotEmpty) coverImage = cv;
         }
+        if (bridePhoto.isEmpty) {
+          final bp = (pData['bridePhotoUrl'] ?? pData['bridePhoto'] ?? '')
+              .toString()
+              .trim();
+          if (bp.isNotEmpty) bridePhoto = bp;
+        }
+        if (groomPhoto.isEmpty) {
+          final gp = (pData['groomPhotoUrl'] ?? pData['groomPhoto'] ?? '')
+              .toString()
+              .trim();
+          if (gp.isNotEmpty) groomPhoto = gp;
+        }
       } catch (_) {}
 
-      // local rsvp
       final rsvp = await GuestLocalStore.loadRsvp(widget.weddingId);
       final displayName =
           await GuestLocalStore.loadDisplayName(widget.weddingId);
@@ -214,6 +238,8 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
         _inv = inv;
         _couplePhotoUrl = couplePhoto;
         _coverImageUrl = coverImage;
+        _bridePhotoUrl = bridePhoto;
+        _groomPhotoUrl = groomPhoto;
         _message = message;
         _localRsvpStatus = rsvp.status;
         _localRsvpName = rsvp.name;
@@ -221,7 +247,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
         _loading = false;
       });
 
-      // prefill name
       final prefill = displayName ?? rsvp.name ?? '';
       if (prefill.trim().isNotEmpty) {
         _nameC.text = prefill.trim();
@@ -229,12 +254,15 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
 
       _setupCountdown();
       _loadDisplayNameForPrefill();
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = _t('invite_load_error', 'خطا در بارگذاری دعوت‌نامه',
-            'Failed to load invitation');
+        _error = _t(
+          'invite_load_error',
+          'خطا در بارگذاری دعوت‌نامه',
+          'Failed to load invitation',
+        );
       });
     }
   }
@@ -242,10 +270,11 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
   Future<void> _loadDisplayNameForPrefill() async {
     try {
       final name = await GuestLocalStore.loadDisplayName(widget.weddingId);
-      if (name != null && name.trim().isNotEmpty && _nameC.text.trim().isEmpty) {
-        if (mounted) {
-          setState(() => _nameC.text = name.trim());
-        }
+      if (name != null &&
+          name.trim().isNotEmpty &&
+          _nameC.text.trim().isEmpty) {
+        if (!mounted) return;
+        setState(() => _nameC.text = name.trim());
       }
     } catch (_) {}
   }
@@ -257,7 +286,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
       _remaining = Duration.zero;
       return;
     }
-    // parse eventTime "19:00" or "19:30:00"
     int hour = 19;
     int minute = 0;
     try {
@@ -293,13 +321,13 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
   }
 
   String _formatDate(DateTime? d) {
-    if (d == null) return _t('invite_no_message', 'تاریخ به زودی', 'Date soon');
+    if (d == null) {
+      return _t('invite_no_message', 'تاریخ به زودی', 'Date soon');
+    }
     final y = d.year.toString();
     final m = d.month.toString().padLeft(2, '0');
     final day = d.day.toString().padLeft(2, '0');
-    if (AppLang.I.isFa) {
-      return '$y / $m / $day';
-    }
+    if (AppLang.I.isFa) return '$y / $m / $day';
     return '$day / $m / $y';
   }
 
@@ -319,8 +347,11 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     } catch (_) {
       if (!mounted) return;
       await Clipboard.setData(ClipboardData(text: link));
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_t('invite_copy_link', 'لینک کپی شد', 'Link copied'))),
+        SnackBar(
+          content: Text(_t('invite_copy_link', 'لینک کپی شد', 'Link copied')),
+        ),
       );
     }
   }
@@ -357,15 +388,11 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     }
     setState(() => _submitting = true);
     try {
-      final isMaybe = status == 'maybe';
-      final attending = status == 'yes' || isMaybe ? true : false;
-      // For maybe we pass attending true but override
-      // If maybe, we want pending; our service handles override
       await InvitationService.submitRsvp(
         weddingId: widget.weddingId,
         name: name,
         phone: phone,
-        attending: status == 'yes' ? true : (status == 'maybe' ? true : false),
+        attending: status == 'yes' || status == 'maybe',
         rsvpStatusOverride: status,
       );
       await GuestLocalStore.saveRsvp(
@@ -408,20 +435,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     }
     final inv = _inv;
     if (inv == null) return;
-    if (widget.previewMode) {
-      // in preview, still open portal shell
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => GuestPortalShell(
-            weddingId: widget.weddingId,
-            invitation: inv,
-            onLeavePortal: () => Navigator.pop(context),
-          ),
-        ),
-      );
-      return;
-    }
-    // normal: push portal shell
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => GuestPortalShell(
@@ -433,6 +446,18 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     );
   }
 
+  bool get _showGuestCta =>
+      widget.showGuestPanelButton || widget.previewMode;
+
+  String get _heroImageUrl {
+    if (_couplePhotoUrl.trim().isNotEmpty) return _couplePhotoUrl.trim();
+    if (_coverImageUrl.trim().isNotEmpty) return _coverImageUrl.trim();
+    return (_inv?.couplePhotoUrl ?? '').trim();
+  }
+
+  bool get _hasDualPortraits =>
+      _bridePhotoUrl.trim().isNotEmpty && _groomPhotoUrl.trim().isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -442,25 +467,23 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
         AppEffectController.I,
       ]),
       builder: (context, _) {
-        // force light elegant even if dark mode, except effect wash
-        // we use light palette tokens for card backgrounds
         return Directionality(
           textDirection: AppLang.I.direction,
           child: EffectBackgroundStack(
-            opacity: 0.9,
+            opacity: 0.95,
             enableBlur: false,
             child: Scaffold(
               backgroundColor: Colors.transparent,
-              appBar: _buildAppBar(context),
+              appBar: _buildAppBar(),
               body: _loading
-                  ? Center(
+                  ? const Center(
                       child: CircularProgressIndicator(
                         color: AppPalette.accent,
                       ),
                     )
                   : _error != null
-                      ? _buildError(context)
-                      : _buildBody(context),
+                      ? _buildError()
+                      : _buildBody(),
             ),
           ),
         );
@@ -468,44 +491,37 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final isDark = AppTok.isDark(context);
-    // Glass AppBar: light glass even in dark for public invite elegance
+  PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
+      automaticallyImplyLeading: false,
       leading: widget.allowPop
           ? IconButton(
               onPressed: () => Navigator.maybePop(context),
               icon: Icon(
                 AppLang.I.isFa ? Icons.arrow_forward : Icons.arrow_back,
-                color: _currentPage == 0 ? Colors.white : AppPalette.text,
+                color: AppPalette.text,
               ),
             )
           : null,
-      title: PageGlass(
-        opacity: 0.78,
-        blurSigma: 12,
-        borderRadius: 12,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.auto_awesome_rounded,
-                size: 16, color: AppPalette.accent),
-            const SizedBox(width: 6),
-            Text(
-              _inv?.coupleTitle ?? AppLang.tr('invite_5phone_title'),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppPalette.text,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+      title: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 240),
+        child: _InviteGlass(
+          opacity: 0.72,
+          borderRadius: 12,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Text(
+            _inv?.coupleTitle ?? AppLang.tr('digital_invitation'),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppPalette.text,
             ),
-          ],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ),
       centerTitle: true,
@@ -513,48 +529,28 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
         IconButton(
           tooltip: AppLang.tr('invite_share'),
           onPressed: _shareInvite,
-          icon: Container(
+          icon: _InviteGlass(
+            opacity: 0.78,
+            borderRadius: 10,
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.86),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: AppPalette.legacyGold.withValues(alpha: 0.35),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+            child: const Icon(
+              Icons.ios_share,
+              size: 18,
+              color: AppPalette.text,
             ),
-            child: const Icon(Icons.ios_share,
-                size: 18, color: AppPalette.text),
           ),
         ),
         const SizedBox(width: 6),
       ],
-      flexibleSpace: ClipRect(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            color: (isDark
-                    ? Colors.black.withValues(alpha: 0.18)
-                    : Colors.white.withValues(alpha: 0.68))
-                .withValues(alpha: 0.72),
-          ),
-        ),
-      ),
     );
   }
 
-  Widget _buildError(BuildContext context) {
+  Widget _buildError() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: PageGlass(
-          opacity: 0.88,
+        child: _InviteGlass(
+          opacity: 0.82,
           borderRadius: 20,
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -590,697 +586,336 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     );
   }
 
-  Widget _buildBody(BuildContext context) {
+  Widget _buildBody() {
     final inv = _inv!;
-    final link = _inviteLink();
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: Column(
-          children: [
-            // page indicator
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-              child: Row(
-                children: [
-                  PageGlass(
-                    opacity: 0.82,
-                    borderRadius: 20,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          AppLang.tr(
-                              'invite_page_${_currentPage + 1}_of_5'),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppPalette.textSoft,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Row(
-                          children: List.generate(5, (i) {
-                            final active = i == _currentPage;
-                            return Container(
-                              width: active ? 18 : 6,
-                              height: 6,
-                              margin: const EdgeInsets.symmetric(horizontal: 2),
-                              decoration: BoxDecoration(
-                                color: active
-                                    ? AppPalette.accent
-                                    : AppPalette.ringTrack,
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                            );
-                          }),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  if (_currentPage < 4)
-                    PageGlass(
-                      opacity: 0.78,
-                      borderRadius: 20,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            AppLang.tr('invite_swipe_hint'),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppPalette.textSoft,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            AppLang.I.isFa
-                                ? Icons.chevron_left_rounded
-                                : Icons.chevron_right_rounded,
-                            size: 14,
-                            color: AppPalette.textSoft,
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (i) => setState(() => _currentPage = i),
-                children: [
-                  _buildPhone1(context, inv),
-                  _buildPhone2(context, inv),
-                  _buildPhone3(context, inv),
-                  _buildPhone4(context, inv),
-                  _buildPhone5(context, inv, link),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Phone 1: dark cinematic cover
-  Widget _buildPhone1(BuildContext context, InvitationModel inv) {
-    final hasCover = _coverImageUrl.trim().isNotEmpty;
     final groom = inv.groomName.trim().isEmpty
         ? AppLang.tr('groom')
         : inv.groomName.trim();
     final bride = inv.brideName.trim().isEmpty
         ? AppLang.tr('bride')
         : inv.brideName.trim();
-    final dateStr = _formatDate(inv.weddingDate);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: Stack(
-          children: [
-            // background
-            Positioned.fill(
-              child: hasCover
-                  ? Image.network(
-                      _coverImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildCoverGradient(),
-                    )
-                  : _buildCoverGradient(),
-            ),
-            // dark cinematic overlay
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: hasCover ? 0.18 : 0.05),
-                      Colors.black.withValues(alpha: hasCover ? 0.55 : 0.25),
-                      Colors.black.withValues(alpha: hasCover ? 0.78 : 0.35),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (!hasCover)
-              const Positioned.fill(
-                child: FloralDecor(intensity: 0.9, frameMode: false),
-              ),
-            // content
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-                child: Column(
-                  children: [
-                    // top share hint (optional)
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: PageGlass(
-                        opacity: 0.72,
-                        blurSigma: 10,
-                        borderRadius: 12,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.link_rounded,
-                                size: 12, color: Colors.white70),
-                            const SizedBox(width: 4),
-                            Text(
-                              AppLang.tr('invite_share_link'),
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      AppLang.tr('invite_you_are_invited'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.86),
-                        fontSize: 11,
-                        letterSpacing: 1.6,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      AppLang.tr('invite_wedding_of'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.72),
-                        fontSize: 10,
-                        letterSpacing: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      groom,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'serif',
-                        color: Color(0xFFE8C9A8),
-                        fontSize: 36,
-                        height: 1.05,
-                        fontWeight: FontWeight.w600,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '&',
-                      style: TextStyle(
-                        fontFamily: 'serif',
-                        color: const Color(0xFFE8C9A8).withValues(alpha: 0.9),
-                        fontSize: 22,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      bride,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'serif',
-                        color: Color(0xFFE8C9A8),
-                        fontSize: 36,
-                        height: 1.05,
-                        fontWeight: FontWeight.w600,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      width: 60,
-                      height: 1,
-                      color: const Color(0xFFE8C9A8).withValues(alpha: 0.6),
-                    ),
-                    const SizedBox(height: 16),
-                    PageGlass(
-                      opacity: 0.18,
-                      blurSigma: 12,
-                      borderRadius: 14,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      borderColor:
-                          const Color(0xFFE8C9A8).withValues(alpha: 0.35),
-                      child: Text(
-                        dateStr,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    // bottom pill ورود به دعوت
-                    InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: () {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 420),
-                          curve: Curves.easeOutCubic,
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 22, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: const Color(0xFFD4AF8C)
-                                .withValues(alpha: 0.5),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.18),
-                              blurRadius: 18,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              AppLang.tr('invite_enter_invite'),
-                              style: const TextStyle(
-                                color: Color(0xFF2F2B28),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF5F7F62),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(
-                                Icons.arrow_downward_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      AppLang.tr('invite_swipe_hint'),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.55),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCoverGradient() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF7F1E6),
-            Color(0xFFD8E5D6),
-            Color(0xFFF0DDD7),
-            Color(0xFF5F7F62),
-          ],
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.5,
-              child: CustomPaint(
-                painter: _OrnamentPainter(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Phone 2: floral photo card
-  Widget _buildPhone2(BuildContext context, InvitationModel inv) {
     final msg = _message.trim().isNotEmpty
         ? _message.trim()
         : inv.message.trim().isNotEmpty
             ? inv.message.trim()
             : AppLang.tr('invite_message_fallback');
-    final hasCouplePhoto = _couplePhotoUrl.trim().isNotEmpty ||
-        inv.couplePhotoUrl.trim().isNotEmpty;
-    final photoUrl = _couplePhotoUrl.trim().isNotEmpty
-        ? _couplePhotoUrl.trim()
-        : inv.couplePhotoUrl.trim();
+    final venue = inv.venueName.trim();
+    final city = inv.venueCity.trim();
+    final address = inv.venueAddress.trim();
+    final hasVenue = venue.isNotEmpty || city.isNotEmpty || address.isNotEmpty;
+    final tagline = msg.trim();
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: PageGlass(
-        opacity: 0.86,
-        blurSigma: 12,
-        borderRadius: 28,
-        padding: const EdgeInsets.all(18),
-        child: Stack(
-          children: [
-            const Positioned.fill(
-              child: FloralDecor(intensity: 1.1, frameMode: true),
-            ),
-            Positioned.fill(
-              child: Container(
-                margin: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBF4).withValues(alpha: 0.86),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF5F7F62).withValues(alpha: 0.14),
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+            children: [
+              Theme(
+                data: AppTheme.light(),
+                child: _InviteGlass(
+                  opacity: 0.64,
+                  blurSigma: 16,
+                  borderRadius: 28,
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                  child: Stack(
+                    children: [
+                      const Positioned.fill(
+                        child: FloralDecor(intensity: 0.85, frameMode: true),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildHeroPhoto(groom: groom, bride: bride),
+                          const SizedBox(height: 16),
+                          Text(
+                            groom,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'serif',
+                              color: AppPalette.text,
+                              fontSize: 28,
+                              height: 1.1,
+                              fontWeight: FontWeight.w600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          Text(
+                            '&',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'serif',
+                              color: AppPalette.legacyGold.withValues(alpha: 0.95),
+                              fontSize: 18,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          Text(
+                            bride,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'serif',
+                              color: AppPalette.text,
+                              fontSize: 28,
+                              height: 1.1,
+                              fontWeight: FontWeight.w600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          if (tagline.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              tagline,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppPalette.textSoft,
+                                fontSize: 13.5,
+                                height: 1.6,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 18),
+                          _buildCountdownOrDate(inv),
+                          const SizedBox(height: 16),
+                          _buildPlaceBlock(inv, hasVenue, venue, city, address),
+                          if (inv.showRsvp) ...[
+                            const SizedBox(height: 20),
+                            _buildRsvpBlock(),
+                          ],
+                          if (_showGuestCta) ...[
+                            const SizedBox(height: 20),
+                            _buildGuestCta(),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 22, 16, 18),
-              child: Column(
-                children: [
-                  // floral frame hint
-                  PageGlass(
-                    opacity: 0.78,
-                    borderRadius: 10,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.auto_awesome_outlined,
-                            size: 12, color: AppPalette.accent),
-                        const SizedBox(width: 4),
-                        Text(
-                          AppLang.tr('invite_floral_frame_hint'),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppPalette.textSoft,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // couple photo
-                  Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color:
-                            const Color(0xFFD4AF8C).withValues(alpha: 0.45),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(23),
-                      child: hasCouplePhoto
-                          ? Image.network(
-                              photoUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _buildFloralPlaceholder(),
-                            )
-                          : _buildFloralPlaceholder(),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    inv.coupleTitle,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'serif',
-                      color: AppPalette.text,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 40,
-                    height: 1,
-                    color: AppPalette.accent.withValues(alpha: 0.3),
-                  ),
-                  const SizedBox(height: 14),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Text(
-                        msg,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppPalette.text,
-                          fontSize: 13.5,
-                          height: 1.7,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => _pageController.nextPage(
-                      duration: const Duration(milliseconds: 420),
-                      curve: Curves.easeOutCubic,
-                    ),
-                    child: PageGlass(
-                      opacity: 0.88,
-                      borderRadius: 16,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            AppLang.tr('invite_until_special_day'),
-                            style: const TextStyle(
-                              color: AppPalette.text,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward_rounded,
-                              size: 16, color: AppPalette.accent),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFloralPlaceholder() {
-    return Container(
-      color: const Color(0xFFF0DDD7),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const FloralDecor(intensity: 1.2, frameMode: false),
-          Center(
-            child: Icon(Icons.favorite,
-                color: AppPalette.accent.withValues(alpha: 0.4), size: 48),
+  Widget _buildHeroPhoto({required String groom, required String bride}) {
+    final imageUrl = _heroImageUrl;
+    if (imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: AspectRatio(
+          aspectRatio: 4 / 3,
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _hasDualPortraits
+                ? _dualPortraits(groom, bride)
+                : _initialsPair(groom, bride),
           ),
-        ],
+        ),
+      );
+    }
+    if (_hasDualPortraits) return _dualPortraits(groom, bride);
+    return _initialsPair(groom, bride);
+  }
+
+  Widget _dualPortraits(String groom, String bride) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _portraitTile(_groomPhotoUrl, _initialOf(groom)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppPalette.brandBlushSoft.withValues(alpha: 0.85),
+              border: Border.all(
+                color: AppPalette.legacyGold.withValues(alpha: 0.55),
+              ),
+            ),
+            child: const Icon(
+              Icons.favorite_rounded,
+              size: 16,
+              color: AppPalette.accentSoft,
+            ),
+          ),
+        ),
+        _portraitTile(_bridePhotoUrl, _initialOf(bride)),
+      ],
+    );
+  }
+
+  Widget _portraitTile(String url, String initial) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        width: 118,
+        height: 148,
+        child: url.trim().isEmpty
+            ? _initialsBox(initial)
+            : Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _initialsBox(initial),
+              ),
       ),
     );
   }
 
-  // Phone 3: countdown + time & place
-  Widget _buildPhone3(BuildContext context, InvitationModel inv) {
+  Widget _initialsPair(String groom, String bride) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _initialsCircle(_initialOf(groom)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Icon(
+            Icons.favorite_rounded,
+            size: 18,
+            color: AppPalette.accentSoft.withValues(alpha: 0.9),
+          ),
+        ),
+        _initialsCircle(_initialOf(bride)),
+      ],
+    );
+  }
+
+  Widget _initialsCircle(String initial) {
+    return Container(
+      width: 86,
+      height: 86,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppPalette.brandIvory,
+            AppPalette.brandGreenSoft,
+            AppPalette.brandBlushSoft,
+          ],
+        ),
+        border: Border.all(
+          color: AppPalette.legacyGold.withValues(alpha: 0.45),
+          width: 1.2,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontFamily: 'serif',
+            color: AppPalette.text,
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _initialsBox(String initial) {
+    return Container(
+      color: AppPalette.brandBlushSoft.withValues(alpha: 0.7),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontFamily: 'serif',
+            color: AppPalette.text,
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _initialOf(String name) {
+    final t = name.trim();
+    if (t.isEmpty) return '♥';
+    return String.fromCharCode(t.runes.first);
+  }
+
+  Widget _buildCountdownOrDate(InvitationModel inv) {
+    final hasDate = inv.weddingDate != null;
     final days = _remaining.inDays;
     final hours = _remaining.inHours % 24;
     final minutes = _remaining.inMinutes % 60;
     final seconds = _remaining.inSeconds % 60;
+    final isPast = hasDate && _remaining == Duration.zero;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: PageGlass(
-        opacity: 0.88,
-        blurSigma: 12,
-        borderRadius: 28,
-        padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
-        child: Column(
-          children: [
-            Text(
-              AppLang.tr('invite_until_special_day'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppPalette.accent,
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                letterSpacing: 0.6,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // countdown LTR digits
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: Row(
-                children: [
-                  _countBox('$days', 'D'),
-                  const SizedBox(width: 8),
-                  _countBox('$hours', 'H'),
-                  const SizedBox(width: 8),
-                  _countBox('$minutes', 'M'),
-                  const SizedBox(width: 8),
-                  _countBox('$seconds', 'S'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: double.infinity,
-              height: 1,
-              color: AppPalette.border.withValues(alpha: 0.8),
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                AppLang.tr('invite_time_place'),
-                style: const TextStyle(
-                  color: AppPalette.text,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            _infoRow(
-              icon: Icons.calendar_today_outlined,
-              label: AppLang.tr('invite_date_label'),
-              value: _formatDate(inv.weddingDate),
-            ),
-            const SizedBox(height: 10),
-            _infoRow(
-              icon: Icons.access_time_rounded,
-              label: AppLang.tr('invite_time_label'),
-              value: inv.eventTime,
-            ),
-            const SizedBox(height: 10),
-            _infoRow(
-              icon: Icons.location_on_outlined,
-              label: AppLang.tr('invite_venue_label'),
-              value: inv.venueName.trim().isEmpty
-                  ? AppLang.tr('invite_no_venue')
-                  : inv.venueName.trim(),
-            ),
-            if (inv.venueCity.trim().isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _infoRow(
-                icon: Icons.location_city_outlined,
-                label: AppLang.tr('invite_city_label'),
-                value: inv.venueCity,
-              ),
-            ],
-            if (inv.venueAddress.trim().isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _infoRow(
-                icon: Icons.map_outlined,
-                label: AppLang.tr('invite_address_label'),
-                value: inv.venueAddress,
-                maxLines: 3,
-              ),
-            ],
-            const Spacer(),
-            InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => _pageController.nextPage(
-                duration: const Duration(milliseconds: 420),
-                curve: Curves.easeOutCubic,
-              ),
-              child: PageGlass(
-                opacity: 0.84,
-                borderRadius: 16,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      AppLang.tr('invite_navigate_map'),
-                      style: const TextStyle(
-                        color: AppPalette.text,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward_rounded,
-                        size: 16, color: AppPalette.accent),
-                  ],
-                ),
-              ),
-            ),
-          ],
+    return Column(
+      children: [
+        Text(
+          AppLang.tr('invite_until_special_day'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppPalette.accent,
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+            letterSpacing: 0.4,
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        if (hasDate && !isPast)
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Row(
+              children: [
+                _countBox('$days', AppLang.tr('day')),
+                const SizedBox(width: 8),
+                _countBox('$hours', AppLang.tr('hour')),
+                const SizedBox(width: 8),
+                _countBox('$minutes', AppLang.tr('minute')),
+                const SizedBox(width: 8),
+                _countBox('$seconds', AppLang.tr('second')),
+              ],
+            ),
+          )
+        else
+          Text(
+            hasDate
+                ? AppLang.tr('guest_home_today')
+                : AppLang.tr('date_not_set'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppPalette.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+        const SizedBox(height: 12),
+        Text(
+          [
+            _formatDate(inv.weddingDate),
+            if (inv.eventTime.trim().isNotEmpty) inv.eventTime.trim(),
+          ].join('  ·  '),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppPalette.textSoft,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _countBox(String value, String unit) {
     return Expanded(
-      child: PageGlass(
-        opacity: 0.92,
+      child: _InviteGlass(
+        opacity: 0.78,
         blurSigma: 10,
-        borderRadius: 16,
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        borderRadius: 14,
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: Column(
           children: [
             Text(
@@ -1288,7 +923,7 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
               style: const TextStyle(
                 color: AppPalette.text,
                 fontWeight: FontWeight.w900,
-                fontSize: 20,
+                fontSize: 18,
                 fontFeatures: [ui.FontFeature.tabularFigures()],
               ),
             ),
@@ -1299,7 +934,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
                 color: AppPalette.textSoft,
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
               ),
             ),
           ],
@@ -1308,898 +942,399 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     );
   }
 
-  Widget _infoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    int maxLines = 1,
-  }) {
+  Widget _buildPlaceBlock(
+    InvitationModel inv,
+    bool hasVenue,
+    String venue,
+    String city,
+    String address,
+  ) {
+    return Column(
+      children: [
+        Text(
+          AppLang.tr('invite_time_place'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppPalette.text,
+            fontWeight: FontWeight.w800,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _infoLine(
+          Icons.location_on_outlined,
+          hasVenue
+              ? (venue.isEmpty ? AppLang.tr('invite_no_venue') : venue)
+              : AppLang.tr('invite_no_venue'),
+        ),
+        if (city.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          _infoLine(Icons.location_city_outlined, city),
+        ],
+        if (address.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          _infoLine(Icons.map_outlined, address),
+        ],
+        if (hasVenue || inv.hasGeo || inv.mapUrl.trim().isNotEmpty) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: _openMap,
+              icon: const Icon(Icons.navigation_rounded, size: 18),
+              label: Text(AppLang.tr('invite_navigate_map')),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppPalette.accentDeep,
+                side: BorderSide(
+                  color: AppPalette.accent.withValues(alpha: 0.45),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _infoLine(IconData icon, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: AppPalette.cardSoft,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppPalette.border),
-          ),
-          child: Icon(icon, size: 18, color: AppPalette.accent),
-        ),
-        const SizedBox(width: 10),
+        Icon(icon, size: 18, color: AppPalette.accent),
+        const SizedBox(width: 8),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppPalette.textSoft,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                maxLines: maxLines,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppPalette.text,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          child: Text(
+            value,
+            textAlign: TextAlign.start,
+            style: const TextStyle(
+              color: AppPalette.text,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
           ),
         ),
       ],
     );
   }
 
-  // Phone 4: map
-  Widget _buildPhone4(BuildContext context, InvitationModel inv) {
-    final hasVenue = inv.venueName.trim().isNotEmpty ||
-        inv.venueAddress.trim().isNotEmpty ||
-        inv.hasGeo;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: PageGlass(
-        opacity: 0.88,
-        blurSigma: 12,
-        borderRadius: 28,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
+  Widget _buildRsvpBlock() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          AppLang.tr('invite_rsvp_honor_title'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppPalette.text,
+            fontWeight: FontWeight.w900,
+            fontSize: 15,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          AppLang.tr('invite_rsvp_honor_sub'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppPalette.textSoft,
+            fontSize: 12,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _nameC,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: AppPalette.text),
+          decoration: _fieldDecoration(AppLang.tr('invite_rsvp_name_hint')),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _phoneC,
+          textAlign: TextAlign.center,
+          textDirection: TextDirection.ltr,
+          keyboardType: TextInputType.phone,
+          style: const TextStyle(color: AppPalette.text),
+          decoration: _fieldDecoration(AppLang.tr('invite_rsvp_phone_hint')),
+        ),
+        if (_hasRsvp && _localRsvpStatus != null) ...[
+          const SizedBox(height: 12),
+          _InviteGlass(
+            opacity: 0.80,
+            borderRadius: 14,
+            padding: const EdgeInsets.all(12),
+            child: Row(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppPalette.accent.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.map_outlined,
-                      color: AppPalette.accent, size: 20),
+                Icon(
+                  _localRsvpStatus == 'yes'
+                      ? Icons.check_circle_rounded
+                      : _localRsvpStatus == 'maybe'
+                          ? Icons.help_rounded
+                          : Icons.cancel_rounded,
+                  color: _localRsvpStatus == 'yes'
+                      ? _rsvpYes
+                      : _localRsvpStatus == 'maybe'
+                          ? _rsvpMaybe
+                          : _rsvpNo,
+                  size: 20,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLang.tr('invite_time_place'),
-                        style: const TextStyle(
-                          color: AppPalette.text,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        hasVenue
-                            ? (inv.venueName.trim().isEmpty
-                                ? inv.venueCity
-                                : inv.venueName)
-                            : AppLang.tr('invite_no_venue'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppPalette.textSoft,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    '${AppLang.tr('invite_rsvp_already')}: ${_localRsvpName ?? ''}',
+                    style: const TextStyle(
+                      color: AppPalette.text,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            // large map preview
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Stack(
-                  children: [
-                    // map placeholder gradient
-                    Positioned.fill(
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFFEEF3EA),
-                              Color(0xFFF7F1E6),
-                              Color(0xFFD8E5D6),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    // grid lines
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _MapGridPainter(),
-                      ),
-                    ),
-                    // pin
-                    Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppPalette.accent
-                                    .withValues(alpha: 0.3),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(Icons.location_on,
-                                color: AppPalette.accent, size: 28),
-                          ),
-                          const SizedBox(height: 8),
-                          PageGlass(
-                            opacity: 0.92,
-                            borderRadius: 12,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            child: Text(
-                              inv.venueName.trim().isEmpty
-                                  ? AppLang.tr('invite_no_venue')
-                                  : inv.venueName.trim(),
-                              style: const TextStyle(
-                                color: AppPalette.text,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          if (inv.venueAddress.trim().isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            PageGlass(
-                              opacity: 0.86,
-                              borderRadius: 10,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              child: Text(
-                                inv.venueAddress.trim(),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: AppPalette.textSoft,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    // lat/lng badge
-                    if (inv.hasGeo)
-                      Positioned(
-                        bottom: 10,
-                        left: 10,
-                        child: PageGlass(
-                          opacity: 0.84,
-                          borderRadius: 10,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                            child: Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: Text(
-                              '${inv.lat!.toStringAsFixed(4)}, ${inv.lng!.toStringAsFixed(4)}',
-                              style: const TextStyle(
-                                fontSize: 9,
-                                color: AppPalette.textSoft,
-                                fontFeatures: [
-                                  ui.FontFeature.tabularFigures()
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: _openMap,
-                icon: const Icon(Icons.navigation_rounded, size: 20),
-                label: Text(
-                  AppLang.tr('invite_navigate_map'),
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppPalette.accent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: () => _pageController.nextPage(
-                duration: const Duration(milliseconds: 420),
-                curve: Curves.easeOutCubic,
-              ),
-              child: PageGlass(
-                opacity: 0.82,
-                borderRadius: 14,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      AppLang.tr('invite_rsvp_honor_title'),
-                      style: const TextStyle(
-                        color: AppPalette.text,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward_rounded,
-                        size: 16, color: AppPalette.accent),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Phone 5: RSVP + share + QR + guest button
-  Widget _buildPhone5(
-      BuildContext context, InvitationModel inv, String link) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: PageGlass(
-        opacity: 0.88,
-        blurSigma: 12,
-        borderRadius: 28,
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // honor title
-              Text(
-                AppLang.tr('invite_rsvp_honor_title'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppPalette.text,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                AppLang.tr('invite_rsvp_honor_sub'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppPalette.textSoft,
-                  fontSize: 12,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 18),
-              // name + phone
-              TextField(
-                controller: _nameC,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppPalette.text),
-                decoration: InputDecoration(
-                  hintText: AppLang.tr('invite_rsvp_name_hint'),
-                  hintStyle:
-                      const TextStyle(color: AppPalette.textSoft),
-                  filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.9),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: AppPalette.border.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: AppPalette.border.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _phoneC,
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.ltr,
-                keyboardType: TextInputType.phone,
-                style: const TextStyle(color: AppPalette.text),
-                decoration: InputDecoration(
-                  hintText: AppLang.tr('invite_rsvp_phone_hint'),
-                  hintStyle:
-                      const TextStyle(color: AppPalette.textSoft),
-                  filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.9),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: AppPalette.border.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: AppPalette.border.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                ),
-              ),
-              const SizedBox(height: 14),
-              if (_hasRsvp && _localRsvpStatus != null)
-                PageGlass(
-                  opacity: 0.92,
-                  borderRadius: 14,
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _localRsvpStatus == 'yes'
-                            ? Icons.check_circle_rounded
-                            : _localRsvpStatus == 'maybe'
-                                ? Icons.help_rounded
-                                : Icons.cancel_rounded,
-                        color: _localRsvpStatus == 'yes'
-                            ? AppPalette.accent
-                            : _localRsvpStatus == 'maybe'
-                                ? const Color(0xFFD4AF8C)
-                                : AppPalette.textSoft,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${AppLang.tr('invite_rsvp_already')}: ${_localRsvpName ?? ''} (${_localRsvpStatus})',
-                          style: const TextStyle(
-                            color: AppPalette.text,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (_hasRsvp && _localRsvpStatus != null)
-                const SizedBox(height: 12),
-              // 3 pills
-              Row(
-                children: [
-                  Expanded(
-                    child: _rsvpPill(
-                      label: AppLang.tr('invite_rsvp_yes'),
-                      icon: Icons.favorite_rounded,
-                      color: AppPalette.accent,
-                      status: 'yes',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _rsvpPill(
-                      label: AppLang.tr('invite_rsvp_no'),
-                      icon: Icons.close_rounded,
-                      color: AppPalette.textSoft,
-                      status: 'no',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _rsvpPill(
-                      label: AppLang.tr('invite_rsvp_maybe'),
-                      icon: Icons.help_outline_rounded,
-                      color: const Color(0xFFD4AF8C),
-                      status: 'maybe',
-                    ),
-                  ),
-                ],
-              ),
-              if (_localRsvpStatus == 'maybe' || true)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    AppLang.tr('invite_rsvp_maybe_hint'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppPalette.textSoft,
-                      fontSize: 10.5,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 20),
-              Container(
-                height: 1,
-                color: AppPalette.border.withValues(alpha: 0.7),
-              ),
-              const SizedBox(height: 16),
-              // share + qr
-              Text(
-                AppLang.tr('invite_share_title'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppPalette.text,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 12),
-              PageGlass(
-                opacity: 0.92,
-                borderRadius: 14,
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: Text(
-                              link,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppPalette.textSoft,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () async {
-                            await Clipboard.setData(
-                                ClipboardData(text: link));
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content:
-                                    Text(AppLang.tr('invite_copy_link')),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppPalette.cardSoft,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppPalette.border),
-                            ),
-                            child: const Icon(Icons.copy_rounded,
-                                size: 16, color: AppPalette.textSoft),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () async {
-                              await Clipboard.setData(
-                                  ClipboardData(text: link));
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content:
-                                      Text(AppLang.tr('invite_copy_link')),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.copy_rounded, size: 16),
-                            label: Text(AppLang.tr('invite_copy_link')),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppPalette.accent,
-                              side: BorderSide(color: AppPalette.accent),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              minimumSize: const Size.fromHeight(42),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _shareInvite,
-                            icon: const Icon(Icons.ios_share, size: 16),
-                            label: Text(AppLang.tr('invite_share')),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppPalette.accent,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              minimumSize: const Size.fromHeight(42),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              // QR
-              Center(
-                child: PageGlass(
-                  opacity: 0.96,
-                  borderRadius: 18,
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    children: [
-                      QrImageView(
-                        data: link,
-                        version: QrVersions.auto,
-                        size: 132,
-                        backgroundColor: Colors.white,
-                        eyeStyle: const QrEyeStyle(
-                          eyeShape: QrEyeShape.square,
-                          color: Color(0xFF3E5A43),
-                        ),
-                        dataModuleStyle: const QrDataModuleStyle(
-                          dataModuleShape: QrDataModuleShape.square,
-                          color: Color(0xFF2F2B28),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        AppLang.tr('invite_qr_hint'),
-                        style: const TextStyle(
-                          color: AppPalette.textSoft,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              // SINGLE primary guest panel button
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: _goToGuestPanel,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppPalette.accent,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.groups_2_rounded, size: 20),
-                      const SizedBox(width: 10),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppLang.tr('invite_enter_guest_panel'),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            AppLang.tr('invite_enter_guest_panel_sub'),
-                            style: TextStyle(
-                              fontSize: 9.5,
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppLang.tr('invite_scan_to_rsvp'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppPalette.textSoft,
-                  fontSize: 10,
-                ),
-              ),
-            ],
           ),
+        ],
+        const SizedBox(height: 14),
+        _rsvpButton(
+          status: 'yes',
+          label: AppLang.tr('invite_rsvp_yes'),
+          color: _rsvpYes,
         ),
-      ),
+        const SizedBox(height: 8),
+        _rsvpButton(
+          status: 'maybe',
+          label: AppLang.tr('invite_rsvp_maybe'),
+          color: _rsvpMaybe,
+        ),
+        const SizedBox(height: 8),
+        _rsvpButton(
+          status: 'no',
+          label: AppLang.tr('invite_rsvp_no'),
+          color: _rsvpNo,
+        ),
+        if (_submitting) ...[
+          const SizedBox(height: 10),
+          const Center(
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppPalette.accent,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _rsvpPill({
-    required String label,
-    required IconData icon,
-    required Color color,
+  InputDecoration _fieldDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: AppPalette.textSoft),
+      filled: true,
+      fillColor: Colors.white.withValues(alpha: 0.72),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: AppPalette.border.withValues(alpha: 0.9),
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: AppPalette.border.withValues(alpha: 0.9),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppPalette.accent, width: 1.3),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    );
+  }
+
+  Widget _rsvpButton({
     required String status,
+    required String label,
+    required Color color,
   }) {
     final selected = _localRsvpStatus == status;
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: _submitting ? null : () => _submitRsvp(status),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? color.withValues(alpha: 0.18)
-              : Colors.white.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? color : AppPalette.border,
-            width: selected ? 1.4 : 1,
+    final fill = Color.lerp(
+      AppPalette.brandIvory,
+      color,
+      selected ? 0.16 : 0.08,
+    )!.withValues(alpha: selected ? 0.78 : 0.58);
+
+    Widget body = AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: color.withValues(alpha: selected ? 0.92 : 0.48),
+          width: selected ? 1.5 : 1.1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: selected ? 0.16 : 0.06),
+            blurRadius: selected ? 12 : 8,
+            offset: const Offset(0, 4),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+        ],
+      ),
+      child: Center(
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w800,
+            fontSize: 13.5,
+            height: 1.25,
+          ),
         ),
-        child: Column(
-          children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppPalette.text,
-                fontWeight: FontWeight.w800,
-                fontSize: 11.5,
-              ),
-            ),
-            if (_submitting && _localRsvpStatus == null)
-              const Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(strokeWidth: 1.5),
-                ),
-              ),
-          ],
+      ),
+    );
+
+    if (!kIsWeb) {
+      body = ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: body,
         ),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: _submitting ? null : () => _submitRsvp(status),
+        child: body,
       ),
     );
   }
 
-  Widget _buildBottomGuestBar(BuildContext context, String link) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-      child: PageGlass(
-        opacity: 0.82,
-        blurSigma: 14,
-        borderRadius: 18,
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppPalette.accent.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.groups_2_rounded,
-                  color: AppPalette.accent, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppLang.tr('invite_enter_guest_panel'),
-                    style: const TextStyle(
-                      color: AppPalette.text,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                  Text(
-                    AppLang.tr('invite_enter_guest_panel_sub'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppPalette.textSoft,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            SizedBox(
-              height: 42,
-              child: ElevatedButton(
-                onPressed: _goToGuestPanel,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppPalette.accent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                ),
-                child: Text(
+  Widget _buildGuestCta() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _goToGuestPanel,
+        child: _InviteGlass(
+          opacity: 0.78,
+          blurSigma: 12,
+          borderRadius: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          tint: AppPalette.brandGreenSoft,
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
                   AppLang.tr('invite_enter_guest_panel'),
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 11,
+                    color: AppPalette.accentDeep,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
                   ),
                 ),
-              ),
+                Text(
+                  AppLang.tr('invite_enter_guest_panel_sub'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    color: AppPalette.textSoft.withValues(alpha: 0.95),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _OrnamentPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = const Color(0xFF5F7F62).withValues(alpha: 0.08)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+/// Always-light cream/sage/blush glass so floral invite stays on-brand.
+class _InviteGlass extends StatelessWidget {
+  const _InviteGlass({
+    required this.child,
+    this.borderRadius = 20,
+    this.padding,
+    this.blurSigma = 14,
+    this.opacity = 0.72,
+    this.tint,
+  });
 
-    final path = Path();
-    path.moveTo(size.width * 0.1, size.height * 0.2);
-    path.quadraticBezierTo(
-      size.width * 0.3,
-      size.height * 0.1,
-      size.width * 0.5,
-      size.height * 0.25,
-    );
-    path.quadraticBezierTo(
-      size.width * 0.7,
-      size.height * 0.4,
-      size.width * 0.9,
-      size.height * 0.3,
-    );
-    canvas.drawPath(path, p);
-
-    final p2 = Paint()
-      ..color = const Color(0xFFD4AF8C).withValues(alpha: 0.10)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final path2 = Path();
-    path2.moveTo(size.width * 0.15, size.height * 0.75);
-    path2.quadraticBezierTo(
-      size.width * 0.35,
-      size.height * 0.65,
-      size.width * 0.55,
-      size.height * 0.78,
-    );
-    path2.quadraticBezierTo(
-      size.width * 0.75,
-      size.height * 0.9,
-      size.width * 0.85,
-      size.height * 0.8,
-    );
-    canvas.drawPath(path2, p2);
-  }
+  final Widget child;
+  final double borderRadius;
+  final EdgeInsetsGeometry? padding;
+  final double blurSigma;
+  final double opacity;
+  final Color? tint;
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
+  Widget build(BuildContext context) {
+    final cream = Color.lerp(
+      AppPalette.brandIvory,
+      AppPalette.brandCream,
+      0.28,
+    )!;
+    final base = tint == null ? cream : Color.lerp(cream, tint, 0.22)!;
+    final fill = base.withValues(alpha: opacity.clamp(0.52, 0.86));
+    final border = Color.lerp(
+      AppPalette.brandGreenSoft,
+      AppPalette.legacyGold,
+      0.38,
+    )!.withValues(alpha: 0.72);
 
-class _MapGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = const Color(0xFF5F7F62).withValues(alpha: 0.10)
-      ..strokeWidth = 0.6
-      ..style = PaintingStyle.stroke;
+    Widget content = Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: border, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.brandGreenDeep.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: AppPalette.legacyGold.withValues(alpha: 0.10),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
 
-    for (double x = 0; x < size.width; x += 28) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), p);
+    if (!kIsWeb) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+          child: content,
+        ),
+      );
     }
-    for (double y = 0; y < size.height; y += 28) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
-    }
 
-    final road = Paint()
-      ..color = const Color(0xFFF0DDD7).withValues(alpha: 0.9)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-    final path = Path();
-    path.moveTo(0, size.height * 0.55);
-    path.quadraticBezierTo(
-      size.width * 0.3,
-      size.height * 0.5,
-      size.width * 0.6,
-      size.height * 0.58,
-    );
-    path.quadraticBezierTo(
-      size.width * 0.8,
-      size.height * 0.62,
-      size.width,
-      size.height * 0.55,
-    );
-    canvas.drawPath(path, road);
+    return content;
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
