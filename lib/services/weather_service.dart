@@ -78,6 +78,47 @@ class WeatherService {
     return AppLang.tr('weather_dash');
   }
 
+  /// Resolve a venue city through Open-Meteo's free geocoding API, then
+  /// reuse the normal coordinate forecast path. This keeps city-only invites
+  /// keyless and shares the existing forecast cache.
+  static Future<WeatherSnapshot> fetchForCity(
+    String city, {
+    bool force = false,
+  }) async {
+    final query = city.trim();
+    if (query.isEmpty) {
+      throw Exception(AppLang.tr('weather_fetch_error'));
+    }
+
+    final uri = Uri.https('geocoding-api.open-meteo.com', '/v1/search', {
+      'name': query,
+      'count': '1',
+      'language': AppLang.I.isFa ? 'fa' : 'en',
+      'format': 'json',
+    });
+    final res = await http.get(uri).timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) {
+      throw Exception(
+        '${AppLang.tr('weather_fetch_error')} (${res.statusCode})',
+      );
+    }
+
+    final jsonMap = jsonDecode(res.body) as Map<String, dynamic>;
+    final results = (jsonMap['results'] as List?) ?? [];
+    final first = results.isEmpty ? null : results.first;
+    if (first is! Map) {
+      throw Exception(AppLang.tr('weather_fetch_error'));
+    }
+
+    final place = Map<String, dynamic>.from(first);
+    final lat = (place['latitude'] as num?)?.toDouble();
+    final lng = (place['longitude'] as num?)?.toDouble();
+    if (lat == null || lng == null) {
+      throw Exception(AppLang.tr('weather_fetch_error'));
+    }
+    return fetch(lat: lat, lng: lng, force: force);
+  }
+
   static Future<WeatherSnapshot> fetch({
     required double lat,
     required double lng,

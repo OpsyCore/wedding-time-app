@@ -16,6 +16,7 @@ import '../core/map_launcher.dart';
 import '../models/invitation_model.dart';
 import '../services/guest_local_store.dart';
 import '../services/invitation_service.dart';
+import '../services/weather_service.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/floral_decor.dart';
 import 'guest_portal/guest_portal_shell.dart';
@@ -45,7 +46,8 @@ class PublicInviteScreen extends StatefulWidget {
   State<PublicInviteScreen> createState() => _PublicInviteScreenState();
 }
 
-class _PublicInviteScreenState extends State<PublicInviteScreen> {
+class _PublicInviteScreenState extends State<PublicInviteScreen>
+    with SingleTickerProviderStateMixin {
   static const Color _rsvpYes = Color(0xFF2E7D32);
   static const Color _rsvpMaybe = Color(0xFFF9A825);
   static const Color _rsvpNo = Color(0xFFC62828);
@@ -59,8 +61,11 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
   String _message = '';
 
   Timer? _timer;
+  late final AnimationController _heartPulse;
   Duration _remaining = Duration.zero;
   DateTime? _targetDateTime;
+  WeatherSnapshot? _weather;
+  bool _weatherLoading = false;
 
   final _nameC = TextEditingController();
   final _phoneC = TextEditingController();
@@ -72,12 +77,17 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
   @override
   void initState() {
     super.initState();
+    _heartPulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
     _bootstrap();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _heartPulse.dispose();
     _nameC.dispose();
     _phoneC.dispose();
     super.dispose();
@@ -212,6 +222,7 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
 
       _setupCountdown();
       _loadDisplayNameForPrefill();
+      _loadVenueWeather(inv);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -235,6 +246,31 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
         setState(() => _nameC.text = name.trim());
       }
     } catch (_) {}
+  }
+
+  Future<void> _loadVenueWeather(InvitationModel inv) async {
+    final lat = inv.lat;
+    final lng = inv.lng;
+    final city = inv.venueCity.trim();
+    if ((lat == null || lng == null) && city.isEmpty) return;
+
+    if (mounted) setState(() => _weatherLoading = true);
+    try {
+      final weather = lat != null && lng != null
+          ? await WeatherService.fetch(lat: lat, lng: lng)
+          : await WeatherService.fetchForCity(city);
+      if (!mounted) return;
+      setState(() {
+        _weather = weather;
+        _weatherLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _weather = null;
+        _weatherLoading = false;
+      });
+    }
   }
 
   void _setupCountdown() {
@@ -407,9 +443,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
   bool get _showGuestCta =>
       widget.showGuestPanelButton || widget.previewMode;
 
-  bool get _hasDualPortraits =>
-      _bridePhotoUrl.trim().isNotEmpty && _groomPhotoUrl.trim().isNotEmpty;
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -459,25 +492,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
               ),
             )
           : null,
-      title: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 240),
-        child: _InviteGlass(
-          opacity: 0.72,
-          borderRadius: 12,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Text(
-            _inv?.coupleTitle ?? AppLang.tr('digital_invitation'),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppPalette.text,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ),
-      centerTitle: true,
       actions: [
         IconButton(
           tooltip: AppLang.tr('invite_share'),
@@ -589,7 +603,7 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
                   child: Theme(
                     data: AppTheme.light(),
                     child: _InviteGlass(
-                      opacity: 0.86,
+                      opacity: 0.70,
                       blurSigma: 16,
                       borderRadius: isMobile ? 18 : 28,
                       child: Stack(
@@ -628,14 +642,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
                                 ],
                                 const SizedBox(height: 18),
                                 _buildCountdownOrDate(inv),
-                                const SizedBox(height: 16),
-                                _buildPlaceBlock(
-                                  inv,
-                                  hasVenue,
-                                  venue,
-                                  city,
-                                  address,
-                                ),
                                 if (inv.showRsvp) ...[
                                   const SizedBox(height: 20),
                                   _buildRsvpBlock(),
@@ -643,6 +649,18 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
                                 if (_showGuestCta) ...[
                                   const SizedBox(height: 20),
                                   _buildGuestCta(),
+                                ],
+                                const SizedBox(height: 22),
+                                _buildPlaceBlock(
+                                  inv,
+                                  hasVenue,
+                                  venue,
+                                  city,
+                                  address,
+                                ),
+                                if (inv.hasGeo || city.isNotEmpty) ...[
+                                  const SizedBox(height: 14),
+                                  _buildVenueWeather(),
                                 ],
                               ],
                             ),
@@ -680,81 +698,105 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
   }
 
   Widget _buildHeroPhoto({required String groom, required String bride}) {
-    if (_hasDualPortraits) return _dualPortraits(groom, bride);
-    return _initialsPair(groom, bride);
-  }
-
-  Widget _dualPortraits(String groom, String bride) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _portraitTile(_groomPhotoUrl, _initialOf(groom)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppPalette.brandBlushSoft.withValues(alpha: 0.85),
-              border: Border.all(
-                color: AppPalette.legacyGold.withValues(alpha: 0.55),
-              ),
-            ),
-            child: const Icon(
-              Icons.favorite_rounded,
-              size: 16,
-              color: AppPalette.accentSoft,
+    return SizedBox(
+      height: 232,
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _heartPulse,
+          child: SizedBox(
+            width: 270,
+            height: 220,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  Icons.favorite_rounded,
+                  size: 218,
+                  color: AppPalette.brandBlushSoft.withValues(alpha: 0.72),
+                ),
+                Icon(
+                  Icons.favorite_border_rounded,
+                  size: 222,
+                  color: AppPalette.brandBlush.withValues(alpha: 0.86),
+                ),
+                Positioned(
+                  top: 74,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _heartAvatar(_groomPhotoUrl, _initialOf(groom)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppPalette.brandIvory.withValues(alpha: 0.86),
+                            border: Border.all(
+                              color: AppPalette.legacyGold.withValues(alpha: 0.72),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.favorite_rounded,
+                            color: AppPalette.accentSoft,
+                            size: 15,
+                          ),
+                        ),
+                      ),
+                      _heartAvatar(_bridePhotoUrl, _initialOf(bride)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
+          builder: (context, child) {
+            final scale = 1 + (_heartPulse.value * 0.06);
+            return Transform.scale(scale: scale, child: child);
+          },
         ),
-        _portraitTile(_bridePhotoUrl, _initialOf(bride)),
-      ],
+      ),
     );
   }
 
-  Widget _portraitTile(String url, String initial) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: SizedBox(
-        width: 118,
-        height: 148,
+  Widget _heartAvatar(String url, String initial) {
+    return Container(
+      width: 82,
+      height: 82,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppPalette.brandIvory.withValues(alpha: 0.88),
+        border: Border.all(
+          color: AppPalette.brandGreenSoft.withValues(alpha: 0.95),
+          width: 1.4,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.brandGreenDeep.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipOval(
         child: url.trim().isEmpty
-            ? _initialsBox(initial)
+            ? _heartInitial(initial)
             : Image.network(
                 url,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _initialsBox(initial),
+                errorBuilder: (_, __, ___) => _heartInitial(initial),
               ),
       ),
     );
   }
 
-  Widget _initialsPair(String groom, String bride) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _initialsCircle(_initialOf(groom)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Icon(
-            Icons.favorite_rounded,
-            size: 18,
-            color: AppPalette.accentSoft.withValues(alpha: 0.9),
-          ),
-        ),
-        _initialsCircle(_initialOf(bride)),
-      ],
-    );
-  }
-
-  Widget _initialsCircle(String initial) {
+  Widget _heartInitial(String initial) {
     return Container(
-      width: 86,
-      height: 86,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -763,37 +805,15 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
             AppPalette.brandBlushSoft,
           ],
         ),
-        border: Border.all(
-          color: AppPalette.legacyGold.withValues(alpha: 0.45),
-          width: 1.2,
-        ),
       ),
-      child: Center(
-        child: Text(
-          initial,
-          style: const TextStyle(
-            fontFamily: 'serif',
-            color: AppPalette.text,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _initialsBox(String initial) {
-    return Container(
-      color: AppPalette.brandBlushSoft.withValues(alpha: 0.7),
-      child: Center(
-        child: Text(
-          initial,
-          style: const TextStyle(
-            fontFamily: 'serif',
-            color: AppPalette.text,
-            fontSize: 32,
-            fontWeight: FontWeight.w700,
-          ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontFamily: 'serif',
+          color: AppPalette.text,
+          fontSize: 27,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -913,7 +933,7 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     return Column(
       children: [
         Text(
-          AppLang.tr('invite_time_place'),
+          AppLang.tr('location'),
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: AppPalette.text,
@@ -959,6 +979,116 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
         ],
       ],
     );
+  }
+
+  Widget _buildVenueWeather() {
+    final weather = _weather;
+    if (_weatherLoading && weather == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppPalette.brandIvory.withValues(alpha: 0.42),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppPalette.brandGreenSoft.withValues(alpha: 0.78),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppPalette.accent,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              AppLang.tr('venue_weather'),
+              style: const TextStyle(
+                color: AppPalette.textSoft,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (weather == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppPalette.brandIvory.withValues(alpha: 0.46),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppPalette.brandGreenSoft.withValues(alpha: 0.88),
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            AppLang.tr('venue_weather'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppPalette.text,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _weatherIcon(weather.weatherCode),
+                color: AppPalette.accent,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${weather.temperature.toStringAsFixed(0)}°',
+                textDirection: TextDirection.ltr,
+                style: const TextStyle(
+                  color: AppPalette.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  WeatherService.conditionShort(weather.weatherCode),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppPalette.textSoft,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _weatherIcon(int code) {
+    if (code <= 1) return Icons.wb_sunny_rounded;
+    if (code == 2) return Icons.wb_cloudy_rounded;
+    if (code == 3) return Icons.cloud_rounded;
+    if (code == 45 || code == 48) return Icons.foggy;
+    if (code >= 51 && code <= 57) return Icons.grain_rounded;
+    if (code >= 61 && code <= 67) return Icons.umbrella_rounded;
+    if (code >= 71 && code <= 77) return Icons.ac_unit_rounded;
+    if (code >= 80 && code <= 82) return Icons.thunderstorm_rounded;
+    if (code >= 85 && code <= 86) return Icons.snowing;
+    if (code >= 95) return Icons.thunderstorm_rounded;
+    return Icons.cloud_rounded;
   }
 
   Widget _infoLine(IconData icon, String value) {
