@@ -685,9 +685,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
                 ],
               ),
             ),
-            // bottom glass bar with guest panel button (single primary)
-            if (widget.showGuestPanelButton || !widget.previewMode)
-              _buildBottomGuestBar(context, link),
           ],
         ),
       ),
