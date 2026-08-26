@@ -11,7 +11,6 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../screens/music_effects_screen.dart';
 import '../screens/notifications_screen.dart';
-import 'effect_picker.dart';
 import 'notification_badge_icon.dart';
 import 'page_glass.dart';
 
@@ -185,7 +184,6 @@ class _EffectSheetWrapper extends StatelessWidget {
       listenable: Listenable.merge([AppLang.I, AppEffectController.I]),
       builder: (context, _) {
         // Reuse EffectPicker's sheet by embedding the public EffectPicker logic
-        // For simplicity we show the same grid as in effect_picker.dart
         // We import the file and reuse its internal builder via a local copy
         // to keep AppTok.*(context) and AppLang fa/en compliant.
         return const _LocalEffectSheet();
@@ -194,7 +192,6 @@ class _EffectSheetWrapper extends StatelessWidget {
   }
 }
 
-// Local copy of _EffectSheet from effect_picker.dart — keeps visual parity
 class _LocalEffectSheet extends StatelessWidget {
   const _LocalEffectSheet();
 
