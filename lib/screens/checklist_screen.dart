@@ -5,6 +5,7 @@ import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/wedding_progress_bar.dart';
 import '../widgets/wedding_time_header.dart';
 
 enum _StatusFilter { all, pending, done }
@@ -912,6 +913,13 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                               matchesSearchAndStatus,
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          _buildProgressFooter(
+                            context,
+                            doneCount: doneCount,
+                            total: activeTasks.length,
+                          ),
+                          const SizedBox(height: 80),
                         ],
                       ),
                     ),
@@ -1033,7 +1041,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     }
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 90),
+      padding: const EdgeInsets.only(bottom: 20),
       children: visibleGroups.map((group) {
         final groupTasks =
             filteredTasks.where((t) => t['group'] == group).toList();
@@ -1151,6 +1159,18 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  // TASK 1 — premium checklist progress footer
+  Widget _buildProgressFooter(
+    BuildContext context, {
+    required int doneCount,
+    required int total,
+  }) {
+    return ChecklistProgressFooter(
+      doneCount: doneCount,
+      total: total,
     );
   }
 

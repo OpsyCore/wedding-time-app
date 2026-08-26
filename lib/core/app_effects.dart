@@ -282,6 +282,7 @@ class _EffectPainter extends CustomPainter {
   }
 
   void _paintWash(Canvas canvas, Size size) {
+    // TASK 2: reduce milky veil — keep particles, remove bright halo
     final t = progress * math.pi * 2;
     final blobs = <Offset>[
       Offset(size.width * (0.2 + 0.05 * math.sin(t)), size.height * 0.25),
@@ -295,14 +296,14 @@ class _EffectPainter extends CustomPainter {
       ),
     ];
     for (var i = 0; i < blobs.length; i++) {
-      final r = (90.0 + i * 35) * (0.85 + 0.15 * intensity);
+      final r = (70.0 + i * 28) * (0.70 + 0.10 * intensity);
       canvas.drawCircle(
         blobs[i],
         r,
         Paint()
           ..color = Color.lerp(style.primary, style.secondary, i / 3)!
-              .withValues(alpha: (0.07 * intensity).clamp(0.04, 0.16))
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 42),
+              .withValues(alpha: (0.025 * intensity).clamp(0.01, 0.06))
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 36),
       );
     }
   }
