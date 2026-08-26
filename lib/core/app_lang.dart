@@ -647,7 +647,7 @@ const Map<String, Map<String, String>> _tables = {
     'guest_home_act_gallery': 'گالری',
     'guest_home_act_gallery_sub': 'عکس‌های تأییدشده مهمان‌ها',
     'guest_home_act_gifts': 'هدایا',
-    'guest_home_act_gifts_sub': 'لیست هدایا و رزرو',
+    'guest_home_act_gifts_sub': 'لیست هدایا',
     'guest_home_act_supports': 'حمایت‌ها',
     'guest_home_act_supports_sub': 'همراهی شما با ما',
     'guest_home_done': 'انجام شد',
@@ -1043,7 +1043,7 @@ const Map<String, Map<String, String>> _tables = {
     'feedback_title': 'ارسال بازخورد / گزارش مشکل',
     'message_sent': 'پیام شما ارسال شد',
     'feedback_storage_hint':
-        'پیام‌ها در Firestore > collection به نام feedbacks ذخیره می‌شوند.',
+        'پیام‌ها در Firestore > weddings/{id}/feedback ذخیره می‌شوند.',
     'feedback_type': 'بازخورد',
     'bug_report': 'گزارش مشکل',
     'message_hint': 'متن پیام...',
@@ -1539,6 +1539,13 @@ const Map<String, Map<String, String>> _tables = {
     'supports_raised': 'جمع‌شده',
     'supports_left': 'باقی‌مانده',
     'supports_full_claim': 'برعهده گرفتن کامل',
+    'supports_guest_claim': 'ثبت حمایت مهمان',
+    'supports_guest_claim_hint':
+        'مهمانِ بدون لاگین می‌تواند موردی را رزرو کند',
+    'supports_guest_claim_disabled':
+        'ثبت حمایت مهمان در حال حاضر غیرفعال است',
+    'supports_guest_claim_disabled_hint':
+        'برای ثبت حمایت/کمک با زوج در تماس باشید',
     'supports_amount_toman': 'مبلغ کمک (تومان)',
     'supports_amount_usd': 'مبلغ کمک (دلار)',
     'supports_contribute_cta': 'کمک می‌کنم',
@@ -2097,7 +2104,7 @@ const Map<String, Map<String, String>> _tables = {
     'guest_home_act_gallery': 'Gallery',
     'guest_home_act_gallery_sub': 'Approved guest photos',
     'guest_home_act_gifts': 'Gifts',
-    'guest_home_act_gifts_sub': 'Registry & reservation',
+    'guest_home_act_gifts_sub': 'Registry',
     'guest_home_act_supports': 'Supports',
     'guest_home_act_supports_sub': 'Stand with us',
     'guest_home_done': 'Done',
@@ -2501,7 +2508,7 @@ const Map<String, Map<String, String>> _tables = {
     'feedback_title': 'Send feedback / report a problem',
     'message_sent': 'Your message was sent',
     'feedback_storage_hint':
-        'Messages are stored in Firestore > collection named feedbacks.',
+        'Messages are stored in Firestore > weddings/{id}/feedback.',
     'feedback_type': 'Feedback',
     'bug_report': 'Bug report',
     'message_hint': 'Message...',
@@ -2996,6 +3003,13 @@ const Map<String, Map<String, String>> _tables = {
     'supports_raised': 'Raised',
     'supports_left': 'Remaining',
     'supports_full_claim': 'Take the full item',
+    'supports_guest_claim': 'Guest claiming',
+    'supports_guest_claim_hint':
+        'Guests can claim an item without signing in',
+    'supports_guest_claim_disabled':
+        'Guest claiming is currently disabled',
+    'supports_guest_claim_disabled_hint':
+        'Contact the couple to offer support',
     'supports_amount_toman': 'Amount (Toman)',
     'supports_amount_usd': 'Amount (USD)',
     'supports_contribute_cta': 'Contribute',

@@ -1050,6 +1050,16 @@ class _SettingsTabState extends State<_SettingsTab> {
               setState(() => _local = s.copyWith(showRemaining: v)),
         ),
         SwitchListTile(
+          value: s.guestClaimEnabled,
+          activeThumbColor: accent,
+          title:
+              Text(t('supports_guest_claim'), style: TextStyle(color: text)),
+          subtitle: Text(t('supports_guest_claim_hint'),
+              style: TextStyle(color: soft, fontSize: 12)),
+          onChanged: (v) =>
+              setState(() => _local = s.copyWith(guestClaimEnabled: v)),
+        ),
+        SwitchListTile(
           value: s.cardSectionEnabled,
           activeThumbColor: accent,
           title:

@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -6,11 +5,9 @@ import '../../core/app_lang.dart';
 import '../../core/app_theme.dart';
 import '../../models/gift_item_model.dart';
 import '../../services/gift_registry_service.dart';
-import '../../services/guest_local_store.dart';
 
-/// هدایا برای مهمان — با یا بدون لاگین.
-/// FIX-01: رزرو/لغو رزرو فقط با نام (مطابق rules) انجام می‌شود؛
-/// «رزرو شما» از روی نام ذخیره‌شده محلی تشخیص داده می‌شود.
+/// هدایا برای مهمان — فقط‌خواندنی (مطابق هنداف: مهمان read-only، نه claim).
+/// فقط هدیه‌هایی با isPublic == true نمایش داده می‌شوند.
 class GuestGiftsTab extends StatefulWidget {
   const GuestGiftsTab({super.key, required this.weddingId});
 
@@ -22,36 +19,11 @@ class GuestGiftsTab extends StatefulWidget {
 
 class _GuestGiftsTabState extends State<GuestGiftsTab> {
   late final GiftRegistryService _service;
-  final _nameC = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _service = GiftRegistryService(widget.weddingId);
-    final u = FirebaseAuth.instance.currentUser;
-    final fallback = u?.displayName?.trim().isNotEmpty == true
-        ? u!.displayName!.trim()
-        : (u?.email?.split('@').first ?? '');
-    if (fallback.isNotEmpty) {
-      _nameC.text = fallback;
-    }
-    _loadSavedName();
-  }
-
-  /// نامی که مهمان قبلاً (RSVP / میز من / رزرو هدیه) وارد کرده
-  Future<void> _loadSavedName() async {
-    final n = await GuestLocalStore.loadDisplayName(widget.weddingId);
-    if (!mounted) return;
-    if ((n ?? '').trim().isNotEmpty) {
-      _nameC.text = n!.trim();
-      setState(() {});
-    }
-  }
-
-  @override
-  void dispose() {
-    _nameC.dispose();
-    super.dispose();
   }
 
   String _t(String key, String fa, String en) {
@@ -70,57 +42,21 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
     );
   }
 
-  /// آیا این رزرو مالِ همین دستگاه/مهمان است؟
-  /// - با uid اگر لاگین کرده باشد
-  /// - وگرنه با تطبیق نام رزرو با نام واردشده (نرمال‌شده)
-  bool _isMine(GiftItemModel g, String? uid) {
-    if (!g.isClaimed) return false;
-    if (uid != null &&
-        g.claimedByUid != null &&
-        g.claimedByUid!.isNotEmpty &&
-        g.claimedByUid == uid) {
-      return true;
+  String _statusText(GiftItemModel g) {
+    if (g.isReceived) {
+      return _t('gift_status_received', 'دریافت شد', 'Received');
     }
-    final mine = GuestLocalStore.normalizeName(_nameC.text);
-    final theirs = GuestLocalStore.normalizeName(g.claimedByName ?? '');
-    return mine.isNotEmpty && theirs.isNotEmpty && mine == theirs;
-  }
-
-  Future<void> _claim(GiftItemModel g) async {
-    final name = _nameC.text.trim();
-    if (name.isEmpty) {
-      _toast(_t('enter_your_name', 'نام خود را وارد کنید', 'Enter your name'), error: true);
-      return;
+    if (g.isClaimed) {
+      final who = (g.claimedByName ?? '').trim();
+      return who.isEmpty
+          ? _t('gift_status_claimed', 'رزرو شده', 'Claimed')
+          : '${_t('claimed_by', 'رزرو:', 'Claimed:')} $who';
     }
-    if (name.length > 80) {
-      _toast(_t('wish_name_long', 'نام خیلی بلند است', 'Name is too long'), error: true);
-      return;
-    }
-    try {
-      await _service.claimGift(giftId: g.id, guestName: name);
-      await GuestLocalStore.saveDisplayName(
-        weddingId: widget.weddingId,
-        name: name,
-      );
-      _toast(_t('gift_claimed', 'هدیه رزرو شد', 'Gift reserved'));
-    } catch (e) {
-      _toast('${_t('error', 'خطا', 'Error')}: $e', error: true);
-    }
-  }
-
-  Future<void> _unclaim(GiftItemModel g) async {
-    try {
-      await _service.unclaimGift(g.id);
-      _toast(_t('gift_unclaimed', 'رزرو لغو شد', 'Reservation cancelled'));
-    } catch (e) {
-      _toast('${_t('error', 'خطا', 'Error')}: $e', error: true);
-    }
+    return _t('gift_status_open', 'آزاد', 'Open');
   }
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-
     return StreamBuilder<GiftSettingsModel>(
       stream: _service.watchSettings(),
       builder: (context, setSnap) {
@@ -136,22 +72,6 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
 
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: TextField(
-                controller: _nameC,
-                style: TextStyle(color: AppTok.text(context)),
-                decoration: InputDecoration(
-                  labelText: _t('your_name_for_gift', 'نام شما (برای رزرو هدیه)', 'Your name (for gift claim)'),
-                  filled: true,
-                  fillColor: AppTok.card(context),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ),
             if (settings.cardEnabled && settings.cards.any((c) => c.enabled)) ...[
               const SizedBox(height: 10),
               SizedBox(
@@ -234,7 +154,7 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
                       child: CircularProgressIndicator(color: AppTok.accent(context)),
                     );
                   }
-                  final items = snap.data!;
+                  final items = snap.data!.where((g) => g.isPublic).toList();
                   if (items.isEmpty) {
                     return Center(
                       child: Text(
@@ -250,7 +170,6 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, i) {
                       final g = items[i];
-                      final mine = _isMine(g, uid);
                       return Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -261,7 +180,9 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
                         child: Row(
                           children: [
                             Icon(
-                              Icons.card_giftcard,
+                              g.isClaimed
+                                  ? Icons.redeem
+                                  : Icons.card_giftcard,
                               color: g.isOpen
                                   ? AppTok.accent(context)
                                   : AppTok.textSoft(context),
@@ -290,38 +211,20 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
                                       ),
                                     ),
                                   ],
-                                  if (g.isClaimed) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      mine
-                                          ? _t('claimed_by_you', 'رزرو شما', 'Reserved by you')
-                                          : '${_t('claimed_by', 'رزرو:', 'Reserved:')} ${g.claimedByName ?? '—'}',
-                                      style: TextStyle(
-                                        color: AppTok.accentDeep(context),
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _statusText(g),
+                                    style: TextStyle(
+                                      color: g.isOpen
+                                          ? AppTok.accent(context)
+                                          : AppTok.textSoft(context),
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                  ],
+                                  ),
                                 ],
                               ),
                             ),
-                            if (g.isOpen)
-                              TextButton(
-                                onPressed: () => _claim(g),
-                                child: Text(
-                                  _t('claim', 'رزرو', 'Claim'),
-                                  style: TextStyle(color: AppTok.accent(context)),
-                                ),
-                              )
-                            else if (mine)
-                              TextButton(
-                                onPressed: () => _unclaim(g),
-                                child: Text(
-                                  _t('unclaim', 'لغو', 'Undo'),
-                                  style: TextStyle(color: AppTok.danger(context)),
-                                ),
-                              ),
                           ],
                         ),
                       );

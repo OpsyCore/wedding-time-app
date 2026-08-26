@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -37,8 +37,12 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       final user = FirebaseAuth.instance.currentUser;
 
       // ذخیره در:
-      // feedbacks/{id}
-      await FirebaseFirestore.instance.collection('feedbacks').add({
+      // weddings/{weddingId}/feedback/{id}
+      await FirebaseFirestore.instance
+          .collection('weddings')
+          .doc(widget.weddingId)
+          .collection('feedback')
+          .add({
         'weddingId': widget.weddingId,
         'uid': user?.uid,
         'email': user?.email,

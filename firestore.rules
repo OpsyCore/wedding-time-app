@@ -136,11 +136,16 @@ service cloud.firestore {
     }
 
     // پشتیبانی — claim با یا بدون لاگین (نام اجباری)
-    function isValidSupportClaim() {
+    // فقط زمانی که setting های مهمان روشن باشد (guestClaimEnabled).
+    function isValidSupportClaim(weddingId) {
       let before = resource.data;
       let after = request.resource.data;
       return before.status == 'open'
         && after.status == 'claimed'
+        && (
+          !exists(/databases/$(database)/documents/weddings/$(weddingId)/supportSettings/main)
+          || get(/databases/$(database)/documents/weddings/$(weddingId)/supportSettings/main).data.guestClaimEnabled != false
+        )
         && after.claimedByName is string
         && after.claimedByName.size() > 0
         && after.claimedByName.size() <= 80
@@ -153,6 +158,19 @@ service cloud.firestore {
           'claimedAt',
           'updatedAt'
         ]);
+    }
+
+    // بازخورد زیر مراسم — مهمان بدون لاگین می‌تواند ثبت کند.
+    function isValidFeedbackCreate() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['type', 'message', 'status', 'createdAt'])
+        && d.type in ['feedback', 'bug']
+        && d.message is string
+        && d.message.size() > 0
+        && d.message.size() <= 2000
+        && d.status == 'new'
+        && (!('uid' in d) || d.uid == null || d.uid is string)
+        && (!('email' in d) || d.email == null || d.email is string);
     }
 
     // آپلود عکس مهمان بدون لاگین (ImgBB URL) — همیشه pending مگر زوج
@@ -186,38 +204,6 @@ service cloud.firestore {
         && d.uploaderName.size() <= 80
         && (!('uploaderUid' in d) || d.uploaderUid == uid())
         && (!('uploaderKey' in d) || d.uploaderKey is string);
-    }
-
-    // رزرو هدیه بدون لاگین (با نام)
-    function isValidPublicGiftClaim() {
-      let before = resource.data;
-      let after = request.resource.data;
-      return before.status == 'open'
-        && after.status == 'claimed'
-        && after.claimedByName is string
-        && after.claimedByName.size() > 0
-        && after.claimedByName.size() <= 80
-        && after.diff(before).affectedKeys().hasOnly([
-          'status',
-          'claimedByUid',
-          'claimedByName',
-          'claimedAt',
-          'updatedAt'
-        ]);
-    }
-
-    function isValidPublicGiftUnclaim() {
-      let before = resource.data;
-      let after = request.resource.data;
-      return before.status == 'claimed'
-        && after.status == 'open'
-        && after.diff(before).affectedKeys().hasOnly([
-          'status',
-          'claimedByUid',
-          'claimedByName',
-          'claimedAt',
-          'updatedAt'
-        ]);
     }
 
     function isValidPublicWishCreate() {
@@ -334,7 +320,8 @@ service cloud.firestore {
       match /supports/{docId} {
         allow read: if true;
         allow create, delete: if isWeddingMember(weddingId);
-        allow update: if isWeddingMember(weddingId) || isValidSupportClaim();
+        allow update: if isWeddingMember(weddingId)
+          || isValidSupportClaim(weddingId);
       }
 
       match /supportSettings/{docId} {
@@ -344,7 +331,11 @@ service cloud.firestore {
 
       match /supportContribs/{docId} {
         allow read: if isWeddingMember(weddingId);
-        allow create: if true;
+        allow create: if isWeddingMember(weddingId)
+          || (
+            !exists(/databases/$(database)/documents/weddings/$(weddingId)/supportSettings/main)
+            || get(/databases/$(database)/documents/weddings/$(weddingId)/supportSettings/main).data.guestClaimEnabled != false
+          );
         allow update, delete: if isWeddingMember(weddingId);
       }
 
@@ -456,11 +447,22 @@ service cloud.firestore {
       }
 
       match /gifts/{giftId} {
+        // مهمان فقط‌خواندنی (مطابق هنداف) — رزرو/لغو توسط مهمان حذف شد.
         allow read: if true;
         allow create, delete: if isWeddingMember(weddingId);
-        allow update: if isWeddingMember(weddingId)
-          || isValidPublicGiftClaim()
-          || isValidPublicGiftUnclaim();
+        allow update: if isWeddingMember(weddingId);
+      }
+
+      // لاگ هدیه‌های دریافت‌شده — فقط توسط زوج مدیریت می‌شود.
+      match /receivedGifts/{docId} {
+        allow read, write: if isWeddingMember(weddingId);
+      }
+
+      // بازخورد زیر مراسم
+      match /feedback/{docId} {
+        allow read: if isWeddingMember(weddingId);
+        allow create: if isValidFeedbackCreate();
+        allow update, delete: if isWeddingMember(weddingId);
       }
 
       match /giftSettings/{docId} {

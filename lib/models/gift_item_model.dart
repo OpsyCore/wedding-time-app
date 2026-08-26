@@ -11,6 +11,9 @@ class GiftItemModel {
   final DateTime? claimedAt;
   final int sortOrder;
 
+  /// اگر false باشد این هدیه در نمای عمومی/مهمان نمایش داده نمی‌شود.
+  final bool isPublic;
+
   const GiftItemModel({
     required this.id,
     required this.title,
@@ -21,10 +24,37 @@ class GiftItemModel {
     required this.claimedByUid,
     required this.claimedAt,
     required this.sortOrder,
+    this.isPublic = true,
   });
 
   bool get isOpen => status == 'open';
   bool get isClaimed => status == 'claimed' || status == 'received';
+  bool get isReceived => status == 'received';
+
+  GiftItemModel copyWith({
+    String? title,
+    String? note,
+    String? imageUrl,
+    String? status,
+    String? claimedByName,
+    String? claimedByUid,
+    DateTime? claimedAt,
+    int? sortOrder,
+    bool? isPublic,
+  }) {
+    return GiftItemModel(
+      id: id,
+      title: title ?? this.title,
+      note: note ?? this.note,
+      imageUrl: imageUrl ?? this.imageUrl,
+      status: status ?? this.status,
+      claimedByName: claimedByName ?? this.claimedByName,
+      claimedByUid: claimedByUid ?? this.claimedByUid,
+      claimedAt: claimedAt ?? this.claimedAt,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isPublic: isPublic ?? this.isPublic,
+    );
+  }
 
   factory GiftItemModel.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? {};
@@ -42,6 +72,7 @@ class GiftItemModel {
       claimedByUid: d['claimedByUid']?.toString(),
       claimedAt: claimedAt,
       sortOrder: (d['sortOrder'] as num?)?.toInt() ?? 0,
+      isPublic: d['isPublic'] != false,
     );
   }
 
@@ -54,6 +85,65 @@ class GiftItemModel {
         'claimedByUid': claimedByUid,
         'claimedAt': claimedAt == null ? null : Timestamp.fromDate(claimedAt!),
         'sortOrder': sortOrder,
+        'isPublic': isPublic,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+}
+
+/// لاگ هدیه‌های دریافت‌شده (جدا از خودِ هدیه در subcollection).
+class ReceivedGiftModel {
+  final String id;
+  final String giftId;
+  final String giftTitle;
+
+  /// از طرف چه کسی / یادداشت کوتاه (اختیاری)
+  final String name;
+  final DateTime? receivedAt;
+  final String note;
+  final String createdBy;
+  final DateTime? createdAt;
+
+  const ReceivedGiftModel({
+    required this.id,
+    required this.giftId,
+    required this.giftTitle,
+    this.name = '',
+    this.receivedAt,
+    this.note = '',
+    this.createdBy = '',
+    this.createdAt,
+  });
+
+  factory ReceivedGiftModel.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data() ?? {};
+    DateTime? parseDate(dynamic raw) {
+      if (raw is Timestamp) return raw.toDate();
+      if (raw is DateTime) return raw;
+      return DateTime.tryParse(raw?.toString() ?? '');
+    }
+
+    return ReceivedGiftModel(
+      id: doc.id,
+      giftId: (d['giftId'] ?? '').toString(),
+      giftTitle: (d['giftTitle'] ?? d['title'] ?? '').toString(),
+      name: (d['name'] ?? '').toString(),
+      receivedAt: parseDate(d['receivedAt'] ?? d['date']),
+      note: (d['note'] ?? '').toString(),
+      createdBy: (d['createdBy'] ?? '').toString(),
+      createdAt: parseDate(d['createdAt']),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'giftId': giftId,
+        'giftTitle': giftTitle,
+        'name': name,
+        'receivedAt': receivedAt == null ? null : Timestamp.fromDate(receivedAt!),
+        'note': note,
+        'createdBy': createdBy,
+        'createdAt': createdAt == null
+            ? FieldValue.serverTimestamp()
+            : Timestamp.fromDate(createdAt!),
         'updatedAt': FieldValue.serverTimestamp(),
       };
 }
