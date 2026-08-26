@@ -5,19 +5,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../core/app_effect_controller.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../services/ambient_music_service.dart';
 import '../services/media_upload_service.dart';
+import '../widgets/ambient_music_controls.dart';
+import '../widgets/effect_background.dart';
+import '../widgets/effect_picker.dart';
 
 /// پروفایل عروس و داماد
-/// - آپلود: ImgBB از طریق MediaUploadService (static)
-/// - بدون Firebase Storage / بدون dart:io
-/// - درصد تکمیل واقعی
-/// - تم: AppTok + i18n
 class CoupleProfileScreen extends StatefulWidget {
   const CoupleProfileScreen({super.key, required this.weddingId});
-
   final String weddingId;
 
   @override
@@ -47,7 +47,6 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
   bool _uploading = false;
   String? _uploadingKind;
 
-  /// 0.0 .. 1.0
   double _completePercent = 0;
 
   final _picker = ImagePicker();
@@ -100,8 +99,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor:
-            error ? AppTok.danger(context) : AppTok.card(context),
+        backgroundColor: error ? AppTok.danger(context) : AppTok.card(context),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -117,17 +115,14 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     try {
       final wedding = await _weddingRef.get();
       final w = wedding.data() ?? {};
-
       final profile = await _profileRef.get();
       final p = profile.data() ?? {};
 
-      _brideFullCtrl.text =
-          (p['brideFullName'] ?? w['brideName'] ?? '').toString();
+      _brideFullCtrl.text = (p['brideFullName'] ?? w['brideName'] ?? '').toString();
       _brideShortCtrl.text = (p['brideShortName'] ?? '').toString();
       _brideBioCtrl.text = (p['brideBio'] ?? '').toString();
 
-      _groomFullCtrl.text =
-          (p['groomFullName'] ?? w['groomName'] ?? '').toString();
+      _groomFullCtrl.text = (p['groomFullName'] ?? w['groomName'] ?? '').toString();
       _groomShortCtrl.text = (p['groomShortName'] ?? '').toString();
       _groomBioCtrl.text = (p['groomBio'] ?? '').toString();
 
@@ -142,7 +137,6 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       if (!const ['everyone', 'invitees', 'off'].contains(_rsvpMode)) {
         _rsvpMode = 'everyone';
       }
-
       _nameOrder = (p['nameOrder'] ?? 'groom_first').toString();
       if (!const ['groom_first', 'bride_first'].contains(_nameOrder)) {
         _nameOrder = 'groom_first';
@@ -156,11 +150,9 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     }
   }
 
-  /// ۹ مورد واقعی (بدون زبان اپ)
   double _calcProgress() {
     const total = 9;
     int filled = 0;
-
     if ((_couplePhotoUrl ?? '').trim().isNotEmpty) filled++;
     if ((_bridePhotoUrl ?? '').trim().isNotEmpty) filled++;
     if ((_groomPhotoUrl ?? '').trim().isNotEmpty) filled++;
@@ -170,7 +162,6 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     if (_groomFullCtrl.text.trim().isNotEmpty) filled++;
     if (_groomShortCtrl.text.trim().isNotEmpty) filled++;
     if (_groomBioCtrl.text.trim().isNotEmpty) filled++;
-
     return filled / total;
   }
 
@@ -178,19 +169,14 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     _completePercent = _calcProgress();
   }
 
-  /// استخراج path/id از نتیجهٔ ImgBB بدون وابستگی به فیلد storagePath
   String _pathFromUploadResult(dynamic result, String url) {
     try {
-      final dynamic id = result.id ??
-          result.providerId ??
-          result.imageId ??
-          result.deleteUrl;
+      final dynamic id = result.id ?? result.providerId ?? result.imageId ?? result.deleteUrl;
       if (id != null) {
         final s = id.toString().trim();
         if (s.isNotEmpty) return s.startsWith('imgbb:') ? s : 'imgbb:$s';
       }
     } catch (_) {}
-
     try {
       final dynamic path = result.path ?? result.storagePath ?? result.ref;
       if (path != null) {
@@ -198,20 +184,14 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         if (s.isNotEmpty) return s;
       }
     } catch (_) {}
-
-    // fallback پایدار
     final uri = Uri.tryParse(url);
-    final last = uri?.pathSegments.isNotEmpty == true
-        ? uri!.pathSegments.last
-        : 'photo';
+    final last = uri?.pathSegments.isNotEmpty == true ? uri!.pathSegments.last : 'photo';
     return 'imgbb:$last';
   }
 
   String _urlFromUploadResult(dynamic result) {
     try {
-      final u = (result.url ?? result.displayUrl ?? result.imageUrl ?? '')
-          .toString()
-          .trim();
+      final u = (result.url ?? result.displayUrl ?? result.imageUrl ?? '').toString().trim();
       if (u.isNotEmpty) return u;
     } catch (_) {}
     throw Exception(AppLang.tr('photo_upload_failed'));
@@ -219,7 +199,6 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
 
   Future<void> _pickAndUpload(String kind) async {
     if (_uploading) return;
-
     try {
       final image = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -227,33 +206,24 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         maxWidth: 1400,
       );
       if (image == null) return;
-
       setState(() {
         _uploading = true;
         _uploadingKind = kind;
       });
-
       final raw = await image.readAsBytes();
       if (raw.isEmpty) {
         _toast(AppLang.tr('empty_file'), error: true);
         return;
       }
-
       final bytes = Uint8List.fromList(raw);
-      final fileName =
-          'profile_${kind}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-      // API واقعی پروژه: static + named param bytes
+      final fileName = 'profile_${kind}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final result = await MediaUploadService.uploadImageBytes(
         bytes: bytes,
         fileName: fileName,
       );
-
       final url = _urlFromUploadResult(result);
       final storagePath = _pathFromUploadResult(result, url);
-
       if (!mounted) return;
-
       setState(() {
         if (kind == 'couple') {
           _couplePhotoUrl = url;
@@ -267,7 +237,6 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         }
         _recalcProgress();
       });
-
       _toast(AppLang.tr('photo_saved_ok'));
     } catch (e) {
       _toast('${AppLang.tr('photo_upload_failed')}: $e', error: true);
@@ -282,21 +251,17 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
   }
 
   Future<void> _save() async {
-    if (_brideFullCtrl.text.trim().isEmpty ||
-        _groomFullCtrl.text.trim().isEmpty) {
+    if (_brideFullCtrl.text.trim().isEmpty || _groomFullCtrl.text.trim().isEmpty) {
       _toast(AppLang.tr('bride_groom_name_required'), error: true);
       return;
     }
-
     setState(() {
       _recalcProgress();
       _saving = true;
     });
-
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       final percent = _calcProgress();
-
       await _profileRef.set({
         'couplePhotoUrl': _couplePhotoUrl ?? '',
         'coupleStoragePath': _coupleStoragePath ?? '',
@@ -319,14 +284,12 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         'updatedBy': uid,
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-
       await _weddingRef.set({
         'brideName': _brideFullCtrl.text.trim(),
         'groomName': _groomFullCtrl.text.trim(),
         'profileCompletePercent': percent,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-
       if (!mounted) return;
       setState(() => _completePercent = percent);
       _toast(AppLang.tr('info_saved'));
@@ -341,218 +304,263 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([AppLang.I, AppThemeController.I]),
+      listenable: Listenable.merge([
+        AppLang.I,
+        AppThemeController.I,
+        AppEffectController.I,
+        AmbientMusicService.I,
+      ]),
       builder: (context, _) {
         return Directionality(
           textDirection: AppLang.I.direction,
-          child: Scaffold(
-            backgroundColor: AppTok.background(context),
-            appBar: AppBar(
-              backgroundColor: AppTok.background(context),
-              elevation: 0,
-              centerTitle: true,
-              leading: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: AppTok.accent(context),
-                  size: 20,
+          child: EffectBackgroundStack(
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: AppBar(
+                backgroundColor: AppTok.background(context),
+                elevation: 0,
+                centerTitle: true,
+                leading: IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: AppTok.accent(context),
+                    size: 20,
+                  ),
                 ),
-              ),
-              title: Text(
-                AppLang.tr('couple_profile'),
-                style: TextStyle(
-                  color: AppTok.text(context),
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
+                title: Text(
+                  AppLang.tr('couple_profile'),
+                  style: TextStyle(
+                    color: AppTok.text(context),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              actions: [
-                IconButton(
-                  onPressed: (_saving || _uploading) ? null : _save,
-                  icon: _saving
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                actions: [
+                  const EffectActionButton(),
+                  const AmbientMusicActionButton(),
+                  IconButton(
+                    onPressed: (_saving || _uploading) ? null : _save,
+                    icon: _saving
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTok.accent(context),
+                            ),
+                          )
+                        : Icon(
+                            Icons.check_rounded,
                             color: AppTok.accent(context),
+                            size: 26,
                           ),
-                        )
-                      : Icon(
-                          Icons.check_rounded,
-                          color: AppTok.accent(context),
-                          size: 26,
-                        ),
-                ),
-              ],
-            ),
-            body: _loading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      color: AppTok.accent(context),
-                    ),
-                  )
-                : Stack(
-                    children: [
-                      ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                        children: [
-                          _progressHeader(context),
-                          const SizedBox(height: 14),
-                          _couplePhotoCard(context),
-                          const SizedBox(height: 14),
-                          _sectionCard(
-                            context,
-                            icon: Icons.woman_2_rounded,
-                            title: AppLang.tr('bride_info'),
-                            child: _personBlock(
+                  ),
+                ],
+              ),
+              body: _loading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: AppTok.accent(context),
+                      ),
+                    )
+                  : Stack(
+                      children: [
+                        ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                          children: [
+                            _progressHeader(context),
+                            const SizedBox(height: 14),
+                            _couplePhotoCard(context),
+                            const SizedBox(height: 14),
+                            _sectionCard(
                               context,
-                              isBride: true,
-                              photoUrl: _bridePhotoUrl,
-                              kind: 'bride',
-                              onPickPhoto: () => _pickAndUpload('bride'),
-                              fullCtrl: _brideFullCtrl,
-                              shortCtrl: _brideShortCtrl,
-                              bioCtrl: _brideBioCtrl,
-                              fullLabel: AppLang.tr('bride_full_name'),
-                              shortLabel: AppLang.tr('bride_short_name'),
-                              bioLabel: AppLang.tr('bride_bio'),
+                              icon: Icons.woman_2_rounded,
+                              title: AppLang.tr('bride_info'),
+                              child: _personBlock(
+                                context,
+                                isBride: true,
+                                photoUrl: _bridePhotoUrl,
+                                kind: 'bride',
+                                onPickPhoto: () => _pickAndUpload('bride'),
+                                fullCtrl: _brideFullCtrl,
+                                shortCtrl: _brideShortCtrl,
+                                bioCtrl: _brideBioCtrl,
+                                fullLabel: AppLang.tr('bride_full_name'),
+                                shortLabel: AppLang.tr('bride_short_name'),
+                                bioLabel: AppLang.tr('bride_bio'),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          _sectionCard(
-                            context,
-                            icon: Icons.man_2_rounded,
-                            title: AppLang.tr('groom_info'),
-                            child: _personBlock(
+                            const SizedBox(height: 14),
+                            _sectionCard(
                               context,
-                              isBride: false,
-                              photoUrl: _groomPhotoUrl,
-                              kind: 'groom',
-                              onPickPhoto: () => _pickAndUpload('groom'),
-                              fullCtrl: _groomFullCtrl,
-                              shortCtrl: _groomShortCtrl,
-                              bioCtrl: _groomBioCtrl,
-                              fullLabel: AppLang.tr('groom_full_name'),
-                              shortLabel: AppLang.tr('groom_short_name'),
-                              bioLabel: AppLang.tr('groom_bio'),
+                              icon: Icons.man_2_rounded,
+                              title: AppLang.tr('groom_info'),
+                              child: _personBlock(
+                                context,
+                                isBride: false,
+                                photoUrl: _groomPhotoUrl,
+                                kind: 'groom',
+                                onPickPhoto: () => _pickAndUpload('groom'),
+                                fullCtrl: _groomFullCtrl,
+                                shortCtrl: _groomShortCtrl,
+                                bioCtrl: _groomBioCtrl,
+                                fullLabel: AppLang.tr('groom_full_name'),
+                                shortLabel: AppLang.tr('groom_short_name'),
+                                bioLabel: AppLang.tr('groom_bio'),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          _sectionCard(
-                            context,
-                            icon: Icons.tune_rounded,
-                            title: AppLang.tr('settings_section'),
-                            child: Column(
-                              children: [
-                                _dropdownTile(
-                                  context,
-                                  label: AppLang.tr('rsvp_confirm_label'),
-                                  value: _rsvpMode,
-                                  items: {
-                                    'everyone': AppLang.tr('rsvp_everyone'),
-                                    'invitees':
-                                        AppLang.tr('rsvp_invitees_only'),
-                                    'off': AppLang.tr('rsvp_off'),
-                                  },
-                                  onChanged: (v) =>
-                                      setState(() => _rsvpMode = v),
-                                ),
-                                const SizedBox(height: 12),
-                                _dropdownTile(
-                                  context,
-                                  label: AppLang.tr('name_order'),
-                                  value: _nameOrder,
-                                  items: {
-                                    'groom_first': AppLang.tr('groom_first'),
-                                    'bride_first': AppLang.tr('bride_first'),
-                                  },
-                                  onChanged: (v) =>
-                                      setState(() => _nameOrder = v),
-                                ),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: Text(
-                                    AppLang.tr('language_hint'),
-                                    style: TextStyle(
-                                      color: AppTok.textSoft(context)
-                                          .withValues(alpha: 0.85),
-                                      fontSize: 11,
+                            const SizedBox(height: 14),
+                            _sectionCard(
+                              context,
+                              icon: Icons.tune_rounded,
+                              title: AppLang.tr('settings_section'),
+                              child: Column(
+                                children: [
+                                  _dropdownTile(
+                                    context,
+                                    label: AppLang.tr('rsvp_confirm_label'),
+                                    value: _rsvpMode,
+                                    items: {
+                                      'everyone': AppLang.tr('rsvp_everyone'),
+                                      'invitees': AppLang.tr('rsvp_invitees_only'),
+                                      'off': AppLang.tr('rsvp_off'),
+                                    },
+                                    onChanged: (v) => setState(() => _rsvpMode = v),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _dropdownTile(
+                                    context,
+                                    label: AppLang.tr('name_order'),
+                                    value: _nameOrder,
+                                    items: {
+                                      'groom_first': AppLang.tr('groom_first'),
+                                      'bride_first': AppLang.tr('bride_first'),
+                                    },
+                                    onChanged: (v) => setState(() => _nameOrder = v),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: Text(
+                                      AppLang.tr('language_hint'),
+                                      style: TextStyle(
+                                        color: AppTok.textSoft(context)
+                                            .withValues(alpha: 0.85),
+                                        fontSize: 11,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: FilledButton(
-                              onPressed:
-                                  (_saving || _uploading) ? null : _save,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppTok.accent(context),
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor: AppTok.accent(context)
-                                    .withValues(alpha: 0.4),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: Text(
-                                _saving
-                                    ? AppLang.tr('saving')
-                                    : AppLang.tr('save_changes'),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                ),
+                                ],
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      if (_uploading)
-                        Positioned.fill(
-                          child: ColoredBox(
-                            color: Colors.black54,
-                            child: Center(
-                              child: Container(
-                                padding: const EdgeInsets.all(22),
-                                decoration: BoxDecoration(
-                                  color: AppTok.card(context),
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    SizedBox(
-                                      width: 36,
-                                      height: 36,
-                                      child: CircularProgressIndicator(
-                                        color: AppTok.accent(context),
-                                        strokeWidth: 3,
-                                      ),
+                            const SizedBox(height: 14),
+                            _sectionCard(
+                              context,
+                              icon: Icons.auto_awesome_rounded,
+                              title: AppLang.tr('effect'),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    AppLang.tr('effect_hint'),
+                                    style: TextStyle(
+                                      color: AppTok.textSoft(context),
+                                      fontSize: 12,
+                                      height: 1.4,
                                     ),
-                                    const SizedBox(height: 14),
-                                    Text(
-                                      AppLang.tr('photo_uploading'),
-                                      style: TextStyle(
-                                        color: AppTok.text(context),
-                                        fontSize: 13,
-                                      ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const EffectPicker(showLabel: false),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _sectionCard(
+                              context,
+                              icon: Icons.music_note_rounded,
+                              title: AppLang.tr('ambient_music'),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    AppLang.tr('ambient_music_hint'),
+                                    style: TextStyle(
+                                      color: AppTok.textSoft(context),
+                                      fontSize: 12,
+                                      height: 1.4,
                                     ),
-                                  ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const AmbientMusicControls(showTitle: false),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: FilledButton(
+                                onPressed: (_saving || _uploading) ? null : _save,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppTok.accent(context),
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor:
+                                      AppTok.accent(context).withValues(alpha: 0.4),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: Text(
+                                  _saving ? AppLang.tr('saving') : AppLang.tr('save_changes'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                    ],
-                  ),
+                        if (_uploading)
+                          Positioned.fill(
+                            child: ColoredBox(
+                              color: Colors.black54,
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.all(22),
+                                  decoration: BoxDecoration(
+                                    color: AppTok.card(context),
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 36,
+                                        height: 36,
+                                        child: CircularProgressIndicator(
+                                          color: AppTok.accent(context),
+                                          strokeWidth: 3,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      Text(
+                                        AppLang.tr('photo_uploading'),
+                                        style: TextStyle(
+                                          color: AppTok.text(context),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
           ),
         );
       },
@@ -576,9 +584,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       decoration: BoxDecoration(
         color: AppTok.card(context),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: AppTok.accent(context).withValues(alpha: 0.22),
-        ),
+        border: Border.all(color: AppTok.accent(context).withValues(alpha: 0.22)),
         boxShadow: [
           BoxShadow(
             color: AppTok.accent(context).withValues(alpha: 0.06),
@@ -658,15 +664,12 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
 
   Widget _couplePhotoCard(BuildContext context) {
     final busy = _uploading && _uploadingKind == 'couple';
-
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTok.card(context),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: AppTok.accent(context).withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: AppTok.accent(context).withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -679,11 +682,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                   color: AppTok.accent(context).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.favorite_rounded,
-                  color: AppTok.accent(context),
-                  size: 18,
-                ),
+                child: Icon(Icons.favorite_rounded, color: AppTok.accent(context), size: 18),
               ),
               const SizedBox(width: 10),
               Text(
@@ -707,9 +706,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                     decoration: BoxDecoration(
                       color: AppTok.cardSoft(context),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: AppTok.border(context),
-                      ),
+                      border: Border.all(color: AppTok.border(context)),
                       image: (_couplePhotoUrl ?? '').isNotEmpty
                           ? DecorationImage(
                               image: NetworkImage(_couplePhotoUrl!),
@@ -721,19 +718,12 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.favorite_border_rounded,
-                                color:
-                                    AppTok.accent(context).withValues(alpha: 0.9),
-                                size: 34,
-                              ),
+                              Icon(Icons.favorite_border_rounded,
+                                  color: AppTok.accent(context).withValues(alpha: 0.9), size: 34),
                               const SizedBox(height: 8),
                               Text(
                                 AppLang.tr('bride_and_groom_label'),
-                                style: TextStyle(
-                                  color: AppTok.textSoft(context),
-                                  fontSize: 12,
-                                ),
+                                style: TextStyle(color: AppTok.textSoft(context), fontSize: 12),
                               ),
                             ],
                           )
@@ -750,9 +740,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                   decoration: BoxDecoration(
                     color: AppTok.cardSoft(context),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: AppTok.accent(context).withValues(alpha: 0.45),
-                    ),
+                    border: Border.all(color: AppTok.accent(context).withValues(alpha: 0.45)),
                   ),
                   child: busy
                       ? Center(
@@ -768,10 +756,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.photo_camera_outlined,
-                              color: AppTok.accent(context),
-                            ),
+                            Icon(Icons.photo_camera_outlined, color: AppTok.accent(context)),
                             const SizedBox(height: 8),
                             Text(
                               AppLang.tr('add_photo'),
@@ -858,17 +843,11 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     required String bioLabel,
   }) {
     final busy = _uploading && _uploadingKind == kind;
-    final photoPlaceholder = AppTok.isDark(context)
-        ? AppTok.cardSoft(context)
-        : const Color(0xFFF4EFEA);
-
+    final photoPlaceholder = AppTok.isDark(context) ? AppTok.cardSoft(context) : const Color(0xFFF4EFEA);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          AppLang.tr('photo_required'),
-          style: TextStyle(color: AppTok.textSoft(context), fontSize: 12),
-        ),
+        Text(AppLang.tr('photo_required'), style: TextStyle(color: AppTok.textSoft(context), fontSize: 12)),
         const SizedBox(height: 8),
         Center(
           child: GestureDetector(
@@ -881,41 +860,25 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                   decoration: BoxDecoration(
                     color: photoPlaceholder,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: AppTok.accent(context).withValues(alpha: 0.25),
-                    ),
+                    border: Border.all(color: AppTok.accent(context).withValues(alpha: 0.25)),
                     image: (photoUrl ?? '').isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(photoUrl!),
-                            fit: BoxFit.cover,
-                          )
+                        ? DecorationImage(image: NetworkImage(photoUrl!), fit: BoxFit.cover)
                         : null,
                   ),
                   child: busy
                       ? Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black45,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
+                          decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(18)),
                           child: Center(
                             child: SizedBox(
                               width: 28,
                               height: 28,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                color: AppTok.accent(context),
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2.4, color: AppTok.accent(context)),
                             ),
                           ),
                         )
                       : (photoUrl ?? '').isEmpty
-                          ? Icon(
-                              isBride
-                                  ? Icons.woman_2_rounded
-                                  : Icons.man_2_rounded,
-                              color: AppTok.accent(context),
-                              size: 64,
-                            )
+                          ? Icon(isBride ? Icons.woman_2_rounded : Icons.man_2_rounded,
+                              color: AppTok.accent(context), size: 64)
                           : null,
                 ),
                 if (!busy)
@@ -928,16 +891,9 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                       decoration: BoxDecoration(
                         color: AppTok.accent(context),
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppTok.card(context),
-                          width: 2,
-                        ),
+                        border: Border.all(color: AppTok.card(context), width: 2),
                       ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 15,
-                      ),
+                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 15),
                     ),
                   ),
               ],
@@ -948,32 +904,16 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         Row(
           children: [
             Expanded(
-              child: _labeledField(
-                context,
-                label: '$fullLabel *',
-                controller: fullCtrl,
-                hint: AppLang.tr('full_name_hint'),
-              ),
+              child: _labeledField(context, label: '$fullLabel *', controller: fullCtrl, hint: AppLang.tr('full_name_hint')),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: _labeledField(
-                context,
-                label: shortLabel,
-                controller: shortCtrl,
-                hint: AppLang.tr('short_name_hint'),
-              ),
+              child: _labeledField(context, label: shortLabel, controller: shortCtrl, hint: AppLang.tr('short_name_hint')),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        _labeledField(
-          context,
-          label: bioLabel,
-          controller: bioCtrl,
-          hint: AppLang.tr('short_bio_hint'),
-          maxLines: 3,
-        ),
+        _labeledField(context, label: bioLabel, controller: bioCtrl, hint: AppLang.tr('short_bio_hint'), maxLines: 3),
       ],
     );
   }
@@ -988,10 +928,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(color: AppTok.textSoft(context), fontSize: 12),
-        ),
+        Text(label, style: TextStyle(color: AppTok.textSoft(context), fontSize: 12)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -1000,13 +937,10 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
           cursorColor: AppTok.accent(context),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(
-              color: AppTok.textSoft(context).withValues(alpha: 0.7),
-            ),
+            hintStyle: TextStyle(color: AppTok.textSoft(context).withValues(alpha: 0.7)),
             filled: true,
             fillColor: AppTok.cardSoft(context),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: AppTok.border(context)),
@@ -1035,10 +969,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(color: AppTok.textSoft(context), fontSize: 12),
-        ),
+        Text(label, style: TextStyle(color: AppTok.textSoft(context), fontSize: 12)),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
@@ -1053,18 +984,10 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
               value: items.containsKey(value) ? value : items.keys.first,
               dropdownColor: AppTok.card(context),
               isExpanded: true,
-              icon: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: AppTok.textSoft(context),
-              ),
+              icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppTok.textSoft(context)),
               style: TextStyle(color: AppTok.text(context), fontSize: 14),
               items: items.entries
-                  .map(
-                    (e) => DropdownMenuItem<String>(
-                      value: e.key,
-                      child: Text(e.value),
-                    ),
-                  )
+                  .map((e) => DropdownMenuItem<String>(value: e.key, child: Text(e.value)))
                   .toList(),
               onChanged: (v) {
                 if (v != null) onChanged(v);

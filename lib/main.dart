@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
+import 'core/app_effect_controller.dart';
 import 'core/app_lang.dart';
 import 'core/app_theme.dart';
 import 'core/app_theme_controller.dart';
 import 'firebase_options.dart';
 import 'screens/guest_portal/guest_auth_gate.dart';
 import 'screens/splash_screen.dart';
+import 'services/ambient_music_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +25,12 @@ void main() async {
 
   await AppLang.I.load();
   await AppThemeController.I.load();
+  await AppEffectController.I.load();
+  try {
+    await AmbientMusicService.I.init();
+  } catch (_) {
+    // missing-file safe — never crash app start
+  }
 
   // مهم: slug مهمان را یک‌بار در استارت قفل کن
   // تا rebuild تم/زبان آن را گم نکند
@@ -130,7 +138,11 @@ class WeddingTimeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([AppLang.I, AppThemeController.I]),
+      listenable: Listenable.merge([
+        AppLang.I,
+        AppThemeController.I,
+        AppEffectController.I,
+      ]),
       builder: (context, _) {
         final lang = AppLang.I;
 

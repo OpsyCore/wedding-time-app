@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
+import 'core/app_effect_controller.dart';
 import 'core/app_lang.dart';
 import 'core/app_theme.dart';
 import 'core/app_theme_controller.dart';
@@ -9,6 +10,7 @@ import 'screens/checklist_screen.dart';
 import 'screens/guests_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/seating_screen.dart';
+import 'widgets/effect_background.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final String weddingId;
@@ -29,7 +31,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([AppLang.I, AppThemeController.I]),
+      listenable: Listenable.merge([
+        AppLang.I,
+        AppThemeController.I,
+        AppEffectController.I,
+      ]),
       builder: (context, _) {
         // داخل builder ساخته شد تا با تغییر زبان/تم، خود تب‌ها هم آپدیت شوند.
         final pages = [
@@ -59,19 +65,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
         return Directionality(
           textDirection: AppLang.I.direction,
-          child: Scaffold(
-            backgroundColor: bg,
-            body: IndexedStack(
-              index: currentIndex,
-              children: pages,
-            ),
-            bottomNavigationBar: _buildBottomNav(
-              card: card,
-              border: border,
-              shadow: shadow,
-              textSoft: textSoft,
-              accentDeep: accentDeep,
-              softPill: softPill,
+          child: EffectBackgroundStack(
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: IndexedStack(
+                index: currentIndex,
+                children: pages,
+              ),
+              bottomNavigationBar: _buildBottomNav(
+                card: card,
+                border: border,
+                shadow: shadow,
+                textSoft: textSoft,
+                accentDeep: accentDeep,
+                softPill: softPill,
+              ),
             ),
           ),
         );

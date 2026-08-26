@@ -4,11 +4,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/app_effect.dart';
+import '../core/app_effect_controller.dart';
 import '../core/app_effects.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/effect_background.dart';
 import '../widgets/floral_decor.dart';
 import '../widgets/wedding_time_header.dart';
 import 'couple_profile_screen.dart';
@@ -405,14 +408,18 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([AppLang.I, AppThemeController.I]),
+      listenable: Listenable.merge([
+        AppLang.I,
+        AppThemeController.I,
+        AppEffectController.I,
+      ]),
       builder: (context, _) {
         final bg = AppTok.background(context);
 
         return Directionality(
           textDirection: AppLang.I.direction,
           child: Scaffold(
-            backgroundColor: bg,
+            backgroundColor: Colors.transparent,
             drawer: AppDrawer(weddingId: widget.weddingId),
             body: SafeArea(
               child: Column(
@@ -428,6 +435,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         const Positioned.fill(
                           child: FloralDecor(intensity: 1.05),
+                        ),
+                        // new global light effect (very subtle)
+                        Positioned.fill(
+                          child: EffectBackground(
+                            opacity: 0.35,
+                            enableBlur: false,
+                            child: const SizedBox.expand(),
+                          ),
                         ),
                         Positioned.fill(
                           child: AppEffectOverlay(

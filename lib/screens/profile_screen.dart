@@ -2,9 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/app_effect_controller.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../services/ambient_music_service.dart';
+import '../widgets/ambient_music_controls.dart';
+import '../widgets/effect_background.dart';
+import '../widgets/effect_picker.dart';
 import '../widgets/invite_code_card.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -122,7 +127,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : '—';
 
     return ListenableBuilder(
-      listenable: Listenable.merge([AppLang.I, AppThemeController.I]),
+      listenable: Listenable.merge([
+        AppLang.I,
+        AppThemeController.I,
+        AppEffectController.I,
+        AmbientMusicService.I,
+      ]),
       builder: (context, _) {
         final isDark = AppTok.isDark(context);
         final bg = AppTok.background(context);
@@ -131,226 +141,263 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final textSoft = AppTok.textSoft(context);
         final accent = AppTok.accent(context);
         final border = AppTok.border(context);
-        final onAccent =
-            isDark ? AppDarkPalette.background : Colors.white;
+        final onAccent = isDark ? AppDarkPalette.background : Colors.white;
 
         return Directionality(
           textDirection: AppLang.I.direction,
-          child: Scaffold(
-            backgroundColor: bg,
-            appBar: AppBar(
+          child: EffectBackgroundStack(
+            child: Scaffold(
               backgroundColor: bg,
-              title: Text(
-                t('profile'),
-                style: TextStyle(color: text),
+              appBar: AppBar(
+                backgroundColor: bg,
+                title: Text(
+                  t('profile'),
+                  style: TextStyle(color: text),
+                ),
+                iconTheme: IconThemeData(color: text),
+                actions: const [
+                  EffectActionButton(),
+                  AmbientMusicActionButton(),
+                  SizedBox(width: 6),
+                ],
               ),
-              iconTheme: IconThemeData(color: text),
-            ),
-            body: _loading
-                ? Center(
-                    child: CircularProgressIndicator(color: accent),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.all(20),
-                    children: [
-                      Center(
-                        child: CircleAvatar(
-                          radius: 46,
-                          backgroundColor: accent.withValues(alpha: 0.2),
-                          backgroundImage: _photoUrl.isNotEmpty
-                              ? NetworkImage(_photoUrl)
-                              : null,
-                          child: _photoUrl.isEmpty
-                              ? Icon(
-                                  Icons.person,
-                                  color: accent,
-                                  size: 46,
-                                )
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      InviteCodeCard(weddingId: widget.weddingId),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: _nameCtrl,
-                        style: TextStyle(color: text),
-                        decoration: _dec(
-                          context,
-                          t('display_name'),
-                          Icons.person_outline,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        readOnly: true,
-                        controller: TextEditingController(text: _email),
-                        style: TextStyle(color: textSoft),
-                        decoration: _dec(
-                          context,
-                          t('email'),
-                          Icons.email_outlined,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        readOnly: true,
-                        controller: TextEditingController(text: roleLabel),
-                        style: TextStyle(color: textSoft),
-                        decoration: _dec(
-                          context,
-                          t('role'),
-                          Icons.favorite_border,
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      Text(
-                        _tf(
-                          'appearance',
-                          AppLang.I.isFa ? 'ظاهر' : 'Appearance',
-                        ),
-                        style: TextStyle(
-                          color: text,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _tf(
-                          'theme_hint',
-                          AppLang.I.isFa
-                              ? 'با یک ضربه تم Material عوض می‌شود؛ صفحات به‌تدریج کامل می‌شوند'
-                              : 'Material theme switches instantly; screens migrate gradually',
-                        ),
-                        style: TextStyle(
-                          color: textSoft,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      // Material جدا → هشدار ListTile + DecoratedBox رفع می‌شود
-                      Material(
-                        color: card,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(color: border),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: SwitchListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 4,
-                          ),
-                          secondary: Icon(
-                            isDark
-                                ? Icons.dark_mode_rounded
-                                : Icons.light_mode_rounded,
-                            color: accent,
-                          ),
-                          title: Text(
-                            _tf(
-                              'dark_mode',
-                              AppLang.I.isFa ? 'حالت تاریک' : 'Dark mode',
-                            ),
-                            style: TextStyle(
-                              color: text,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          subtitle: Text(
-                            isDark
-                                ? _tf(
-                                    'theme_dark_on',
-                                    AppLang.I.isFa
-                                        ? 'تم طلایی کلاسیک'
-                                        : 'Classic gold dark',
+              body: _loading
+                  ? Center(
+                      child: CircularProgressIndicator(color: accent),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(20),
+                      children: [
+                        Center(
+                          child: CircleAvatar(
+                            radius: 46,
+                            backgroundColor: accent.withValues(alpha: 0.2),
+                            backgroundImage: _photoUrl.isNotEmpty
+                                ? NetworkImage(_photoUrl)
+                                : null,
+                            child: _photoUrl.isEmpty
+                                ? Icon(
+                                    Icons.person,
+                                    color: accent,
+                                    size: 46,
                                   )
-                                : _tf(
-                                    'theme_light_on',
-                                    AppLang.I.isFa
-                                        ? 'تم روشن موکاپ'
-                                        : 'Light mockup',
-                                  ),
-                            style: TextStyle(
-                              color: textSoft,
-                              fontSize: 11.5,
-                            ),
+                                : null,
                           ),
-                          value: isDark,
-                          activeThumbColor: accent,
-                          activeTrackColor: accent.withValues(alpha: 0.45),
-                          onChanged: _onThemeChanged,
                         ),
-                      ),
-                      const SizedBox(height: 22),
-                      Text(
-                        t('language'),
-                        style: TextStyle(
-                          color: text,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        t('language_hint'),
-                        style: TextStyle(
-                          color: textSoft,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _langTile(
-                              context: context,
-                              code: 'fa',
-                              title: t('lang_fa'),
-                              subtitle: 'RTL',
-                            ),
+                        const SizedBox(height: 16),
+                        InviteCodeCard(weddingId: widget.weddingId),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: _nameCtrl,
+                          style: TextStyle(color: text),
+                          decoration: _dec(
+                            context,
+                            t('display_name'),
+                            Icons.person_outline,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _langTile(
-                              context: context,
-                              code: 'en',
-                              title: t('lang_en'),
-                              subtitle: 'LTR',
-                            ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          readOnly: true,
+                          controller: TextEditingController(text: _email),
+                          style: TextStyle(color: textSoft),
+                          decoration: _dec(
+                            context,
+                            t('email'),
+                            Icons.email_outlined,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 28),
-                      ElevatedButton(
-                        onPressed: _saving ? null : _save,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accent,
-                          foregroundColor: onAccent,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          readOnly: true,
+                          controller: TextEditingController(text: roleLabel),
+                          style: TextStyle(color: textSoft),
+                          decoration: _dec(
+                            context,
+                            t('role'),
+                            Icons.favorite_border,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Text(
+                          _tf(
+                            'appearance',
+                            AppLang.I.isFa ? 'ظاهر' : 'Appearance',
+                          ),
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _tf(
+                            'theme_hint',
+                            AppLang.I.isFa
+                                ? 'با یک ضربه تم Material عوض می‌شود؛ صفحات به‌تدریج کامل می‌شوند'
+                                : 'Material theme switches instantly; screens migrate gradually',
+                          ),
+                          style: TextStyle(
+                            color: textSoft,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Material(
+                          color: card,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(color: border),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: SwitchListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 4,
+                            ),
+                            secondary: Icon(
+                              isDark
+                                  ? Icons.dark_mode_rounded
+                                  : Icons.light_mode_rounded,
+                              color: accent,
+                            ),
+                            title: Text(
+                              _tf(
+                                'dark_mode',
+                                AppLang.I.isFa ? 'حالت تاریک' : 'Dark mode',
+                              ),
+                              style: TextStyle(
+                                color: text,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              isDark
+                                  ? _tf(
+                                      'theme_dark_on',
+                                      AppLang.I.isFa
+                                          ? 'تم طلایی کلاسیک'
+                                          : 'Classic gold dark',
+                                    )
+                                  : _tf(
+                                      'theme_light_on',
+                                      AppLang.I.isFa
+                                          ? 'تم روشن موکاپ'
+                                          : 'Light mockup',
+                                    ),
+                              style: TextStyle(
+                                color: textSoft,
+                                fontSize: 11.5,
+                              ),
+                            ),
+                            value: isDark,
+                            activeThumbColor: accent,
+                            activeTrackColor: accent.withValues(alpha: 0.45),
+                            onChanged: _onThemeChanged,
                           ),
                         ),
-                        child: _saving
-                            ? SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: onAccent,
-                                ),
-                              )
-                            : Text(
-                                t('save_changes'),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        const SizedBox(height: 22),
+                        Text(
+                          AppLang.tr('effect'),
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          AppLang.tr('effect_hint'),
+                          style: TextStyle(color: textSoft, fontSize: 12),
+                        ),
+                        const SizedBox(height: 10),
+                        const EffectPicker(),
+                        const SizedBox(height: 22),
+                        Text(
+                          AppLang.tr('ambient_music'),
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          AppLang.tr('ambient_music_hint'),
+                          style: TextStyle(color: textSoft, fontSize: 12),
+                        ),
+                        const SizedBox(height: 10),
+                        const AmbientMusicControls(),
+                        const SizedBox(height: 22),
+                        Text(
+                          t('language'),
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          t('language_hint'),
+                          style: TextStyle(
+                            color: textSoft,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _langTile(
+                                context: context,
+                                code: 'fa',
+                                title: t('lang_fa'),
+                                subtitle: 'RTL',
                               ),
-                      ),
-                    ],
-                  ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _langTile(
+                                context: context,
+                                code: 'en',
+                                title: t('lang_en'),
+                                subtitle: 'LTR',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        ElevatedButton(
+                          onPressed: _saving ? null : _save,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: accent,
+                            foregroundColor: onAccent,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: _saving
+                              ? SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: onAccent,
+                                  ),
+                                )
+                              : Text(
+                                  t('save_changes'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+            ),
           ),
         );
       },

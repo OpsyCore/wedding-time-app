@@ -1,11 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/app_effect.dart';
+import '../../core/app_effect_controller.dart';
 import '../../core/app_effects.dart';
 import '../../core/app_lang.dart';
 import '../../core/app_theme.dart';
 import '../../core/app_theme_controller.dart';
 import '../../models/invitation_model.dart';
+import '../../widgets/ambient_music_controls.dart';
+import '../../widgets/effect_background.dart';
+import '../../widgets/effect_picker.dart';
 import '../guest_camera_screen.dart';
 import '../public_invite_screen.dart';
 import 'guest_gallery_tab.dart';
@@ -35,15 +40,15 @@ class GuestPortalShell extends StatefulWidget {
 
 class _GuestPortalShellState extends State<GuestPortalShell> {
   int _index = 0;
-  String _effectStyleId = AppEffectStyle.noneId;
+  String _legacyEffectId = AppEffectStyle.noneId;
 
   @override
   void initState() {
     super.initState();
-    _loadEffect();
+    _loadLegacyEffect();
   }
 
-  Future<void> _loadEffect() async {
+  Future<void> _loadLegacyEffect() async {
     try {
       final wid = widget.weddingId;
       String style = AppEffectStyle.noneId;
@@ -83,22 +88,22 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
         }
       }
 
-      if (mounted) setState(() => _effectStyleId = style);
+      if (mounted) setState(() => _legacyEffectId = style);
     } catch (_) {}
   }
 
-  double get _fxIntensity {
-    switch (_effectStyleId) {
+  double get _legacyFxIntensity {
+    switch (_legacyEffectId) {
       case AppEffectStyle.lavenderId:
       case AppEffectStyle.roseId:
-        return 0.85;
+        return 0.55;
       case AppEffectStyle.goldId:
       case AppEffectStyle.champagneId:
-        return 0.75;
+        return 0.45;
       case AppEffectStyle.midnightId:
-        return 0.65;
+        return 0.40;
       default:
-        return 0.55;
+        return 0.35;
     }
   }
 
@@ -114,16 +119,53 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
     );
   }
 
+  void _openLoveStory() => _openPage(GuestLoveStoryTab(weddingId: widget.weddingId));
+  void _openWishes() => _openPage(GuestWishesTab(weddingId: widget.weddingId));
+  void _openGallery() => _openPage(
+        Scaffold(
+          backgroundColor: AppTok.background(context),
+          appBar: AppBar(
+            backgroundColor: AppTok.background(context),
+            elevation: 0,
+            title: Text(
+              _t('gallery', 'گالری', 'Gallery'),
+              style: TextStyle(color: AppTok.text(context)),
+            ),
+            iconTheme: IconThemeData(color: AppTok.text(context)),
+          ),
+          body: GuestGalleryTab(weddingId: widget.weddingId),
+        ),
+      );
+  void _openSupports() => _openPage(SupportsGuestScreen(weddingId: widget.weddingId));
+  void _openGifts() => _openPage(
+        Scaffold(
+          backgroundColor: AppTok.background(context),
+          appBar: AppBar(
+            backgroundColor: AppTok.background(context),
+            elevation: 0,
+            title: Text(
+              _t('gifts', 'هدایا', 'Gifts'),
+              style: TextStyle(color: AppTok.text(context)),
+            ),
+            iconTheme: IconThemeData(color: AppTok.text(context)),
+          ),
+          body: GuestGiftsTab(weddingId: widget.weddingId),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([AppLang.I, AppThemeController.I]),
+      listenable: Listenable.merge([
+        AppLang.I,
+        AppThemeController.I,
+        AppEffectController.I,
+      ]),
       builder: (context, _) {
         final pages = <Widget>[
           GuestHomeTab(
             weddingId: widget.weddingId,
             invitation: widget.invitation,
-            // خانه مهمان برای «جزئیات/مسیر مهمان» به تب‌های شل می‌رود
             onOpenTab: (i) => setState(() => _index = i),
           ),
           PublicInviteScreen(
@@ -133,7 +175,6 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
             showGuestPanelButton: false,
             allowPop: false,
           ),
-          // برنامه کارت دعوت + کالکشن timeline
           GuestTimelineTab(
             weddingId: widget.weddingId,
             invitation: widget.invitation,
@@ -142,302 +183,161 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
           GuestSeatingTab(weddingId: widget.weddingId),
         ];
 
+        // For quick access menu (replaces drawer)
+        final extraMenuItems = [
+          {'icon': Icons.auto_stories_outlined, 'label': _t('love_story', 'داستان عشق', 'Love story'), 'onTap': _openLoveStory},
+          {'icon': Icons.favorite_border, 'label': _t('wishes', 'آرزوها', 'Wishes'), 'onTap': _openWishes},
+          {'icon': Icons.photo_library_outlined, 'label': _t('gallery', 'گالری', 'Gallery'), 'onTap': _openGallery},
+          {'icon': Icons.volunteer_activism_outlined, 'label': _t('supports_title', 'حمایت‌ها', 'Supports'), 'onTap': _openSupports},
+          {'icon': Icons.card_giftcard_outlined, 'label': _t('gifts', 'هدایا', 'Gifts'), 'onTap': _openGifts},
+        ];
+
         return Directionality(
           textDirection: AppLang.I.direction,
-          child: Scaffold(
-            backgroundColor: AppTok.background(context),
-            appBar: AppBar(
-              backgroundColor: AppTok.background(context),
-              elevation: 0,
-              centerTitle: true,
-              // مهم: leading سفارشی نگذار تا همبرگری drawer بماند
-              automaticallyImplyLeading: true,
-              title: Text(
-                widget.invitation.coupleTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppTok.text(context),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  fontFamily: 'serif',
+          child: EffectBackgroundStack(
+            opacity: 0.9,
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: AppBar(
+                backgroundColor: AppTok.background(context),
+                elevation: 0,
+                centerTitle: true,
+                automaticallyImplyLeading: false,
+                title: Text(
+                  widget.invitation.coupleTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppTok.text(context),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    fontFamily: 'serif',
+                  ),
                 ),
-              ),
-              actions: [
-                if (widget.onLeavePortal != null)
+                actions: [
+                  // back to invite card
+                  if (widget.onLeavePortal != null)
+                    IconButton(
+                      tooltip: _t('back_to_invite', 'کارت دعوت', 'Invite card'),
+                      onPressed: widget.onLeavePortal,
+                      icon: Icon(
+                        Icons.mail_outline_rounded,
+                        color: AppTok.accent(context),
+                        size: 22,
+                      ),
+                    ),
+                  // theme toggle
                   IconButton(
-                    tooltip: _t('back_to_invite', 'کارت دعوت', 'Invite card'),
-                    onPressed: widget.onLeavePortal,
+                    tooltip: AppThemeController.I.isDark
+                        ? _t('light_mode', 'روز', 'Light')
+                        : _t('dark_mode', 'شب', 'Dark'),
+                    onPressed: () {
+                      AppThemeController.I.setDark(!AppThemeController.I.isDark);
+                    },
                     icon: Icon(
-                      Icons.mail_outline,
+                      AppThemeController.I.isDark
+                          ? Icons.light_mode_outlined
+                          : Icons.dark_mode_outlined,
                       color: AppTok.accent(context),
+                      size: 22,
                     ),
                   ),
-                IconButton(
-                  tooltip: AppThemeController.I.isDark
-                      ? _t('light_mode', 'روز', 'Light')
-                      : _t('dark_mode', 'شب', 'Dark'),
-                  onPressed: () {
-                    AppThemeController.I.setDark(!AppThemeController.I.isDark);
-                  },
-                  icon: Icon(
-                    AppThemeController.I.isDark
-                        ? Icons.light_mode_outlined
-                        : Icons.dark_mode_outlined,
-                    color: AppTok.accent(context),
-                  ),
-                ),
-              ],
-            ),
-            drawer: _GuestDrawer(
-              coupleTitle: widget.invitation.coupleTitle,
-              onLoveStory: () => _openPage(
-                GuestLoveStoryTab(weddingId: widget.weddingId),
-              ),
-              onWishes: () => _openPage(
-                GuestWishesTab(weddingId: widget.weddingId),
-              ),
-              onGallery: () => _openPage(
-                Scaffold(
-                  backgroundColor: AppTok.background(context),
-                  appBar: AppBar(
-                    backgroundColor: AppTok.background(context),
-                    elevation: 0,
-                    title: Text(
-                      _t('gallery', 'گالری', 'Gallery'),
-                      style: TextStyle(color: AppTok.text(context)),
-                    ),
-                    iconTheme: IconThemeData(color: AppTok.text(context)),
-                  ),
-                  body: GuestGalleryTab(weddingId: widget.weddingId),
-                ),
-              ),
-              onSupports: () => _openPage(
-                SupportsGuestScreen(weddingId: widget.weddingId),
-              ),
-              onGifts: () => _openPage(
-                Scaffold(
-                  backgroundColor: AppTok.background(context),
-                  appBar: AppBar(
-                    backgroundColor: AppTok.background(context),
-                    elevation: 0,
-                    title: Text(
-                      _t('gifts', 'هدایا', 'Gifts'),
-                      style: TextStyle(color: AppTok.text(context)),
-                    ),
-                    iconTheme: IconThemeData(color: AppTok.text(context)),
-                  ),
-                  body: GuestGiftsTab(weddingId: widget.weddingId),
-                ),
-              ),
-              onToggleTheme: () {
-                AppThemeController.I.setDark(!AppThemeController.I.isDark);
-              },
-              onBackToInvite: widget.onLeavePortal,
-            ),
-            body: Stack(
-              children: [
-                Positioned.fill(
-                  child: IndexedStack(index: _index, children: pages),
-                ),
-                if (_effectStyleId != AppEffectStyle.noneId)
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: AppEffectOverlay(
-                        effectId: _effectStyleId,
-                        intensity: _fxIntensity,
+                  // effect picker
+                  const EffectActionButton(),
+                  // ambient music
+                  const AmbientMusicActionButton(),
+                  // overflow menu for love story etc (replaces drawer)
+                  PopupMenuButton<int>(
+                    tooltip: AppLang.tr('menu'),
+                    icon: Icon(Icons.more_vert_rounded, color: AppTok.text(context)),
+                    color: AppTok.card(context),
+                    onSelected: (v) {
+                      if (v >= 0 && v < extraMenuItems.length) {
+                        (extraMenuItems[v]['onTap'] as VoidCallback)();
+                      }
+                    },
+                    itemBuilder: (ctx) => List.generate(
+                      extraMenuItems.length,
+                      (i) => PopupMenuItem<int>(
+                        value: i,
+                        child: Row(
+                          children: [
+                            Icon(extraMenuItems[i]['icon'] as IconData,
+                                color: AppTok.accent(context), size: 20),
+                            const SizedBox(width: 10),
+                            Text(
+                              extraMenuItems[i]['label'] as String,
+                              style: TextStyle(
+                                color: AppTok.text(context),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-              ],
-            ),
-            bottomNavigationBar: NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              backgroundColor: AppTok.card(context),
-              indicatorColor: AppTok.accent(context).withValues(alpha: 0.18),
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.home_outlined),
-                  selectedIcon:
-                      Icon(Icons.home, color: AppTok.accent(context)),
-                  label: _t('guest_tab_home', 'خانه', 'Home'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.mail_outline),
-                  selectedIcon:
-                      Icon(Icons.mail, color: AppTok.accent(context)),
-                  label: _t('guest_tab_invite', 'دعوت‌نامه', 'Invite'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.view_timeline_outlined),
-                  selectedIcon: Icon(Icons.view_timeline,
-                      color: AppTok.accent(context)),
-                  label: _t('guest_tab_timeline', 'تایم‌لاین', 'Timeline'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.photo_camera_outlined),
-                  selectedIcon: Icon(Icons.photo_camera,
-                      color: AppTok.accent(context)),
-                  label: _t('guest_tab_camera', 'دوربین', 'Camera'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.event_seat_outlined),
-                  selectedIcon: Icon(Icons.event_seat,
-                      color: AppTok.accent(context)),
-                  label: _t('guest_tab_seating', 'صندلی', 'Seats'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _GuestDrawer extends StatelessWidget {
-  const _GuestDrawer({
-    required this.coupleTitle,
-    required this.onLoveStory,
-    required this.onWishes,
-    required this.onGallery,
-    required this.onSupports,
-    required this.onGifts,
-    required this.onToggleTheme,
-    this.onBackToInvite,
-  });
-
-  final String coupleTitle;
-  final VoidCallback onLoveStory;
-  final VoidCallback onWishes;
-  final VoidCallback onGallery;
-  final VoidCallback onSupports;
-  final VoidCallback onGifts;
-  final VoidCallback onToggleTheme;
-  final VoidCallback? onBackToInvite;
-
-  String _t(String key, String fa, String en) {
-    final v = AppLang.tr(key);
-    if (v.isEmpty || v == key) return AppLang.I.isFa ? fa : en;
-    return v;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = AppThemeController.I.isDark;
-
-    return Drawer(
-      backgroundColor: AppTok.background(context),
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-              decoration: BoxDecoration(
-                gradient: AppTok.drawerHeaderGradient(context),
-                border: Border(
-                  bottom: BorderSide(color: AppTok.border(context)),
-                ),
+                  const SizedBox(width: 4),
+                ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              body: Stack(
                 children: [
-                  Icon(Icons.favorite, color: AppTok.accent(context), size: 28),
-                  const SizedBox(height: 10),
-                  Text(
-                    coupleTitle,
-                    style: TextStyle(
-                      color: AppTok.text(context),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'serif',
-                    ),
+                  Positioned.fill(
+                    child: IndexedStack(index: _index, children: pages),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _t('guest_menu', 'منوی مهمان', 'Guest menu'),
-                    style: TextStyle(
-                      color: AppTok.textSoft(context),
-                      fontSize: 12.5,
+                  // legacy effect overlay (very subtle) if global effect is none
+                  if (_legacyEffectId != AppEffectStyle.noneId &&
+                      AppEffectController.I.isNone)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Opacity(
+                          opacity: 0.55,
+                          child: AppEffectOverlay(
+                            effectId: _legacyEffectId,
+                            intensity: _legacyFxIntensity,
+                          ),
+                        ),
+                      ),
                     ),
+                ],
+              ),
+              bottomNavigationBar: NavigationBar(
+                selectedIndex: _index,
+                onDestinationSelected: (i) => setState(() => _index = i),
+                backgroundColor: AppTok.card(context),
+                indicatorColor: AppTok.accent(context).withValues(alpha: 0.18),
+                destinations: [
+                  NavigationDestination(
+                    icon: const Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home, color: AppTok.accent(context)),
+                    label: _t('guest_tab_home', 'خانه', 'Home'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.mail_outline),
+                    selectedIcon: Icon(Icons.mail, color: AppTok.accent(context)),
+                    label: _t('guest_tab_invite', 'دعوت‌نامه', 'Invite'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.view_timeline_outlined),
+                    selectedIcon: Icon(Icons.view_timeline, color: AppTok.accent(context)),
+                    label: _t('guest_tab_timeline', 'تایم‌لاین', 'Timeline'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    selectedIcon: Icon(Icons.photo_camera, color: AppTok.accent(context)),
+                    label: _t('guest_tab_camera', 'دوربین', 'Camera'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.event_seat_outlined),
+                    selectedIcon: Icon(Icons.event_seat, color: AppTok.accent(context)),
+                    label: _t('guest_tab_seating', 'صندلی', 'Seats'),
                   ),
                 ],
               ),
             ),
-            _tile(context, Icons.auto_stories_outlined,
-                _t('love_story', 'داستان عشق', 'Love story'), onLoveStory),
-            _tile(context, Icons.favorite_border,
-                _t('wishes', 'آرزوها', 'Wishes'), onWishes),
-            _tile(context, Icons.photo_library_outlined,
-                _t('gallery', 'گالری', 'Gallery'), onGallery),
-            _tile(context, Icons.volunteer_activism_outlined,
-                _t('supports_title', 'حمایت‌ها', 'Supports'), onSupports),
-            _tile(context, Icons.card_giftcard_outlined,
-                _t('gifts', 'هدایا', 'Gifts'), onGifts),
-            const Divider(),
-            SwitchListTile(
-              value: isDark,
-              onChanged: (_) => onToggleTheme(),
-              secondary: Icon(
-                isDark ? Icons.dark_mode : Icons.light_mode,
-                color: AppTok.accent(context),
-              ),
-              title: Text(
-                isDark
-                    ? _t('dark_mode', 'تم شب', 'Dark mode')
-                    : _t('light_mode', 'تم روز', 'Light mode'),
-                style: TextStyle(
-                  color: AppTok.text(context),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            if (onBackToInvite != null) ...[
-              const Divider(),
-              ListTile(
-                leading:
-                    Icon(Icons.mail_outline, color: AppTok.accent(context)),
-                title: Text(
-                  _t('back_to_invite_card', 'بازگشت به کارت دعوت',
-                      'Back to invite card'),
-                  style: TextStyle(
-                    color: AppTok.text(context),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  onBackToInvite!();
-                },
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _tile(
-    BuildContext context,
-    IconData icon,
-    String title,
-    VoidCallback onTap,
-  ) {
-    return ListTile(
-      leading: Icon(icon, color: AppTok.accent(context)),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: AppTok.text(context),
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      onTap: () {
-        Navigator.pop(context);
-        onTap();
+          ),
+        );
       },
     );
   }
