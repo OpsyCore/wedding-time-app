@@ -97,7 +97,7 @@ class GiftRegistryService {
       'giftTitle': giftTitle.trim(),
       'name': name.trim(),
       'receivedAt':
-          receivedAt == null ? FieldValue.serverTimestamp() : receivedAt,
+          receivedAt ?? FieldValue.serverTimestamp(),
       'note': note.trim(),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
