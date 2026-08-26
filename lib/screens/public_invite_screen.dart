@@ -54,8 +54,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
   bool _loading = true;
   String? _error;
 
-  String _couplePhotoUrl = '';
-  String _coverImageUrl = '';
   String _bridePhotoUrl = '';
   String _groomPhotoUrl = '';
   String _message = '';
@@ -121,8 +119,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
         return;
       }
 
-      String couplePhoto = inv.couplePhotoUrl.trim();
-      String coverImage = inv.coverImageUrl.trim();
       String bridePhoto = '';
       String groomPhoto = '';
       String message = inv.message.trim();
@@ -133,26 +129,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
             .doc(widget.weddingId)
             .get();
         final wData = weddingDoc.data() ?? {};
-        final coverCandidates = [
-          wData['coverImageUrl'],
-          wData['coverPhotoUrl'],
-          wData['coverImage'],
-          wData['coverPhoto'],
-          wData['bannerUrl'],
-        ];
-        for (final c in coverCandidates) {
-          final s = (c ?? '').toString().trim();
-          if (s.isNotEmpty && coverImage.isEmpty) coverImage = s;
-        }
-        final coupleCandidates = [
-          wData['couplePhotoUrl'],
-          wData['couplePhoto'],
-          wData['photoUrl'],
-        ];
-        for (final c in coupleCandidates) {
-          final s = (c ?? '').toString().trim();
-          if (s.isNotEmpty && couplePhoto.isEmpty) couplePhoto = s;
-        }
         final brideCandidates = [
           wData['bridePhotoUrl'],
           wData['bridePhoto'],
@@ -192,27 +168,11 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
             .doc('main')
             .get();
         final pData = profileDoc.data() ?? {};
-        final candidates = [
-          pData['couplePhotoUrl'],
-          pData['couplePhoto'],
-          pData['photoUrl'],
-          pData['coverPhotoUrl'],
-        ];
-        for (final c in candidates) {
-          final s = (c ?? '').toString().trim();
-          if (s.isNotEmpty && couplePhoto.isEmpty) couplePhoto = s;
-        }
         if (message.isEmpty) {
           final m = (pData['invitationMessage'] ?? pData['message'] ?? '')
               .toString()
               .trim();
           if (m.isNotEmpty) message = m;
-        }
-        if (coverImage.isEmpty) {
-          final cv = (pData['coverImageUrl'] ?? pData['coverPhotoUrl'] ?? '')
-              .toString()
-              .trim();
-          if (cv.isNotEmpty) coverImage = cv;
         }
         if (bridePhoto.isEmpty) {
           final bp = (pData['bridePhotoUrl'] ?? pData['bridePhoto'] ?? '')
@@ -236,8 +196,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
       if (!mounted) return;
       setState(() {
         _inv = inv;
-        _couplePhotoUrl = couplePhoto;
-        _coverImageUrl = coverImage;
         _bridePhotoUrl = bridePhoto;
         _groomPhotoUrl = groomPhoto;
         _message = message;
@@ -449,12 +407,6 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
   bool get _showGuestCta =>
       widget.showGuestPanelButton || widget.previewMode;
 
-  String get _heroImageUrl {
-    if (_couplePhotoUrl.trim().isNotEmpty) return _couplePhotoUrl.trim();
-    if (_coverImageUrl.trim().isNotEmpty) return _coverImageUrl.trim();
-    return (_inv?.couplePhotoUrl ?? '').trim();
-  }
-
   bool get _hasDualPortraits =>
       _bridePhotoUrl.trim().isNotEmpty && _groomPhotoUrl.trim().isNotEmpty;
 
@@ -474,6 +426,7 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
             enableBlur: false,
             child: Scaffold(
               backgroundColor: Colors.transparent,
+              extendBodyBehindAppBar: true,
               appBar: _buildAppBar(),
               body: _loading
                   ? const Center(
@@ -605,120 +558,128 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     final hasVenue = venue.isNotEmpty || city.isNotEmpty || address.isNotEmpty;
     final tagline = msg.trim();
 
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-            children: [
-              Theme(
-                data: AppTheme.light(),
-                child: _InviteGlass(
-                  opacity: 0.64,
-                  blurSigma: 16,
-                  borderRadius: 28,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                  child: Stack(
-                    children: [
-                      const Positioned.fill(
-                        child: FloralDecor(intensity: 0.85, frameMode: true),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return LayoutBuilder(
+      builder: (context, viewport) {
+        final isMobile = viewport.maxWidth < 600;
+        final pagePadding = EdgeInsets.symmetric(
+          horizontal: isMobile ? 10 : 20,
+          vertical: isMobile ? 0 : 16,
+        );
+        final panelMinHeight = isMobile
+            ? viewport.maxHeight
+            : (viewport.maxHeight - pagePadding.vertical)
+                .clamp(0.0, double.infinity)
+                .toDouble();
+        final contentTop =
+            MediaQuery.of(context).padding.top + kToolbarHeight + 14;
+        final widthConstraint = isMobile
+            ? const BoxConstraints()
+            : const BoxConstraints(maxWidth: 640);
+
+        return SingleChildScrollView(
+          padding: pagePadding,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: widthConstraint,
+              child: SizedBox(
+                width: double.infinity,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: panelMinHeight),
+                  child: Theme(
+                    data: AppTheme.light(),
+                    child: _InviteGlass(
+                      opacity: 0.86,
+                      blurSigma: 16,
+                      borderRadius: isMobile ? 18 : 28,
+                      child: Stack(
                         children: [
-                          _buildHeroPhoto(groom: groom, bride: bride),
-                          const SizedBox(height: 16),
-                          Text(
-                            groom,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontFamily: 'serif',
-                              color: AppPalette.text,
-                              fontSize: 28,
-                              height: 1.1,
-                              fontWeight: FontWeight.w600,
-                              fontStyle: FontStyle.italic,
+                          const Positioned.fill(
+                            child: FloralDecor(
+                              intensity: 0.85,
+                              frameMode: true,
                             ),
                           ),
-                          Text(
-                            '&',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'serif',
-                              color: AppPalette.legacyGold.withValues(alpha: 0.95),
-                              fontSize: 18,
-                              fontStyle: FontStyle.italic,
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              isMobile ? 14 : 20,
+                              contentTop,
+                              isMobile ? 14 : 20,
+                              20,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildHeroPhoto(groom: groom, bride: bride),
+                                const SizedBox(height: 10),
+                                _buildCoupleNames(groom, bride),
+                                if (tagline.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    tagline,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: AppPalette.textSoft,
+                                      fontSize: 13.5,
+                                      height: 1.6,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 18),
+                                _buildCountdownOrDate(inv),
+                                const SizedBox(height: 16),
+                                _buildPlaceBlock(
+                                  inv,
+                                  hasVenue,
+                                  venue,
+                                  city,
+                                  address,
+                                ),
+                                if (inv.showRsvp) ...[
+                                  const SizedBox(height: 20),
+                                  _buildRsvpBlock(),
+                                ],
+                                if (_showGuestCta) ...[
+                                  const SizedBox(height: 20),
+                                  _buildGuestCta(),
+                                ],
+                              ],
                             ),
                           ),
-                          Text(
-                            bride,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontFamily: 'serif',
-                              color: AppPalette.text,
-                              fontSize: 28,
-                              height: 1.1,
-                              fontWeight: FontWeight.w600,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                          if (tagline.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              tagline,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: AppPalette.textSoft,
-                                fontSize: 13.5,
-                                height: 1.6,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 18),
-                          _buildCountdownOrDate(inv),
-                          const SizedBox(height: 16),
-                          _buildPlaceBlock(inv, hasVenue, venue, city, address),
-                          if (inv.showRsvp) ...[
-                            const SizedBox(height: 20),
-                            _buildRsvpBlock(),
-                          ],
-                          if (_showGuestCta) ...[
-                            const SizedBox(height: 20),
-                            _buildGuestCta(),
-                          ],
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCoupleNames(String groom, String bride) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        '$groom${AppLang.tr('couple_name_joiner')}$bride',
+        maxLines: 1,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontFamily: 'serif',
+          color: AppPalette.text,
+          fontSize: 27,
+          height: 1.15,
+          fontWeight: FontWeight.w600,
+          fontStyle: FontStyle.italic,
         ),
       ),
     );
   }
 
   Widget _buildHeroPhoto({required String groom, required String bride}) {
-    final imageUrl = _heroImageUrl;
-    if (imageUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: AspectRatio(
-          aspectRatio: 4 / 3,
-          child: Image.network(
-            imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _hasDualPortraits
-                ? _dualPortraits(groom, bride)
-                : _initialsPair(groom, bride),
-          ),
-        ),
-      );
-    }
     if (_hasDualPortraits) return _dualPortraits(groom, bride);
     return _initialsPair(groom, bride);
   }
@@ -1164,62 +1125,49 @@ class _PublicInviteScreenState extends State<PublicInviteScreen> {
     required Color color,
   }) {
     final selected = _localRsvpStatus == status;
-    final fill = Color.lerp(
-      AppPalette.brandIvory,
+    final background = selected
+        ? Color.lerp(color, Colors.black, 0.18)!
+        : color;
+    final borderColor = Color.lerp(
       color,
-      selected ? 0.16 : 0.08,
-    )!.withValues(alpha: selected ? 0.78 : 0.58);
-
-    Widget body = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      constraints: const BoxConstraints(minHeight: 48),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: fill,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: color.withValues(alpha: selected ? 0.92 : 0.48),
-          width: selected ? 1.5 : 1.1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: selected ? 0.16 : 0.06),
-            blurRadius: selected ? 12 : 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w800,
-            fontSize: 13.5,
-            height: 1.25,
-          ),
-        ),
-      ),
-    );
-
-    if (!kIsWeb) {
-      body = ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: body,
-        ),
-      );
-    }
+      Colors.black,
+      selected ? 0.42 : 0.24,
+    )!;
+    final foreground = status == 'maybe'
+        ? const Color(0xFF332400)
+        : Colors.white;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: _submitting ? null : () => _submitRsvp(status),
-        child: body,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          constraints: const BoxConstraints(minHeight: 50),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: borderColor,
+              width: selected ? 2 : 1.25,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: foreground,
+                fontWeight: FontWeight.w800,
+                fontSize: 13.5,
+                height: 1.25,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
