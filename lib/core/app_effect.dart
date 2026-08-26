@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'app_theme.dart';
 
 /// Global visual effects — very light, readable, works with light & dark
 /// ids: none + 10 distinct effects (5 existing + 5 new)

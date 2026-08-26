@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import '../core/app_effect.dart';
 import '../core/app_effect_controller.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';

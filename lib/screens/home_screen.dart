@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../core/app_effect.dart';
 import '../core/app_effect_controller.dart';
 import '../core/app_effects.dart';
 import '../core/app_lang.dart';
@@ -415,8 +414,6 @@ class _HomeScreenState extends State<HomeScreen> {
         AppEffectController.I,
       ]),
       builder: (context, _) {
-        final bg = AppTok.background(context);
-
         return Directionality(
           textDirection: AppLang.I.direction,
           child: Scaffold(
@@ -438,11 +435,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: FloralDecor(intensity: 1.05),
                         ),
                         // new global light effect (very subtle)
-                        Positioned.fill(
+                        const Positioned.fill(
                           child: EffectBackground(
                             opacity: 0.35,
                             enableBlur: false,
-                            child: const SizedBox.expand(),
+                            child: SizedBox.expand(),
                           ),
                         ),
                         Positioned.fill(
@@ -485,9 +482,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildProfileNudge() {
     final pct = ((_profileComplete ?? 0) * 100).round().clamp(0, 100);
-    final card = AppTok.card(context);
-    final border = AppTok.border(context);
-    final shadow = AppTok.shadow(context);
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
     final accent = AppTok.accent(context);
@@ -579,8 +573,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final coupleLine = brideFirst ? '$bride  &  $groom' : '$groom  &  $bride';
 
-    final border = AppTok.border(context);
-    final shadow = AppTok.shadow(context);
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
     final accent = AppTok.accent(context);
@@ -944,9 +936,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final accentSoft = AppTok.accentSoft(context);
     final accentDeep = AppTok.accentDeep(context);
     final danger = AppTok.danger(context);
-    final card = AppTok.card(context);
-    final border = AppTok.border(context);
-    final shadow = AppTok.shadow(context);
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
 
@@ -1415,7 +1404,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
     final border = AppTok.border(context);
-    final shadow = AppTok.shadow(context);
     final accent = AppTok.accent(context);
     final ringTrack = AppTok.ringTrack(context);
     final accentSoft = AppTok.accentSoft(context);
@@ -1664,8 +1652,6 @@ class _HomeScreenState extends State<HomeScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    final card = AppTok.card(context);
-    final border = AppTok.border(context);
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
 

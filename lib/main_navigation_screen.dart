@@ -51,10 +51,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           CalendarScreen(weddingId: widget.weddingId),
         ];
 
-        final bg = AppTok.background(context);
-        final card = AppTok.card(context);
-        final border = AppTok.border(context);
-        final shadow = AppTok.shadow(context);
         final textSoft = AppTok.textSoft(context);
         final accentDeep = AppTok.accentDeep(context);
 
@@ -74,9 +70,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 children: pages,
               ),
               bottomNavigationBar: _buildBottomNav(
-                card: card,
-                border: border,
-                shadow: shadow,
                 textSoft: textSoft,
                 accentDeep: accentDeep,
                 softPill: softPill,
@@ -89,9 +82,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Widget _buildBottomNav({
-    required Color card,
-    required Color border,
-    required Color shadow,
     required Color textSoft,
     required Color accentDeep,
     required Color softPill,

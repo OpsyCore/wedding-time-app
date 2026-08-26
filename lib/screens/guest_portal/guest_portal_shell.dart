@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/app_effect.dart';
 import '../../core/app_effect_controller.dart';
 import '../../core/app_effects.dart';
 import '../../core/app_lang.dart';
