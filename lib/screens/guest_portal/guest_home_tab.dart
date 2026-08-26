@@ -11,7 +11,7 @@ import '../../services/guest_local_store.dart';
 import 'guest_gallery_tab.dart';
 import 'guest_gifts_tab.dart';
 import 'guest_love_story_tab.dart';
-import 'guest_supports_tab.dart';
+import '../supports_guest_screen.dart';
 import 'guest_wishes_tab.dart';
 
 /// تب خانه مهمان — داشبورد کارت‌محور:
@@ -912,7 +912,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
           'همراهی شما با ما',
           'Stand with us',
         ),
-        onTap: () => _push(GuestSupportsTab(weddingId: widget.weddingId)),
+        onTap: () => _push(SupportsGuestScreen(weddingId: widget.weddingId)),
       ),
     );
 

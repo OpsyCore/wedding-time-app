@@ -12,8 +12,14 @@ class GiftRegistryService {
   CollectionReference<Map<String, dynamic>> get _gifts =>
       _db.collection('weddings').doc(weddingId).collection('gifts');
 
-  DocumentReference<Map<String, dynamic>> get _settings =>
-      _db.collection('weddings').doc(weddingId).collection('giftSettings').doc('main');
+  CollectionReference<Map<String, dynamic>> get _received =>
+      _db.collection('weddings').doc(weddingId).collection('receivedGifts');
+
+  DocumentReference<Map<String, dynamic>> get _settings => _db
+      .collection('weddings')
+      .doc(weddingId)
+      .collection('giftSettings')
+      .doc('main');
 
   Stream<List<GiftItemModel>> watchGifts() {
     return _gifts.orderBy('sortOrder').snapshots().map(
@@ -27,6 +33,13 @@ class GiftRegistryService {
         );
   }
 
+  Stream<List<ReceivedGiftModel>> watchReceivedGifts() {
+    return _received
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map(ReceivedGiftModel.fromDoc).toList());
+  }
+
   Future<void> saveSettings(GiftSettingsModel model) async {
     await _settings.set(model.toMap(), SetOptions(merge: true));
   }
@@ -36,6 +49,7 @@ class GiftRegistryService {
     String note = '',
     String imageUrl = '',
     int sortOrder = 0,
+    bool isPublic = true,
   }) async {
     await _gifts.add({
       'title': title.trim(),
@@ -46,6 +60,7 @@ class GiftRegistryService {
       'claimedByUid': null,
       'claimedAt': null,
       'sortOrder': sortOrder,
+      'isPublic': isPublic,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -59,38 +74,48 @@ class GiftRegistryService {
     await _gifts.doc(id).delete();
   }
 
-  /// رزرو هدیه — با یا بدون لاگین (نام اجباری).
-  /// FIX-01: مطابق firestore.rules (isValidPublicGiftClaim) مهمانِ
-  /// بدون حساب هم می‌تواند فقط با نام هدیه را رزرو کند.
-  /// فیلدهای لمس‌شده دقیقاً همان‌هایی است که rules مجاز می‌داند.
-  Future<void> claimGift({
-    required String giftId,
-    required String guestName,
-  }) async {
-    final name = guestName.trim();
-    if (name.isEmpty) {
-      throw Exception('name_required');
-    }
-
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-
-    await _gifts.doc(giftId).update({
-      'status': 'claimed',
-      'claimedByUid': uid,
-      'claimedByName': name,
-      'claimedAt': FieldValue.serverTimestamp(),
+  /// نمایش/عدم نمایش عمومی یک هدیه (مهمان read-only).
+  Future<void> setPublic(String giftId, bool isPublic) async {
+    await _gifts.doc(giftId).set({
+      'isPublic': isPublic,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
   }
 
-  /// لغو رزرو هدیه — با یا بدون لاگین.
-  Future<void> unclaimGift(String giftId) async {
-    await _gifts.doc(giftId).update({
-      'status': 'open',
-      'claimedByUid': null,
-      'claimedByName': null,
-      'claimedAt': null,
+  /// ثبت «دریافت شد» — یک سند در receivedGifts می‌سازد و وضعیت هدیه را
+  /// به received می‌برد.
+  Future<void> markReceived({
+    required String giftId,
+    required String giftTitle,
+    String name = '',
+    String note = '',
+    DateTime? receivedAt,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final body = {
+      'giftId': giftId,
+      'giftTitle': giftTitle.trim(),
+      'name': name.trim(),
+      'receivedAt':
+          receivedAt == null ? FieldValue.serverTimestamp() : receivedAt,
+      'note': note.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+      'createdBy': uid,
+    };
+    await _received.add(body);
+    await _gifts.doc(giftId).set({
+      'status': 'received',
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// پاک کردن «دریافت شد» و برگرداندن هدیه به آزاد.
+  Future<void> unmarkReceived(String receivedDocId, String giftId) async {
+    await _received.doc(receivedDocId).delete();
+    await _gifts.doc(giftId).set({
+      'status': 'open',
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 }

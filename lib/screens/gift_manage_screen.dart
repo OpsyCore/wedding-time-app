@@ -76,6 +76,141 @@ class _GiftManageScreenState extends State<GiftManageScreen> {
     );
   }
 
+  String _giftStatus(GiftItemModel g) {
+    if (g.isReceived) {
+      return _t('gift_status_received', 'دریافت شد', 'Received');
+    }
+    if (g.isClaimed) {
+      final who = (g.claimedByName ?? '').trim();
+      return who.isEmpty
+          ? _t('gift_status_claimed', 'رزرو شده', 'Claimed')
+          : '${_t('claimed_by', 'رزرو:', 'Claimed:')} $who';
+    }
+    return _t('gift_status_open', 'آزاد', 'Open');
+  }
+
+  String _fmtDate(DateTime d) {
+    const monthsFa = [
+      'ژانویه', 'فوریه', 'مارس', 'آوریل', 'مه', 'ژوئن',
+      'ژوئیه', 'اوت', 'سپتامبر', 'اکتبر', 'نوامبر', 'دسامبر',
+    ];
+    return AppLang.I.isFa
+        ? '${monthsFa[d.month - 1]} ${d.day} ${d.year}'
+        : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _markReceived(GiftItemModel g) async {
+    final nameC = TextEditingController();
+    final noteC = TextEditingController();
+    var date = DateTime.now();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text(_t('gift_mark_received', 'ثبت دریافت', 'Mark received')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  g.title,
+                  style: TextStyle(color: AppTok.textSoft(ctx), fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameC,
+                  decoration: InputDecoration(
+                    labelText: _t('received_gift_name', 'از طرف / نام (اختیاری)', 'From / name (optional)'),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: noteC,
+                  decoration: InputDecoration(
+                    labelText: _t('received_gift_note', 'یادداشت (اختیاری)', 'Note (optional)'),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    _t('received_gift_date', 'تاریخ دریافت', 'Received date'),
+                    style: TextStyle(color: AppTok.text(ctx), fontSize: 13),
+                  ),
+                  subtitle: Text(_fmtDate(date), style: TextStyle(color: AppTok.textSoft(ctx))),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.calendar_today_outlined),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: date,
+                        firstDate: DateTime(2015),
+                        lastDate: DateTime.now().add(const Duration(days: 1)),
+                      );
+                      if (picked != null) setLocal(() => date = picked);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(_t('cancel', 'انصراف', 'Cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(_t('save', 'ثبت', 'Save')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true) return;
+    try {
+      await _service.markReceived(
+        giftId: g.id,
+        giftTitle: g.title,
+        name: nameC.text,
+        note: noteC.text,
+        receivedAt: date,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_t('gift_received_saved', 'دریافت ثبت شد', 'Marked as received'))),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_t('error', 'خطا', 'Error')}: $e')),
+      );
+    }
+  }
+
+  Future<void> _unmarkReceived(ReceivedGiftModel r) async {
+    try {
+      await _service.unmarkReceived(r.id, r.giftId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_t('gift_received_removed', 'دریافت لغو شد', 'Removed from received'))),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_t('error', 'خطا', 'Error')}: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -175,21 +310,120 @@ class _GiftManageScreenState extends State<GiftManageScreen> {
                     return Column(
                       children: [
                         for (final g in items)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTok.card(context),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppTok.border(context)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        g.title,
+                                        style: TextStyle(
+                                          color: AppTok.text(context),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _giftStatus(g),
+                                        style: TextStyle(
+                                          color: g.isOpen
+                                              ? AppTok.accent(context)
+                                              : AppTok.textSoft(context),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Tooltip(
+                                  message: _t('gift_is_public', 'نمایش عمومی', 'Public'),
+                                  child: Switch(
+                                    value: g.isPublic,
+                                    activeThumbColor: AppTok.accent(context),
+                                    onChanged: (v) => _service.setPublic(g.id, v),
+                                  ),
+                                ),
+                                if (!g.isReceived)
+                                  IconButton(
+                                    tooltip: _t('gift_mark_received', 'دریافت شد', 'Mark received'),
+                                    icon: Icon(Icons.check_circle_outline,
+                                        color: AppTok.accent(context)),
+                                    onPressed: () => _markReceived(g),
+                                  ),
+                                IconButton(
+                                  icon: Icon(Icons.delete_outline,
+                                      color: AppTok.danger(context)),
+                                  onPressed: () => _service.deleteGift(g.id),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (items.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              _t('no_gifts_yet', 'هنوز هدیه‌ای ثبت نشده', 'No gifts yet'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppTok.textSoft(context)),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                const Divider(height: 32),
+                Text(
+                  _t('received_gifts_title', 'هدایای دریافت‌شده', 'Received gifts'),
+                  style: TextStyle(
+                    color: AppTok.text(context),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                StreamBuilder<List<ReceivedGiftModel>>(
+                  stream: _service.watchReceivedGifts(),
+                  builder: (context, snap) {
+                    final list = snap.data ?? [];
+                    if (list.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          _t('received_gifts_empty', 'هنوز موردی ثبت نشده', 'Nothing yet'),
+                          style: TextStyle(color: AppTok.textSoft(context)),
+                        ),
+                      );
+                    }
+                    return Column(
+                      children: [
+                        for (final r in list)
                           ListTile(
                             tileColor: AppTok.card(context),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            title: Text(g.title, style: TextStyle(color: AppTok.text(context))),
+                            leading: const Icon(Icons.inventory_2_outlined),
+                            title: Text(r.giftTitle,
+                                style: TextStyle(color: AppTok.text(context))),
                             subtitle: Text(
-                              g.isOpen
-                                  ? _t('open', 'آزاد', 'Open')
-                                  : '${g.claimedByName ?? ''} · ${g.status}',
+                              [
+                                if (r.name.trim().isNotEmpty) r.name,
+                                if (r.receivedAt != null) _fmtDate(r.receivedAt!),
+                              ].join(' · '),
                               style: TextStyle(color: AppTok.textSoft(context)),
                             ),
                             trailing: IconButton(
-                              icon: Icon(Icons.delete_outline, color: AppTok.danger(context)),
-                              onPressed: () => _service.deleteGift(g.id),
+                              icon: Icon(Icons.undo, color: AppTok.danger(context)),
+                              tooltip: _t('gift_received_remove', 'لغو دریافت', 'Undo'),
+                              onPressed: () => _unmarkReceived(r),
                             ),
                           ),
                       ],

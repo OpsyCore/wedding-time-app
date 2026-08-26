@@ -154,6 +154,7 @@ class SupportSettings {
     this.showProgress = true,
     this.showRemaining = true,
     this.currencyMode = 'both', // toman | usd | both
+    this.guestClaimEnabled = true,
     this.introFa = '',
     this.introEn = '',
     this.thanksFa = '',
@@ -166,6 +167,9 @@ class SupportSettings {
   final bool cardSectionEnabled;
   final bool showProgress;
   final bool showRemaining;
+
+  /// اگر false باشد مهمانِ بدون لاگین نمی‌تواند موردی را رزرو کند.
+  final bool guestClaimEnabled;
 
   /// toman | usd | both
   final String currencyMode;
@@ -195,6 +199,7 @@ class SupportSettings {
     bool? showProgress,
     bool? showRemaining,
     String? currencyMode,
+    bool? guestClaimEnabled,
     String? introFa,
     String? introEn,
     String? thanksFa,
@@ -208,6 +213,7 @@ class SupportSettings {
       showProgress: showProgress ?? this.showProgress,
       showRemaining: showRemaining ?? this.showRemaining,
       currencyMode: currencyMode ?? this.currencyMode,
+      guestClaimEnabled: guestClaimEnabled ?? this.guestClaimEnabled,
       introFa: introFa ?? this.introFa,
       introEn: introEn ?? this.introEn,
       thanksFa: thanksFa ?? this.thanksFa,
@@ -223,6 +229,7 @@ class SupportSettings {
         'showProgress': showProgress,
         'showRemaining': showRemaining,
         'currencyMode': currencyMode,
+        'guestClaimEnabled': guestClaimEnabled,
         'introFa': introFa,
         'introEn': introEn,
         'thanksFa': thanksFa,
@@ -266,6 +273,7 @@ class SupportSettings {
       showProgress: map['showProgress'] != false,
       showRemaining: map['showRemaining'] != false,
       currencyMode: (map['currencyMode'] ?? 'both').toString(),
+      guestClaimEnabled: map['guestClaimEnabled'] != false,
       introFa: (map['introFa'] ?? '').toString(),
       introEn: (map['introEn'] ?? '').toString(),
       thanksFa: (map['thanksFa'] ?? '').toString(),

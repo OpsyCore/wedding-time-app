@@ -244,9 +244,9 @@ class _SupportsGuestScreenState extends State<SupportsGuestScreen> {
       );
       return;
     }
-    if (FirebaseAuth.instance.currentUser == null) {
+    if (!settings.guestClaimEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t('supports_login_required'))),
+        SnackBar(content: Text(t('supports_guest_claim_disabled'))),
       );
       return;
     }
@@ -649,18 +649,37 @@ class _GuestItemTile extends StatelessWidget {
           ],
           if (open) ...[
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                onPressed: onSupport,
+            if (settings.guestClaimEnabled)
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: onSupport,
+                  child: Text(
+                    item.hasTarget && item.allowPartial
+                        ? t('supports_contribute_cta')
+                        : t('supports_claim_cta'),
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTok.cardSoft(context),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Text(
-                  item.hasTarget && item.allowPartial
-                      ? t('supports_contribute_cta')
-                      : t('supports_claim_cta'),
+                  t('supports_guest_claim_disabled_hint'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTok.textSoft(context),
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
                 ),
               ),
-            ),
           ],
         ],
       ),

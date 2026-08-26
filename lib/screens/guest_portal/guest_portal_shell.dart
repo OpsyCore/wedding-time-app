@@ -13,7 +13,7 @@ import 'guest_gifts_tab.dart';
 import 'guest_home_tab.dart';
 import 'guest_love_story_tab.dart';
 import 'guest_seating_tab.dart';
-import 'guest_supports_tab.dart';
+import '../supports_guest_screen.dart';
 import 'guest_timeline_tab.dart';
 import 'guest_wishes_tab.dart';
 
@@ -213,7 +213,7 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
                 ),
               ),
               onSupports: () => _openPage(
-                GuestSupportsTab(weddingId: widget.weddingId),
+                SupportsGuestScreen(weddingId: widget.weddingId),
               ),
               onGifts: () => _openPage(
                 Scaffold(
