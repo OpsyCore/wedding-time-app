@@ -1183,8 +1183,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final accent = AppTok.accent(context);
     final accentDeep = AppTok.accentDeep(context);
     final border = AppTok.border(context);
-    final cardSoft = AppTok.cardSoft(context);
-    final ringTrack = AppTok.ringTrack(context);
 
     // Precompute events per day for dot colors
     Map<DateTime, int> eventsCount = {};
@@ -1552,7 +1550,6 @@ class _DayCell extends StatelessWidget {
     final accent = AppTok.accent(context);
     final accentDeep = AppTok.accentDeep(context);
     final accentSoft = AppTok.accentSoft(context);
-    final isDark = AppTok.isDark(context);
 
     Color bg;
     Color txt;

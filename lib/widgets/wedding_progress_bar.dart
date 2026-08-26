@@ -54,13 +54,13 @@ class WeddingProgressBar extends StatelessWidget {
           stops: const [0.0, 0.55, 1.0],
         );
 
-    final darkGradient = LinearGradient(
+    const darkGradient = LinearGradient(
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
       colors: [
-        const Color(0xFFEFC4A8),
-        const Color(0xFFD4AF8C),
-        const Color(0xFFE8C9A8),
+        Color(0xFFEFC4A8),
+        Color(0xFFD4AF8C),
+        Color(0xFFE8C9A8),
       ],
     );
 
@@ -251,9 +251,6 @@ class ChecklistProgressFooter extends StatelessWidget {
     final progress = total == 0 ? 0.0 : doneCount / total;
     final pct = total == 0 ? 0 : ((doneCount / total) * 100).round();
     final pctClamped = pct.clamp(0, 100);
-    final percentText = AppLang.I.isFa
-        ? '${_d(pctClamped)}${AppLang.tr('percent_unit')}'
-        : '${_d(pctClamped)}${AppLang.tr('percent_unit')}';
     final title = AppLang.tr('checklist_progress');
     final doneLabel = AppLang.tr('checklist_progress_done');
     final ofLabel = AppLang.tr('checklist_progress_of');
@@ -267,7 +264,6 @@ class ChecklistProgressFooter extends StatelessWidget {
 
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
-    final accent = AppTok.accent(context);
     final accentDeep = AppTok.accentDeep(context);
     final isDark = AppTok.isDark(context);
 
