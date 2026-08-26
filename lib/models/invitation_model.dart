@@ -101,7 +101,7 @@ class InvitationModel {
 static String get publicBaseUrl => AppConfig.publicBaseUrl;
 
   /// لینک پورتال مهمان — مخصوص همین عروسی
-  /// مثال: https://wedding-time-app.netlify.app/invite/zaza-sara
+  /// مثال: https://wedding-time-app2.netlify.app/invite/zaza-sara
   String get shareLink => AppConfig.inviteUrl(normalizedSlug);
 
   /// متن اشتراک با لینک پورتال مهمان (نه ریشه سایت)

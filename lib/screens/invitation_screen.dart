@@ -1205,8 +1205,8 @@ class _InvitationScreenState extends State<InvitationScreen>
               Text(
                 _t(
                   'guest_portal_url_must',
-                  'باید شبیه این باشد:\nhttps://wedding-time-app.netlify.app/invite/zaza-sara',
-                  'Must look like:\nhttps://wedding-time-app.netlify.app/invite/zaza-sara',
+                  'باید شبیه این باشد:\nhttps://wedding-time-app2.netlify.app/invite/zaza-sara',
+                  'Must look like:\nhttps://wedding-time-app2.netlify.app/invite/zaza-sara',
                 ),
                 textAlign: TextAlign.center,
                 style: TextStyle(

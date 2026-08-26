@@ -33,7 +33,7 @@ class AppConfig {
   }
 
   /// لینک پورتال مهمان مخصوص هر عروسی
-  /// مثال: https://wedding-time-app.netlify.app/invite/zaza-sara
+  /// مثال: https://wedding-time-app2.netlify.app/invite/zaza-sara
   static String inviteUrl(String slug) {
     final s = slug.trim().toLowerCase();
     final clean = s.isEmpty ? 'invite' : s;
