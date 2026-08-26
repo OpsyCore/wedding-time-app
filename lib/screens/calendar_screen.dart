@@ -523,9 +523,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           children: [
                             _buildWeddingBanner(context),
                             const SizedBox(height: 14),
-                            _buildWeatherCard(context),
-                            const SizedBox(height: 16),
                             _buildCalendar(context, allDocs),
+                            const SizedBox(height: 16),
+                            _buildWeatherCard(context),
                             const SizedBox(height: 18),
                             Text(
                               AppLang.tr('selected_day_events'),

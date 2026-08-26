@@ -1156,6 +1156,11 @@ const Map<String, Map<String, String>> _tables = {
     'fx_pearl_sand_sub': 'بژِ روشنِ صدفی — مینیمالِ لوکس',
 
     'effect': 'جلوه',
+    'effects': 'جلوه‌ها',
+    'theme': 'تم',
+    'checklist_progress': 'پیشرفت چک‌لیست',
+    'checklist_progress_done': 'انجام شده',
+    'checklist_progress_of': 'از',
     'choose_effect': 'انتخاب جلوه',
     'effect_hint': 'جلوهٔ سراسریِ خیلی لطیف — فقط گرادینتِ کم‌رنگ + مهِ نرم. روی وب بلورِ سنگین ندارد تا سبک بماند.',
     'ambient_music': 'موسیقیِ فضا',
@@ -2721,6 +2726,11 @@ const Map<String, Map<String, String>> _tables = {
     'fx_pearl_sand_sub': 'Light shell beige — minimal luxe',
 
     'effect': 'Effect',
+    'effects': 'Effects',
+    'theme': 'Theme',
+    'checklist_progress': 'Checklist progress',
+    'checklist_progress_done': 'done',
+    'checklist_progress_of': 'of',
     'choose_effect': 'Choose effect',
     'effect_hint': 'Very light global effect — faint gradient + soft wash only. No heavy blur on web.',
     'ambient_music': 'Ambient music',

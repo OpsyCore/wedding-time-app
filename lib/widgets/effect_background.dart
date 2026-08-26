@@ -57,8 +57,8 @@ class EffectBackground extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      eff.primary.withValues(alpha: isDark ? 0.08 : 0.10),
-                      eff.secondary.withValues(alpha: isDark ? 0.06 : 0.08),
+                      eff.primary.withValues(alpha: isDark ? 0.04 : 0.05),
+                      eff.secondary.withValues(alpha: isDark ? 0.03 : 0.04),
                       Colors.transparent,
                     ],
                   ),
@@ -72,7 +72,7 @@ class EffectBackground extends StatelessWidget {
                     primary: eff.primary,
                     secondary: eff.secondary,
                     isDark: isDark,
-                    opacityFactor: opacity,
+                    opacityFactor: opacity * 0.55,
                   ),
                 ),
               ),
@@ -89,7 +89,7 @@ class EffectBackground extends StatelessWidget {
                       color: (isDark
                               ? AppDarkPalette.background
                               : AppPalette.background)
-                          .withValues(alpha: isDark ? 0.02 : 0.04),
+                          .withValues(alpha: isDark ? 0.01 : 0.02),
                     ),
                   ),
                 ),
@@ -103,7 +103,7 @@ class EffectBackground extends StatelessWidget {
             Positioned.fill(
               child: IgnorePointer(
                 child: Opacity(
-                  opacity: (0.32 * opacity).clamp(0.0, 1.0),
+                  opacity: (0.14 * opacity).clamp(0.0, 1.0),
                   child: bg,
                 ),
               ),
@@ -155,9 +155,11 @@ class EffectBackgroundStack extends StatelessWidget {
         return Stack(
           children: [
             Positioned.fill(child: ColoredBox(color: baseBg)),
+            // TASK 2: strongly reduce bright cream/white radial wash that washes out effects
+            // Keep gradient but much more transparent so particles read clearly
             Positioned.fill(
               child: Opacity(
-                opacity: (0.72 * opacity).clamp(0.0, 1.0),
+                opacity: (0.22 * opacity).clamp(0.0, 1.0),
                 child: DecoratedBox(
                   decoration: BoxDecoration(gradient: gradient),
                 ),
@@ -165,15 +167,15 @@ class EffectBackgroundStack extends StatelessWidget {
             ),
             Positioned.fill(
               child: Opacity(
-                opacity: (0.48 * opacity).clamp(0.0, 1.0),
+                opacity: (0.16 * opacity).clamp(0.0, 1.0),
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        eff.primary.withValues(alpha: isDark ? 0.28 : 0.34),
-                        eff.secondary.withValues(alpha: isDark ? 0.18 : 0.22),
+                        eff.primary.withValues(alpha: isDark ? 0.10 : 0.12),
+                        eff.secondary.withValues(alpha: isDark ? 0.07 : 0.09),
                         Colors.transparent,
                       ],
                     ),
@@ -184,13 +186,13 @@ class EffectBackgroundStack extends StatelessWidget {
             Positioned.fill(
               child: IgnorePointer(
                 child: Opacity(
-                  opacity: (0.62 * opacity).clamp(0.0, 1.0),
+                  opacity: (0.20 * opacity).clamp(0.0, 1.0),
                   child: CustomPaint(
                     painter: _SoftBlobsPainter(
                       primary: eff.primary,
                       secondary: eff.secondary,
                       isDark: isDark,
-                      opacityFactor: opacity,
+                      opacityFactor: opacity * 0.5,
                     ),
                   ),
                 ),
@@ -201,7 +203,7 @@ class EffectBackgroundStack extends StatelessWidget {
                 child: IgnorePointer(
                   child: AppEffectOverlay(
                     effectId: particleId,
-                    intensity: 0.72,
+                    intensity: 0.92,
                   ),
                 ),
               ),
@@ -324,12 +326,12 @@ class _SoftBlobsPainter extends CustomPainter {
     final paints = [
       Paint()
         ..color = primary.withValues(
-          alpha: (isDark ? 0.18 : 0.22) * opacityFactor,
+          alpha: (isDark ? 0.07 : 0.09) * opacityFactor,
         )
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28),
       Paint()
         ..color = secondary.withValues(
-          alpha: (isDark ? 0.14 : 0.18) * opacityFactor,
+          alpha: (isDark ? 0.05 : 0.07) * opacityFactor,
         )
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 32),
     ];
