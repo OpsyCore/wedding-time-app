@@ -372,6 +372,24 @@ class AppEffect {
     return all.firstWhere((e) => e.id == norm, orElse: () => all.first);
   }
 
+  /// Maps a global effect id onto the particle overlay styles in
+  /// `app_effects.dart`. New cream/sage ids fall back to the closest legacy
+  /// painter so picking an effect always changes more than a faint wash.
+  static String particleStyleId(String? id) {
+    final norm = normalizeId(id);
+    if (norm == none) return none;
+    switch (norm) {
+      case mistyRose:
+      case oliveGrove:
+      case candlelight:
+      case midnightOrchid:
+      case pearlSand:
+        return norm;
+      default:
+        return AppEffectCompat.toLegacy(norm);
+    }
+  }
+
   LinearGradient gradientForBrightness(Brightness b) {
     return b == Brightness.dark ? gradientDark : gradientLight;
   }

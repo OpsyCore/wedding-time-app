@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../core/app_effect.dart';
 import '../core/app_effect_controller.dart';
+import '../core/app_effects.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../core/app_lang.dart';
@@ -142,39 +144,36 @@ class EffectBackgroundStack extends StatelessWidget {
         final baseBg = AppTok.background(context);
 
         if (eff.isNone) {
-          // even when none, provide base bg for consistency
           return ColoredBox(color: baseBg, child: child);
         }
 
         final gradient = eff.gradientForBrightness(
           isDark ? Brightness.dark : Brightness.light,
         );
+        final particleId = AppEffect.particleStyleId(eff.id);
 
         return Stack(
           children: [
-            // base
             Positioned.fill(child: ColoredBox(color: baseBg)),
-            // gradient very light
             Positioned.fill(
               child: Opacity(
-                opacity: (0.38 * opacity).clamp(0.0, 1.0),
+                opacity: (0.72 * opacity).clamp(0.0, 1.0),
                 child: DecoratedBox(
                   decoration: BoxDecoration(gradient: gradient),
                 ),
               ),
             ),
-            // wash
             Positioned.fill(
               child: Opacity(
-                opacity: (0.22 * opacity).clamp(0.0, 1.0),
+                opacity: (0.48 * opacity).clamp(0.0, 1.0),
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        eff.primary.withValues(alpha: isDark ? 0.12 : 0.14),
-                        eff.secondary.withValues(alpha: isDark ? 0.08 : 0.10),
+                        eff.primary.withValues(alpha: isDark ? 0.28 : 0.34),
+                        eff.secondary.withValues(alpha: isDark ? 0.18 : 0.22),
                         Colors.transparent,
                       ],
                     ),
@@ -182,11 +181,10 @@ class EffectBackgroundStack extends StatelessWidget {
                 ),
               ),
             ),
-            // blobs
             Positioned.fill(
               child: IgnorePointer(
                 child: Opacity(
-                  opacity: (0.32 * opacity).clamp(0.0, 1.0),
+                  opacity: (0.62 * opacity).clamp(0.0, 1.0),
                   child: CustomPaint(
                     painter: _SoftBlobsPainter(
                       primary: eff.primary,
@@ -198,6 +196,15 @@ class EffectBackgroundStack extends StatelessWidget {
                 ),
               ),
             ),
+            if (particleId != AppEffect.none)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AppEffectOverlay(
+                    effectId: particleId,
+                    intensity: 0.72,
+                  ),
+                ),
+              ),
             if (enableBlur && !kIsWeb)
               Positioned.fill(
                 child: ClipRect(
@@ -317,12 +324,12 @@ class _SoftBlobsPainter extends CustomPainter {
     final paints = [
       Paint()
         ..color = primary.withValues(
-          alpha: (isDark ? 0.10 : 0.12) * opacityFactor,
+          alpha: (isDark ? 0.18 : 0.22) * opacityFactor,
         )
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28),
       Paint()
         ..color = secondary.withValues(
-          alpha: (isDark ? 0.08 : 0.10) * opacityFactor,
+          alpha: (isDark ? 0.14 : 0.18) * opacityFactor,
         )
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 32),
     ];
