@@ -53,7 +53,8 @@ class GuestLocalStore {
 
   static Future<bool> hasRsvp(String weddingId) async {
     final r = await loadRsvp(weddingId);
-    return r.status == 'yes' || r.status == 'no';
+    final s = (r.status ?? '').toLowerCase();
+    return s == 'yes' || s == 'no' || s == 'maybe';
   }
 
   static Future<void> saveDisplayName({

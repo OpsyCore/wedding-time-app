@@ -194,11 +194,13 @@ class InvitationService {
   }
 
   /// RSVP عمومی — بدون query روی guests (امن برای Rules)
+  /// Supports yes / no / maybe (maybe -> pending guest)
   static Future<void> submitRsvp({
     required String weddingId,
     required String name,
     String phone = '',
     required bool attending,
+    String? rsvpStatusOverride,
   }) async {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
@@ -206,8 +208,17 @@ class InvitationService {
     }
 
     final trimmedPhone = phone.trim();
-    final guestStatus = attending ? 'confirmed' : 'declined';
-    final rsvpStatus = attending ? 'yes' : 'no';
+    final override = rsvpStatusOverride?.trim().toLowerCase();
+    final bool isMaybe = override == 'maybe';
+    final String rsvpStatus;
+    final String guestStatus;
+    if (isMaybe) {
+      rsvpStatus = 'maybe';
+      guestStatus = 'pending';
+    } else {
+      guestStatus = attending ? 'confirmed' : 'declined';
+      rsvpStatus = attending ? 'yes' : 'no';
+    }
     final digitalNote = AppLang.tr('note_from_digital_invite');
 
     final guestsRef = _firestore

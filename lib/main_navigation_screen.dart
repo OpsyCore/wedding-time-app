@@ -11,6 +11,7 @@ import 'screens/guests_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/seating_screen.dart';
 import 'widgets/effect_background.dart';
+import 'widgets/page_glass.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final String weddingId;
@@ -116,65 +117,54 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       },
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: card,
-        border: Border(
-          top: BorderSide(
-            color: border,
-            width: 1,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: shadow,
-            blurRadius: 12,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(items.length, (index) {
-            final isActive = index == currentIndex;
-            final item = items[index];
+    return GlassBottomBar(
+      opacity: 0.84,
+      blurSigma: 12,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(items.length, (index) {
+              final isActive = index == currentIndex;
+              final item = items[index];
 
-            return GestureDetector(
-              onTap: () => _goToTab(index),
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isActive ? softPill : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      item['icon'] as IconData,
-                      color: isActive ? accentDeep : textSoft,
-                      size: 22,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item['label'] as String,
-                      style: TextStyle(
+              return GestureDetector(
+                onTap: () => _goToTab(index),
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isActive ? softPill : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        item['icon'] as IconData,
                         color: isActive ? accentDeep : textSoft,
-                        fontSize: 10,
-                        fontWeight:
-                            isActive ? FontWeight.bold : FontWeight.normal,
+                        size: 22,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        item['label'] as String,
+                        style: TextStyle(
+                          color: isActive ? accentDeep : textSoft,
+                          fontSize: 10,
+                          fontWeight:
+                              isActive ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }),
+              );
+            }),
+          ),
         ),
       ),
     );

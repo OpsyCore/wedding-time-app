@@ -46,6 +46,10 @@ class InvitationModel {
   final String slug;
   final bool showRsvp;
   final List<ScheduleItem> schedule;
+  // extended for 5-phone redesign (optional, real product fields)
+  final String message;
+  final String coverImageUrl;
+  final String couplePhotoUrl;
 
   const InvitationModel({
     required this.coverTitle,
@@ -62,6 +66,9 @@ class InvitationModel {
     required this.slug,
     required this.showRsvp,
     required this.schedule,
+    this.message = '',
+    this.coverImageUrl = '',
+    this.couplePhotoUrl = '',
   });
 
   String get coupleTitle {
@@ -229,6 +236,23 @@ static String get publicBaseUrl => AppConfig.publicBaseUrl;
     }
 
     final rawCover = (data['coverTitle'] ?? '').toString();
+    final message = (data['message'] ??
+            data['invitationMessage'] ??
+            data['inviteMessage'] ??
+            '')
+        .toString();
+    final coverImageUrl = (data['coverImageUrl'] ??
+            data['coverImage'] ??
+            data['coverPhotoUrl'] ??
+            data['coverPhoto'] ??
+            data['coverUrl'] ??
+            '')
+        .toString();
+    final couplePhotoUrl = (data['couplePhotoUrl'] ??
+            data['couplePhoto'] ??
+            data['photoUrl'] ??
+            '')
+        .toString();
 
     return InvitationModel(
       coverTitle:
@@ -246,6 +270,9 @@ static String get publicBaseUrl => AppConfig.publicBaseUrl;
       slug: (data['slug'] ?? '').toString(),
       showRsvp: showRsvp,
       schedule: schedule,
+      message: message,
+      coverImageUrl: coverImageUrl,
+      couplePhotoUrl: couplePhotoUrl,
     );
   }
 
@@ -267,6 +294,9 @@ static String get publicBaseUrl => AppConfig.publicBaseUrl;
       'slug': normalizedSlug,
       'showRsvp': showRsvp,
       'schedule': schedule.map((e) => e.toMap()).toList(),
+      'message': message,
+      'coverImageUrl': coverImageUrl,
+      'couplePhotoUrl': couplePhotoUrl,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }
@@ -286,6 +316,9 @@ static String get publicBaseUrl => AppConfig.publicBaseUrl;
     String? slug,
     bool? showRsvp,
     List<ScheduleItem>? schedule,
+    String? message,
+    String? coverImageUrl,
+    String? couplePhotoUrl,
   }) {
     return InvitationModel(
       coverTitle: coverTitle ?? this.coverTitle,
@@ -302,6 +335,9 @@ static String get publicBaseUrl => AppConfig.publicBaseUrl;
       slug: slug ?? this.slug,
       showRsvp: showRsvp ?? this.showRsvp,
       schedule: schedule ?? this.schedule,
+      message: message ?? this.message,
+      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      couplePhotoUrl: couplePhotoUrl ?? this.couplePhotoUrl,
     );
   }
 }

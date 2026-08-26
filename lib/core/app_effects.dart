@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -29,6 +29,12 @@ class AppEffectStyle {
   static const roseId = 'rose';
   static const champagneId = 'champagne';
   static const midnightId = 'midnight';
+  // new 5 (mapped to new system)
+  static const mistyRoseId = 'misty_rose';
+  static const oliveGroveId = 'olive_grove';
+  static const candlelightId = 'candlelight';
+  static const midnightOrchidId = 'midnight_orchid';
+  static const pearlSandId = 'pearl_sand';
 
   static bool get _isDark =>
       AppThemeController.I.themeMode == ThemeMode.dark;
@@ -84,6 +90,47 @@ class AppEffectStyle {
           primary: Color(0xFF8EC5FF),
           secondary: Color(0xFFD0E8FF),
           icon: Icons.nights_stay_rounded,
+        ),
+        // new 5
+        const AppEffectStyle(
+          id: mistyRoseId,
+          nameKey: 'fx_misty_rose',
+          subtitleKey: 'fx_misty_rose_sub',
+          primary: Color(0xFFC98A83),
+          secondary: Color(0xFFF2D6D0),
+          icon: Icons.spa_rounded,
+        ),
+        const AppEffectStyle(
+          id: oliveGroveId,
+          nameKey: 'fx_olive_grove',
+          subtitleKey: 'fx_olive_grove_sub',
+          primary: Color(0xFF6B7A4F),
+          secondary: Color(0xFFDDE3D0),
+          icon: Icons.park_rounded,
+        ),
+        const AppEffectStyle(
+          id: candlelightId,
+          nameKey: 'fx_candlelight',
+          subtitleKey: 'fx_candlelight_sub',
+          primary: Color(0xFFC9A86A),
+          secondary: Color(0xFFF5E6C8),
+          icon: Icons.local_fire_department_rounded,
+        ),
+        const AppEffectStyle(
+          id: midnightOrchidId,
+          nameKey: 'fx_midnight_orchid',
+          subtitleKey: 'fx_midnight_orchid_sub',
+          primary: Color(0xFF8E7A8E),
+          secondary: Color(0xFFE9DDE6),
+          icon: Icons.nights_stay_rounded,
+        ),
+        const AppEffectStyle(
+          id: pearlSandId,
+          nameKey: 'fx_pearl_sand',
+          subtitleKey: 'fx_pearl_sand_sub',
+          primary: Color(0xFFD8CFC2),
+          secondary: Color(0xFFF2EEE6),
+          icon: Icons.beach_access_rounded,
         ),
       ];
 
@@ -207,6 +254,29 @@ class _EffectPainter extends CustomPainter {
         break;
       case AppEffectStyle.midnightId:
         _paintStars(canvas, size, rnd);
+        break;
+      case AppEffectStyle.mistyRoseId:
+        _paintParticles(canvas, size, rnd, hearts: true, glass: false, count: 24);
+        _paintWash(canvas, size);
+        break;
+      case AppEffectStyle.oliveGroveId:
+        _paintParticles(canvas, size, rnd, hearts: false, glass: false, count: 30);
+        break;
+      case AppEffectStyle.candlelightId:
+        _paintSparkles(canvas, size, rnd, count: 20);
+        _paintParticles(canvas, size, rnd, hearts: false, glass: false, count: 12);
+        break;
+      case AppEffectStyle.midnightOrchidId:
+        _paintStars(canvas, size, rnd);
+        _paintParticles(canvas, size, rnd, hearts: true, glass: true, count: 18);
+        break;
+      case AppEffectStyle.pearlSandId:
+        _paintParticles(canvas, size, rnd, hearts: false, glass: false, count: 22);
+        _paintSparkles(canvas, size, rnd, count: 10);
+        break;
+      default:
+        // for new AppEffect ids that map via legacy compat
+        _paintParticles(canvas, size, rnd, hearts: false, glass: false, count: 16);
         break;
     }
   }

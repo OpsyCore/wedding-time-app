@@ -14,6 +14,7 @@ import '../services/media_upload_service.dart';
 import '../widgets/ambient_music_controls.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/effect_picker.dart';
+import '../widgets/page_glass.dart';
 
 /// پروفایل عروس و داماد
 class CoupleProfileScreen extends StatefulWidget {
@@ -316,24 +317,23 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
           child: EffectBackgroundStack(
             child: Scaffold(
               backgroundColor: Colors.transparent,
-              appBar: AppBar(
-                backgroundColor: AppTok.background(context),
-                elevation: 0,
-                centerTitle: true,
-                leading: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: AppTok.accent(context),
-                    size: 20,
-                  ),
-                ),
+              appBar: GlassAppBar(
+                opacity: 0.82,
+                blurSigma: 12,
                 title: Text(
                   AppLang.tr('couple_profile'),
                   style: TextStyle(
                     color: AppTok.text(context),
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
+                  ),
+                ),
+                leading: IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: AppTok.accent(context),
+                    size: 20,
                   ),
                 ),
                 actions: [
@@ -579,19 +579,11 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                     ? AppLang.tr('progress_almost')
                     : AppLang.tr('progress_ready');
 
-    return Container(
+    return PageGlass(
+      opacity: 0.84,
+      blurSigma: 12,
+      borderRadius: 22,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTok.card(context),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppTok.accent(context).withValues(alpha: 0.22)),
-        boxShadow: [
-          BoxShadow(
-            color: AppTok.accent(context).withValues(alpha: 0.06),
-            blurRadius: 16,
-          ),
-        ],
-      ),
       child: Row(
         children: [
           SizedBox(
@@ -664,13 +656,11 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
 
   Widget _couplePhotoCard(BuildContext context) {
     final busy = _uploading && _uploadingKind == 'couple';
-    return Container(
+    return PageGlass(
+      opacity: 0.84,
+      blurSigma: 12,
+      borderRadius: 22,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTok.card(context),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppTok.accent(context).withValues(alpha: 0.2)),
-      ),
       child: Column(
         children: [
           Row(
@@ -789,14 +779,11 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     required String title,
     required Widget child,
   }) {
-    return Container(
-      width: double.infinity,
+    return PageGlass(
+      opacity: 0.84,
+      blurSigma: 12,
+      borderRadius: 22,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-      decoration: BoxDecoration(
-        color: AppTok.card(context),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppTok.border(context)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

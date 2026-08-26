@@ -84,7 +84,7 @@ service cloud.firestore {
         && d.name is string
         && d.name.size() > 0
         && d.name.size() <= 80
-        && d.status in ['yes', 'no']
+        && d.status in ['yes', 'no', 'maybe']
         && d.source == 'public_invite'
         && (!('phone' in d) || (d.phone is string && d.phone.size() <= 30))
         && (!('guestId' in d) || d.guestId is string);
@@ -96,7 +96,7 @@ service cloud.firestore {
         && d.name is string
         && d.name.size() > 0
         && d.name.size() <= 80
-        && d.status in ['confirmed', 'declined']
+        && d.status in ['confirmed', 'declined', 'pending']
         && d.rsvpSource == 'public_invite'
         && (!('phone' in d) || (d.phone is string && d.phone.size() <= 30))
         && (!('group' in d) || d.group is string)

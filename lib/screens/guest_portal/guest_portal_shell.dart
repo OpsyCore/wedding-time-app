@@ -11,6 +11,7 @@ import '../../models/invitation_model.dart';
 import '../../widgets/ambient_music_controls.dart';
 import '../../widgets/effect_background.dart';
 import '../../widgets/effect_picker.dart';
+import '../../widgets/page_glass.dart';
 import '../guest_camera_screen.dart';
 import '../public_invite_screen.dart';
 import 'guest_gallery_tab.dart';
@@ -198,11 +199,9 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
             opacity: 0.9,
             child: Scaffold(
               backgroundColor: Colors.transparent,
-              appBar: AppBar(
-                backgroundColor: AppTok.background(context),
-                elevation: 0,
-                centerTitle: true,
-                automaticallyImplyLeading: false,
+              appBar: GlassAppBar(
+                opacity: 0.82,
+                blurSigma: 12,
                 title: Text(
                   widget.invitation.coupleTitle,
                   maxLines: 1,
@@ -214,19 +213,18 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
                     fontFamily: 'serif',
                   ),
                 ),
+                leading: widget.onLeavePortal != null
+                    ? IconButton(
+                        tooltip: _t('back_to_invite', 'کارت دعوت', 'Invite card'),
+                        onPressed: widget.onLeavePortal,
+                        icon: Icon(
+                          Icons.mail_outline_rounded,
+                          color: AppTok.accent(context),
+                          size: 22,
+                        ),
+                      )
+                    : null,
                 actions: [
-                  // back to invite card
-                  if (widget.onLeavePortal != null)
-                    IconButton(
-                      tooltip: _t('back_to_invite', 'کارت دعوت', 'Invite card'),
-                      onPressed: widget.onLeavePortal,
-                      icon: Icon(
-                        Icons.mail_outline_rounded,
-                        color: AppTok.accent(context),
-                        size: 22,
-                      ),
-                    ),
-                  // theme toggle
                   IconButton(
                     tooltip: AppThemeController.I.isDark
                         ? _t('light_mode', 'روز', 'Light')
@@ -242,11 +240,8 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
                       size: 22,
                     ),
                   ),
-                  // effect picker
                   const EffectActionButton(),
-                  // ambient music
                   const AmbientMusicActionButton(),
-                  // overflow menu for love story etc (replaces drawer)
                   PopupMenuButton<int>(
                     tooltip: AppLang.tr('menu'),
                     icon: Icon(Icons.more_vert_rounded, color: AppTok.text(context)),
@@ -302,38 +297,48 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
                     ),
                 ],
               ),
-              bottomNavigationBar: NavigationBar(
-                selectedIndex: _index,
-                onDestinationSelected: (i) => setState(() => _index = i),
-                backgroundColor: AppTok.card(context),
-                indicatorColor: AppTok.accent(context).withValues(alpha: 0.18),
-                destinations: [
-                  NavigationDestination(
-                    icon: const Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home, color: AppTok.accent(context)),
-                    label: _t('guest_tab_home', 'خانه', 'Home'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.mail_outline),
-                    selectedIcon: Icon(Icons.mail, color: AppTok.accent(context)),
-                    label: _t('guest_tab_invite', 'دعوت‌نامه', 'Invite'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.view_timeline_outlined),
-                    selectedIcon: Icon(Icons.view_timeline, color: AppTok.accent(context)),
-                    label: _t('guest_tab_timeline', 'تایم‌لاین', 'Timeline'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.photo_camera_outlined),
-                    selectedIcon: Icon(Icons.photo_camera, color: AppTok.accent(context)),
-                    label: _t('guest_tab_camera', 'دوربین', 'Camera'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.event_seat_outlined),
-                    selectedIcon: Icon(Icons.event_seat, color: AppTok.accent(context)),
-                    label: _t('guest_tab_seating', 'صندلی', 'Seats'),
-                  ),
-                ],
+              bottomNavigationBar: GlassBottomBar(
+                opacity: 0.84,
+                blurSigma: 12,
+                child: NavigationBar(
+                  selectedIndex: _index,
+                  onDestinationSelected: (i) => setState(() => _index = i),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  indicatorColor: AppTok.accent(context).withValues(alpha: 0.18),
+                  destinations: [
+                    NavigationDestination(
+                      icon: const Icon(Icons.home_outlined),
+                      selectedIcon:
+                          Icon(Icons.home, color: AppTok.accent(context)),
+                      label: _t('guest_tab_home', 'خانه', 'Home'),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.mail_outline),
+                      selectedIcon:
+                          Icon(Icons.mail, color: AppTok.accent(context)),
+                      label: _t('guest_tab_invite', 'دعوت‌نامه', 'Invite'),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.view_timeline_outlined),
+                      selectedIcon: Icon(Icons.view_timeline,
+                          color: AppTok.accent(context)),
+                      label: _t('guest_tab_timeline', 'تایم‌لاین', 'Timeline'),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.photo_camera_outlined),
+                      selectedIcon: Icon(Icons.photo_camera,
+                          color: AppTok.accent(context)),
+                      label: _t('guest_tab_camera', 'دوربین', 'Camera'),
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.event_seat_outlined),
+                      selectedIcon: Icon(Icons.event_seat,
+                          color: AppTok.accent(context)),
+                      label: _t('guest_tab_seating', 'صندلی', 'Seats'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

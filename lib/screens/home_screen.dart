@@ -13,6 +13,7 @@ import '../core/app_theme_controller.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/floral_decor.dart';
+import '../widgets/page_glass.dart';
 import '../widgets/wedding_time_header.dart';
 import 'couple_profile_screen.dart';
 import 'vendors_screen.dart';
@@ -497,21 +498,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: InkWell(
         onTap: _openCoupleProfile,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: double.infinity,
+        child: PageGlass(
+          opacity: 0.84,
+          blurSigma: 12,
+          borderRadius: 16,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: border),
-            boxShadow: [
-              BoxShadow(
-                color: shadow,
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
           child: Row(
             children: [
               Container(
@@ -599,23 +590,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return GestureDetector(
       onTap: _openCoupleProfile,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: AppTok.heroGradient(context),
-          border: Border.all(color: border),
-          boxShadow: [
-            BoxShadow(
-              color: shadow,
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Stack(
+      child: PageGlass(
+        opacity: 0.86,
+        blurSigma: 12,
+        borderRadius: 24,
+        padding: EdgeInsets.zero,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: AppTok.heroGradient(context),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
             children: [
               if (coverPhoto != null && coverPhoto!.isNotEmpty)
                 Positioned.fill(
@@ -831,7 +819,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _personAvatar({
@@ -920,18 +908,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _timeBox(String value, String label) {
-    final card = AppTok.card(context);
-    final border = AppTok.border(context);
     final accentDeep = AppTok.accentDeep(context);
     final textSoft = AppTok.textSoft(context);
 
-    return Container(
+    return PageGlass(
+      opacity: 0.84,
+      blurSigma: 10,
+      borderRadius: 14,
       padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: card.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: border),
-      ),
       child: Column(
         children: [
           Text(
@@ -1223,21 +1207,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     final weekItems =
                         items.where((e) => !e.isToday).take(6).toList();
 
-                    return Container(
-                      width: double.infinity,
+                    return PageGlass(
+                      opacity: 0.84,
+                      blurSigma: 12,
+                      borderRadius: 22,
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: card,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: border),
-                        boxShadow: [
-                          BoxShadow(
-                            color: shadow,
-                            blurRadius: 14,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1309,13 +1283,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _emptyFocus(String text) {
-    return Container(
-      width: double.infinity,
+    return PageGlass(
+      opacity: 0.78,
+      blurSigma: 10,
+      borderRadius: 14,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppTok.cardSoft(context),
-        borderRadius: BorderRadius.circular(14),
-      ),
       child: Text(
         text,
         style: TextStyle(color: AppTok.textSoft(context), fontSize: 12.5),
@@ -1326,18 +1298,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _focusTile(_FocusItem item) {
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
-    final cardSoft = AppTok.cardSoft(context);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: cardSoft,
-        borderRadius: BorderRadius.circular(14),
+      child: PageGlass(
+        opacity: 0.80,
+        blurSigma: 10,
+        borderRadius: 14,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: InkWell(
           onTap: item.onTap,
           borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
                 Container(
@@ -1518,21 +1489,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 guestPercent) /
                             4;
 
-                        return Container(
-                          width: double.infinity,
+                        return PageGlass(
+                          opacity: 0.86,
+                          blurSigma: 12,
+                          borderRadius: 22,
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(22),
-                            gradient: AppTok.progressGradient(context),
-                            border: Border.all(color: border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: shadow,
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
                           child: Column(
                             children: [
                               Row(
@@ -1709,18 +1670,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
 
-    return Material(
-      color: card,
-      borderRadius: BorderRadius.circular(16),
+    return PageGlass(
+      opacity: 0.82,
+      blurSigma: 10,
+      borderRadius: 16,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: border),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
