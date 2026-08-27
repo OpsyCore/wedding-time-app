@@ -1,21 +1,5 @@
 // ============================================================================
-// NDK detection & alignment — runs FIRST, before any subproject evaluates.
-//
-// Fixes [CXX1104] "NDK from ndk.dir ... had version [x] which disagrees with
-// android.ndkVersion [y]" on machines where more than one NDK exists or where
-// Flutter plugins pin flutter.ndkVersion (e.g. 27.0.12077973) without that
-// exact revision being installed.
-//
-// Choice priority (first match wins):
-//   1. the NDK pointed to by ndk.dir in android/local.properties (explicit
-//      user choice — highest priority, per docs/ANDROID_RELEASE.md)
-//   2. the Flutter-preferred revision (27.0.12077973) IF it is installed
-//   3. the newest revision installed under <sdk>\ndk\
-//   4. nothing (no NDK installed — this app builds fine without one; plugins
-//      ship prebuilt .so files)
-//
-// The chosen revision is shared with android/app/build.gradle.kts via a root
-// extra, and :app pins exactly that revision.
+// NDK detection — runs FIRST, before any subproject evaluates.
 // ============================================================================
 import java.io.FileInputStream
 import java.util.Properties
@@ -54,9 +38,9 @@ val ndkInstalledRevisions: List<String> = ndkSdkDir
 val ndkDirRevision: String? =
     ndkLocalProperties.getProperty("ndk.dir")?.let { ndkRevisionOf(File(it)) }
 
-val flutterPreferredNdk = "27.0.12077973" // flutter.ndkVersion of the pinned Flutter SDK
+val flutterPreferredNdk = "27.0.12077973"
 
-val ndkAlignedRevision: String? = ndkDirRevision
+val ndkChosenRevision: String? = ndkDirRevision
     ?: (if (flutterPreferredNdk in ndkInstalledRevisions) flutterPreferredNdk else null)
     ?: ndkInstalledRevisions.maxWithOrNull(
         compareBy(
@@ -66,27 +50,69 @@ val ndkAlignedRevision: String? = ndkDirRevision
         ),
     )
 
-extra["ndkAlignedRevision"] = ndkAlignedRevision
+extra["ndkChosenRevision"] = ndkChosenRevision
+extra["ndkAlignedRevision"] = ndkChosenRevision
 extra["ndkInstalledRevisions"] = ndkInstalledRevisions
 
 println(
     "root: NDK installed=[" + ndkInstalledRevisions.joinToString(", ") + "]" +
         (ndkDirRevision?.let { " ndk.dir=$it" } ?: "") +
-        " -> using '" + (ndkAlignedRevision ?: "<none - build proceeds without NDK>") + "'",
+        " -> using '" + (ndkChosenRevision ?: "<none>") + "'",
 )
+
+// ============================================================================
+// Mirrors for buildscript classpath (fixes plugins like audio_session that
+// need com.android.tools.build:gradle:8.1.0 but google()/mavenCentral() are
+// blocked on this network).
+// ============================================================================
+subprojects {
+    buildscript {
+        repositories {
+            maven("https://maven.aliyun.com/repository/google")
+            maven("https://maven.aliyun.com/repository/gradle-plugin")
+            maven("https://maven.aliyun.com/repository/public")
+            maven("https://mirrors.huaweicloud.com/repository/maven/")
+            maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+            maven("https://plugins.gradle.org/m2/")
+            google()
+            mavenCentral()
+        }
+    }
+}
+
+// ============================================================================
+// FORCE every Android module (app + every plugin library) onto the SAME
+// installed NDK — via plugins.withId (fires immediately when the plugin is
+// applied), NOT afterEvaluate. This is what actually fixes CXX1104 for
+// modules like ":jni" that never set ndkVersion themselves and would
+// otherwise fall back to AGP's built-in default (e.g. 28.2.13676358),
+// which conflicts with ndk.dir.
+// ============================================================================
+subprojects {
+    val subproject = this
+    val alignNdk: () -> Unit = {
+        if (ndkChosenRevision != null) {
+            val ext = subproject.extensions.findByName("android")
+            val setter = ext?.javaClass?.methods?.firstOrNull {
+                it.name == "setNdkVersion" && it.parameterCount == 1
+            }
+            setter?.invoke(ext, ndkChosenRevision)
+            println("root: aligned '${subproject.path}' ndkVersion -> $ndkChosenRevision")
+        }
+    }
+    plugins.withId("com.android.library") { alignNdk() }
+    plugins.withId("com.android.application") { alignNdk() }
+}
 
 // ============================================================================
 
 allprojects {
     repositories {
-        // Multi-mirror FIRST (restricted-network friendly); originals kept at the
-        // end as fallback. Order matters — Gradle tries repositories in order.
-        maven("https://mirrors.huaweicloud.com/repository/maven/")
-        maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
-        maven("https://repo1.maven.org/maven2/")
         maven("https://maven.aliyun.com/repository/public")
         maven("https://maven.aliyun.com/repository/google")
         maven("https://maven.aliyun.com/repository/central")
+        maven("https://mirrors.huaweicloud.com/repository/maven/")
+        maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
         google()
         mavenCentral()
     }
@@ -102,20 +128,10 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
-
-// NOTE: do NOT register subproject afterEvaluate hooks in this file.
-// The evaluationDependsOn(":app") above forces :app to evaluate DURING root
-// evaluation, so any `subprojects { afterEvaluate { ... } }` registered after
-// it throws "Cannot run Project.afterEvaluate(Action) when the project is
-// already evaluated." NDK alignment is also unnecessary: the NDK choice is
-// made once above (ndk.dir > 27.0.12077973-if-installed > newest installed),
-// :app pins exactly that, and plugins pin flutter.ndkVersion — which equals
-// the Flutter-preferred revision, so all pins agree as long as the preferred
-// (or only) installed NDK is 27.0.12077973. Diagnose any mismatch with
-// tools\android_ndk_doctor.cmd.
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
