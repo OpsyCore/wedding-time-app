@@ -1,5 +1,10 @@
 allprojects {
     repositories {
+        // Aliyun mirrors FIRST (China-friendly, also handy behind flaky VPNs);
+        // original repos are kept after as fallback.
+        maven("https://maven.aliyun.com/repository/google")
+        maven("https://maven.aliyun.com/repository/central")
+        maven("https://maven.aliyun.com/repository/public")
         google()
         mavenCentral()
     }
@@ -21,17 +26,4 @@ subprojects {
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
-}
-
-buildscript {
-    dependencies {
-        classpath("com.google.gms:google-services:4.3.15")
-    }
-}
-
-android {
-    defaultConfig {
-        minSdkVersion 21
-        // ...
-    }
 }

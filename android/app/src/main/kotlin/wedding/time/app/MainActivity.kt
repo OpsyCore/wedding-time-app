@@ -1,4 +1,4 @@
-package com.example.wedding_time
+package wedding.time.app
 
 import io.flutter.embedding.android.FlutterActivity
 

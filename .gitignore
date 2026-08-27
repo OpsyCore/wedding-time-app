@@ -3,20 +3,9 @@ build/
 .flutter-plugins-dependencies
 *.cache.dill
 *.cache.dill.track.dill
-# Android signing
-android/key.properties
-android/*.jks
-*.jks
 
-# Android signing
-android/key.properties
-android/*.jks
-
-# Android signing
-android/key.properties
-android/*.jks
-
-# Android signing
+# Android signing secrets — NEVER commit these (local machine only).
+# See docs/ANDROID_RELEASE.md
 android/key.properties
 android/*.jks
 *.jks
