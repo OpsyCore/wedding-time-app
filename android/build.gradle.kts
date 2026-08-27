@@ -1,7 +1,5 @@
 allprojects {
     repositories {
-        // Aliyun mirrors FIRST (China-friendly, also handy behind flaky VPNs);
-        // original repos are kept after as fallback.
         maven("https://maven.aliyun.com/repository/google")
         maven("https://maven.aliyun.com/repository/central")
         maven("https://maven.aliyun.com/repository/public")

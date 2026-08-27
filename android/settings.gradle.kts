@@ -11,8 +11,7 @@
     includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
 
     repositories {
-        // Aliyun mirrors FIRST (China-friendly, also handy behind flaky VPNs);
-        // original repos are kept after as fallback.
+        // Mirrors first (flaky Google access)
         maven("https://maven.aliyun.com/repository/google")
         maven("https://maven.aliyun.com/repository/central")
         maven("https://maven.aliyun.com/repository/gradle-plugin")
@@ -25,10 +24,9 @@
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "9.0.1" apply false
-    id("org.jetbrains.kotlin.android") version "2.3.20" apply false
-    id("com.google.gms.google-services") version "4.4.2" apply false
+    id("com.android.application") version "8.11.1" apply false
+    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    id("com.google.gms.google-services") version "4.3.15" apply false
 }
 
 include(":app")
-
