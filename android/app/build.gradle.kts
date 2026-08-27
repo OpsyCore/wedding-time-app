@@ -3,6 +3,9 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
+    // AGP 8.11.x has no built-in Kotlin support — apply KGP explicitly
+    // (version comes from android/settings.gradle.kts plugins block).
+    id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
 }

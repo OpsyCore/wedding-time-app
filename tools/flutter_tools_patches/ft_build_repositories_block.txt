@@ -1,0 +1,18 @@
+
+// ==== ARENA-MIRRORS (appended by wedding_time tools\android_build_release.cmd) ====
+// Multi-mirror repositories for the flutter_tools included build, so
+// :gradle:compileKotlin can resolve AGP 8.11.1 / annotation-jvm 1.9.1 /
+// kotlin-gradle-plugin 2.0.0 on restricted networks. Mirrors first, then the
+// repositories declared in the shipped settings.gradle.kts as fallback.
+// To undo: restore build.gradle.kts.arena.bak (same folder).
+repositories {
+    maven("https://mirrors.huaweicloud.com/repository/maven/")
+    maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+    maven("https://repo1.maven.org/maven2/")
+    maven("https://maven.aliyun.com/repository/public")
+    maven("https://maven.aliyun.com/repository/google")
+    maven("https://maven.aliyun.com/repository/central")
+    google()
+    mavenCentral()
+}
+// ==== ARENA-MIRRORS-END ====
