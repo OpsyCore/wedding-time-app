@@ -104,22 +104,48 @@ was that one line in `android/app/build.gradle.kts`. This app has no native
 C/C++ sources; plugins ship prebuilt `.so` files, so an NDK is not required to
 produce an AAB/APK.
 
-**Now:** `android/app/build.gradle.kts` scans `<sdk>\ndk\*`:
-- NDK installed → pins the best one (prefers `27.0.12077973`, else newest
-  revision). No download, no SDK Manager.
-- No NDK installed → sets nothing; the build proceeds without one.
-- If you ever want an NDK without Android Studio:
-  ```bat
-  set INSTALLNDK=1
-  tools\android_build_release.cmd
-  ```
-  Manual equivalent — zip URLs (first that works wins), extract so that
-  `source.properties` sits **directly** in `<sdk>\ndk\<revision>\`:
-  - `https://mirrors.huaweicloud.com/android/repository/android-ndk-r27c-windows.zip`
-  - `https://mirrors.cloud.tencent.com/AndroidSDK/android-ndk-r27c-windows.zip`
-  - `https://dl.google.com/android/repository/android-ndk-r27c-windows.zip`
-  - release page: `https://github.com/android/ndk/releases/tag/r27c`
-    (rev `27.2.12479018`, ≈840 MB for Windows)
+**Now** (since `fix(android): stop hard-failing on missing NDK 27…` + the CXX1104 fix):
+`android/build.gradle.kts` detects the NDK once, before any subproject, with
+priority **`ndk.dir` (from local.properties) → `27.0.12077973` if installed →
+newest revision under `<sdk>\ndk\` → nothing**, and:
+
+- `android/app/build.gradle.kts` pins exactly that revision (or nothing when
+  no NDK exists — the build proceeds fine without one; plugins ship prebuilt
+  `.so` files).
+- every plugin subproject that pins a *different, not-installed* `ndkVersion`
+  (plugins inherit `flutter.ndkVersion`, e.g. `27.0.12077973`) is re-aligned
+  to it — the build log shows `root: aligned project 'X' ndkVersion A -> B`.
+
+**[CXX1104] "NDK from ndk.dir … disagrees with android.ndkVersion":** caused
+by `ndk.dir` pointing at revision X while *some module* pins revision Y.
+Diagnose which pin wins with:
+
+```bat
+tools\android_ndk_doctor.cmd
+```
+
+It prints the repo pins, the **machine-global** `%USERPROFILE%\.gradle\gradle.properties`
+(check for an `android.ndkVersion=…` line there — it overrides nothing but
+reveals stale advice), `local.properties`, and every installed NDK revision.
+The repo logic above (ndk.dir first) resolves it without any manual step;
+after pulling, just `gradlew --stop` once (stale daemons keep old config)
+and rebuild.
+
+If you ever want an NDK without Android Studio:
+
+```bat
+set INSTALLNDK=1
+tools\android_build_release.cmd
+```
+
+Manual equivalent — zip URLs (first that works wins), extract so that
+`source.properties` sits **directly** in `<sdk>\ndk\<revision>\`:
+
+- `https://mirrors.huaweicloud.com/android/repository/android-ndk-r27c-windows.zip`
+- `https://mirrors.cloud.tencent.com/AndroidSDK/android-ndk-r27c-windows.zip`
+- `https://dl.google.com/android/repository/android-ndk-r27c-windows.zip`
+- release page: `https://github.com/android/ndk/releases/tag/r27c`
+  (rev `27.2.12479018`, ≈840 MB for Windows)
 
 ## 6) Network root cause & fix (multi-mirror)
 
