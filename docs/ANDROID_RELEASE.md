@@ -111,10 +111,11 @@ newest revision under `<sdk>\ndk\` → nothing**, and:
 
 - `android/app/build.gradle.kts` pins exactly that revision (or nothing when
   no NDK exists — the build proceeds fine without one; plugins ship prebuilt
-  `.so` files).
-- every plugin subproject that pins a *different, not-installed* `ndkVersion`
-  (plugins inherit `flutter.ndkVersion`, e.g. `27.0.12077973`) is re-aligned
-  to it — the build log shows `root: aligned project 'X' ndkVersion A -> B`.
+  `.so` files). No subproject `afterEvaluate` hooks are registered (they are
+  illegal after `evaluationDependsOn(":app")` forces `:app` to evaluate early
+  — that was the `Cannot run Project.afterEvaluate(Action)…` crash).
+  Plugins pin `flutter.ndkVersion`; as long as the Flutter-preferred revision
+  (or your only NDK) is installed, every pin agrees.
 
 **[CXX1104] "NDK from ndk.dir … disagrees with android.ndkVersion":** caused
 by `ndk.dir` pointing at revision X while *some module* pins revision Y.

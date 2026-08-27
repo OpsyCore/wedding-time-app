@@ -15,8 +15,7 @@
 //      ship prebuilt .so files)
 //
 // The chosen revision is shared with android/app/build.gradle.kts via a root
-// extra, and every Android subproject (plugins included) that pins a DIFFERENT,
-// not-installed ndkVersion is re-aligned to it below.
+// extra, and :app pins exactly that revision.
 // ============================================================================
 import java.io.FileInputStream
 import java.util.Properties
@@ -107,32 +106,16 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// Align every Android subproject (Flutter plugins included): if it pins an
-// ndkVersion that is NOT installed on this machine, point it at the chosen
-// installed revision instead. Kills the plugin-side half of [CXX1104].
-subprojects {
-    afterEvaluate {
-        val androidExtension = extensions.findByName("android") ?: return@afterEvaluate
-        val target = rootProject.extra["ndkAlignedRevision"] as? String ?: return@afterEvaluate
-        val installed = rootProject.extra["ndkInstalledRevisions"] as? List<*>
-        val current = runCatching {
-            androidExtension.javaClass.methods
-                .firstOrNull { it.name == "getNdkVersion" && it.parameterCount == 0 }
-                ?.invoke(androidExtension) as? String
-        }.getOrNull()
-        if (current != null && current != target && (installed == null || current !in installed)) {
-            runCatching {
-                androidExtension.javaClass.methods
-                    .firstOrNull { it.name == "setNdkVersion" && it.parameterCount == 1 }
-                    ?.invoke(androidExtension, target)
-                println(
-                    "root: aligned project '" + project.name + "' ndkVersion " +
-                        current + " -> " + target + " (previous version not installed)",
-                )
-            }
-        }
-    }
-}
+// NOTE: do NOT register subproject afterEvaluate hooks in this file.
+// The evaluationDependsOn(":app") above forces :app to evaluate DURING root
+// evaluation, so any `subprojects { afterEvaluate { ... } }` registered after
+// it throws "Cannot run Project.afterEvaluate(Action) when the project is
+// already evaluated." NDK alignment is also unnecessary: the NDK choice is
+// made once above (ndk.dir > 27.0.12077973-if-installed > newest installed),
+// :app pins exactly that, and plugins pin flutter.ndkVersion — which equals
+// the Flutter-preferred revision, so all pins agree as long as the preferred
+// (or only) installed NDK is 27.0.12077973. Diagnose any mismatch with
+// tools\android_ndk_doctor.cmd.
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)

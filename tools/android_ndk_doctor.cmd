@@ -76,7 +76,6 @@ echo ------------------------------------------------------------
 echo The root build prints this at configuration time, e.g.:
 echo    root: NDK installed=[...] ndk.dir=... -^> using '...'
 echo    android/app: pinning installed NDK ...
-echo    root: aligned project 'X' ndkVersion A -^> B ...
 echo Just run a build and read those lines - they are the ground truth.
 echo.
 
