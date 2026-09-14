@@ -1050,8 +1050,9 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 20),
       children: visibleGroups.map((group) {
-        final groupTasks =
-            filteredTasks.where((t) => t['group'] == group).toList();
+        final groupTasks = _sortByOrder(
+          filteredTasks.where((t) => t['group'] == group).toList(),
+        );
         final groupActive =
             tasks.where((t) => t['group'] == group && _isInChecklist(t));
         final groupTotal = groupActive.length;
@@ -1181,9 +1182,62 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
+  /// ترتیب ذخیره‌شدهٔ یک آیتم (آیتم‌های قدیمی order ندارند → آخر می‌روند)
+  int _orderOf(Map<String, dynamic> t) {
+    final v = t['order'];
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return 1 << 30;
+  }
+
+  List<Map<String, dynamic>> _sortByOrder(List<Map<String, dynamic>> list) {
+    final copy = List<Map<String, dynamic>>.from(list);
+    copy.sort((a, b) => _orderOf(a).compareTo(_orderOf(b)));
+    return copy;
+  }
+
+  /// آیتم‌های فعال یک گروه، مرتب‌شده بر اساس order
+  List<Map<String, dynamic>> _tasksInGroup(String group) => _sortByOrder(
+        tasks
+            .where((t) =>
+                (t['group'] ?? groups.first).toString() == group &&
+                _isInChecklist(t))
+            .toList(),
+      );
+
+  /// جابه‌جا کردن یک آیتم داخل گروه‌اش (delta: -1 بالا، 1 پایین)
+  Future<void> moveTask(Map<String, dynamic> task, int delta) async {
+    final group = (task['group'] ?? groups.first).toString();
+    final list = _tasksInGroup(group);
+    final index = list.indexWhere((t) => t['id'] == task['id']);
+    if (index < 0) return;
+
+    final target = index + delta;
+    if (target < 0 || target >= list.length) return;
+
+    final moved = list.removeAt(index);
+    list.insert(target, moved);
+
+    final batch = FirebaseFirestore.instance.batch();
+    for (var i = 0; i < list.length; i++) {
+      final id = list[i]['id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      batch.update(ref.doc(id), {'order': i});
+    }
+    await batch.commit();
+    await loadTasks();
+  }
+
   Widget _buildTaskRow(BuildContext context, Map<String, dynamic> task) {
     final hasDesc = (task['desc'] ?? '').toString().isNotEmpty;
     final isDone = task['done'] == true;
+
+    // جایگاه این آیتم در گروه‌اش — برای فعال/غیرفعال کردن دکمه‌های جابه‌جایی
+    final _group = (task['group'] ?? groups.first).toString();
+    final _groupList = _tasksInGroup(_group);
+    final _index = _groupList.indexWhere((t) => t['id'] == task['id']);
+    final canMoveUp = _index > 0;
+    final canMoveDown = _index >= 0 && _index < _groupList.length - 1;
 
     return Dismissible(
       key: ValueKey(task['id'] ?? task.hashCode),
@@ -1285,6 +1339,18 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   ],
                 ),
               ),
+              _MoveButton(
+                icon: Icons.arrow_upward_rounded,
+                tooltip: AppLang.tr('move_up'),
+                enabled: canMoveUp,
+                onTap: () => moveTask(task, -1),
+              ),
+              _MoveButton(
+                icon: Icons.arrow_downward_rounded,
+                tooltip: AppLang.tr('move_down'),
+                enabled: canMoveDown,
+                onTap: () => moveTask(task, 1),
+              ),
               Icon(
                 AppLang.I.isFa ? Icons.chevron_left : Icons.chevron_right,
                 color: AppTok.textSoft(context),
@@ -1294,6 +1360,39 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// دکمهٔ کوچک جابه‌جایی (بالا/پایین) — وقتی در انتهای لیست است خاکستری می‌شود
+class _MoveButton extends StatelessWidget {
+  const _MoveButton({
+    required this.icon,
+    required this.tooltip,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+      icon: Icon(
+        icon,
+        size: 16,
+        color: enabled
+            ? AppTok.textSoft(context)
+            : AppTok.textSoft(context).withValues(alpha: 0.28),
+      ),
+      onPressed: enabled ? onTap : null,
     );
   }
 }
