@@ -2,10 +2,16 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+
+// Conditional import: flutter_web_plugins depends on dart:ui_web, which
+// only exists on web. Importing it unconditionally breaks Android/iOS
+// builds with "Dart library 'dart:ui_web' is not available".
+import 'core/web_url_strategy_stub.dart'
+    if (dart.library.js_interop) 'core/web_url_strategy_web.dart';
 
 import 'core/app_effect_controller.dart';
 import 'core/app_lang.dart';
+import 'core/guest_slug.dart';
 import 'core/app_theme.dart';
 import 'core/app_theme_controller.dart';
 import 'firebase_options.dart';
@@ -16,7 +22,7 @@ import 'services/ambient_music_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
-    usePathUrlStrategy();
+    configureWebUrlStrategy();
   }
 
   await Firebase.initializeApp(
@@ -74,42 +80,7 @@ class WeddingTimeApp extends StatelessWidget {
     return null;
   }
 
-  static String? _slugFrom(String? raw) {
-    if (raw == null) return null;
-    var s = raw.trim();
-    if (s.isEmpty) return null;
-
-    final asUri = Uri.tryParse(s);
-    if (asUri != null && (asUri.hasScheme || s.contains('://'))) {
-      s = asUri.path;
-      if ((s.isEmpty || s == '/') && asUri.fragment.isNotEmpty) {
-        s = asUri.fragment;
-      }
-    }
-
-    if (s.startsWith('#')) s = s.substring(1);
-    if (!s.startsWith('/')) s = '/$s';
-
-    final qi = s.indexOf('?');
-    if (qi >= 0) s = s.substring(0, qi);
-    final hi = s.indexOf('#');
-    if (hi >= 0) s = s.substring(0, hi);
-
-    final parts = s.split('/').where((e) => e.isNotEmpty).toList();
-    if (parts.isEmpty) return null;
-
-    final root = parts.first.toLowerCase();
-    if (root == 'invite' ||
-        root == 'portal' ||
-        root == 'guest' ||
-        root == 'g') {
-      if (parts.length >= 2) {
-        return Uri.decodeComponent(parts[1]).trim();
-      }
-      return '';
-    }
-    return null;
-  }
+  static String? _slugFrom(String? raw) => GuestSlug.from(raw);
 
   static Route<dynamic> _routeFor(RouteSettings settings) {
     // سشن مهمان قفل‌شده — هر routeی → فقط GuestAuthGate

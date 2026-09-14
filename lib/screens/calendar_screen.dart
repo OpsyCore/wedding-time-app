@@ -1475,6 +1475,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: AppLang.tr('delete_event'),
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 30,
+                      height: 30,
+                    ),
+                    icon: Icon(
+                      Icons.delete_outline_rounded,
+                      color: AppTok.danger(context),
+                      size: 18,
+                    ),
+                    onPressed: () => deleteEvent(doc),
+                  ),
+                  const SizedBox(width: 2),
                   Icon(
                     Icons.edit_outlined,
                     color: AppTok.textSoft(context),

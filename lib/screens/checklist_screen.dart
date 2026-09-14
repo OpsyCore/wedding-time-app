@@ -165,6 +165,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     payload['inChecklist'] = payload['inChecklist'] ?? true;
     payload['done'] = payload['done'] ?? false;
     final doc = await ref.add(payload);
+    if (!mounted) return;
     payload['id'] = doc.id;
     setState(() => tasks.add(payload));
   }
@@ -837,6 +838,18 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             key: _scaffoldKey,
             backgroundColor: AppTok.background(context),
             drawer: AppDrawer(weddingId: widget.weddingId),
+            // نوار پیشرفت ثابتِ پایین صفحه — دیگر روی آیتم‌ها نمی‌افتد
+            bottomNavigationBar: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: _buildProgressFooter(
+                  context,
+                  doneCount: doneCount,
+                  total: activeTasks.length,
+                ),
+              ),
+            ),
             body: SafeArea(
               child: Column(
                 children: [
@@ -914,12 +927,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          _buildProgressFooter(
-                            context,
-                            doneCount: doneCount,
-                            total: activeTasks.length,
-                          ),
-                          const SizedBox(height: 80),
                         ],
                       ),
                     ),

@@ -7,6 +7,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../main_navigation_screen.dart';
 import '../services/wedding_service.dart';
+import '../widgets/forgot_password_sheet.dart';
 import 'wedding_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -89,6 +90,16 @@ class _LoginScreenState extends State<LoginScreen> {
       MaterialPageRoute(
         builder: (_) => MainNavigationScreen(weddingId: weddingId),
       ),
+    );
+  }
+
+  /// بازیابی رمز عبور — شیت «فراموشی رمز» را با ایمیلِ تایپ‌شده باز می‌کند
+  Future<void> _openForgotPassword() async {
+    if (_isLoading) return;
+    FocusScope.of(context).unfocus();
+    await ForgotPasswordSheet.show(
+      context,
+      initialEmail: _emailCtrl.text.trim(),
     );
   }
 
@@ -298,14 +309,17 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected
-                  ? AppTok.accentDeep(context)
-                  : AppTok.textSoft(context),
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              fontSize: 14,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected
+                    ? AppTok.accentDeep(context)
+                    : AppTok.textSoft(context),
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 14,
+              ),
             ),
           ),
         ),
@@ -330,28 +344,31 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           alignment: Alignment.center,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected
-                    ? AppTok.accentDeep(context)
-                    : AppTok.textSoft(context),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
                   color: selected
                       ? AppTok.accentDeep(context)
                       : AppTok.textSoft(context),
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  fontSize: 14,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: selected
+                        ? AppTok.accentDeep(context)
+                        : AppTok.textSoft(context),
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -482,6 +499,32 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
+
+                          // ── فراموشی رمز عبور ──
+                          Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: TextButton(
+                              onPressed:
+                                  _isLoading ? null : _openForgotPassword,
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 4,
+                                ),
+                                minimumSize: Size.zero,
+                                tapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                AppLang.tr('forgot_password'),
+                                style: TextStyle(
+                                  color: AppTok.accent(context),
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -516,8 +559,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           _isLogin

@@ -178,7 +178,7 @@ class AmbientMusicService extends ChangeNotifier {
       _error = e.toString();
       _playing = false;
       if (kDebugMode) {
-        print('AmbientMusic load error: $e');
+        debugPrint('AmbientMusic load error: $e');
       }
     } finally {
       _loading = false;

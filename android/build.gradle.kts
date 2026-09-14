@@ -61,6 +61,36 @@ println(
 )
 
 // ============================================================================
+// Build Tools detection — same idea as the NDK above.
+// AGP defaults to a Build Tools revision that may not be installed (35.0.0),
+// and on networks where dl.google.com is unreachable it cannot download it
+// ("Failed to find Build Tools revision 35.0.0"). So pick the newest
+// revision that is actually present under <sdk>/build-tools.
+// ============================================================================
+fun buildToolsKey(v: String): List<Int> =
+    v.split(".").map { it.toIntOrNull() ?: 0 }
+
+val buildToolsInstalled: List<String> = ndkSdkDir
+    ?.resolve("build-tools")
+    ?.listFiles { f -> f.isDirectory }
+    ?.map { it.name }
+    .orEmpty()
+    .filter { it.isNotEmpty() && it[0].isDigit() && !it.contains("-") }
+
+val buildToolsChosen: String? = buildToolsInstalled.maxWithOrNull(
+    compareBy(
+        { v: String -> buildToolsKey(v).getOrNull(0) ?: 0 },
+        { v: String -> buildToolsKey(v).getOrNull(1) ?: 0 },
+        { v: String -> buildToolsKey(v).getOrNull(2) ?: 0 },
+    ),
+)
+
+println(
+    "root: build-tools installed=[" + buildToolsInstalled.joinToString(", ") +
+        "] -> using '" + (buildToolsChosen ?: "<none>") + "'",
+)
+
+// ============================================================================
 // Mirrors for buildscript classpath (fixes plugins like audio_session that
 // need com.android.tools.build:gradle:8.1.0 but google()/mavenCentral() are
 // blocked on this network).
@@ -102,6 +132,56 @@ subprojects {
     }
     plugins.withId("com.android.library") { alignNdk() }
     plugins.withId("com.android.application") { alignNdk() }
+}
+
+// Pin Build Tools as well — AGP would otherwise insist on its own default.
+subprojects {
+    val subproject = this
+    val alignBuildTools: () -> Unit = {
+        if (buildToolsChosen != null) {
+            runCatching {
+                val ext = subproject.extensions.findByName("android")
+                ext?.javaClass?.methods?.firstOrNull {
+                    it.name == "setBuildToolsVersion" && it.parameterCount == 1
+                }?.invoke(ext, buildToolsChosen)
+            }
+        }
+    }
+    plugins.withId("com.android.library") { alignBuildTools() }
+    plugins.withId("com.android.application") { alignBuildTools() }
+    subproject.afterEvaluate { alignBuildTools() }
+}
+
+// ============================================================================
+// SECOND pass — some plugin modules (notably ":jni") set android.ndkVersion
+// in their OWN build.gradle, i.e. AFTER plugins.withId fires, which brings
+// back [CXX1104] (ndk.dir=27.x vs android.ndkVersion=28.x).
+// Re-assert the chosen revision once the module has finished evaluating so
+// nothing can drift away from the installed NDK.
+// ============================================================================
+subprojects {
+    val subproject = this
+    subproject.afterEvaluate {
+        if (ndkChosenRevision != null) {
+            runCatching {
+                val ext = subproject.extensions.findByName("android")
+                val getter = ext?.javaClass?.methods?.firstOrNull {
+                    it.name == "getNdkVersion" && it.parameterCount == 0
+                }
+                val setter = ext?.javaClass?.methods?.firstOrNull {
+                    it.name == "setNdkVersion" && it.parameterCount == 1
+                }
+                val current = getter?.invoke(ext)?.toString()
+                if (setter != null && current != ndkChosenRevision) {
+                    setter.invoke(ext, ndkChosenRevision)
+                    println(
+                        "root: late-aligned '${subproject.path}' ndkVersion " +
+                            "$current -> $ndkChosenRevision"
+                    )
+                }
+            }
+        }
+    }
 }
 
 // ============================================================================
