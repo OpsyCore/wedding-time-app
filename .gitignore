@@ -25,6 +25,8 @@ firebase-debug.*.log
 
 # Analyzer / build output
 analyze_out.txt
+build_log*.txt
+flutter_run*.log
 
 # Local dart-define secrets (never commit)
 dart_defines.json
