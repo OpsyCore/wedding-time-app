@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/app_effect.dart';
 import '../core/app_effect_controller.dart';
 import '../core/app_effects.dart';
 import '../core/app_lang.dart';
@@ -280,26 +281,9 @@ class _LocalEffectSheet extends StatelessWidget {
 class _EffectGrid extends StatelessWidget {
   const _EffectGrid();
 
-  static String _normalizeForCompare(String id) {
-    const legacyToNew = {
-      'gold': 'champagne_gold',
-      'lavender': 'lavender_dusk',
-      'rose': 'blush_rose',
-      'champagne': 'champagne_gold',
-      'midnight': 'ocean_mist',
-      'none': 'none',
-      'misty_rose': 'misty_rose',
-      'olive_grove': 'olive_grove',
-      'candlelight': 'candlelight',
-      'midnight_orchid': 'midnight_orchid',
-      'pearl_sand': 'pearl_sand',
-    };
-    return legacyToNew[id] ?? id;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final all = AppEffectStyle.all;
+    const all = AppEffect.all;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -311,16 +295,15 @@ class _EffectGrid extends StatelessWidget {
         childAspectRatio: 1.35,
       ),
       itemBuilder: (c, i) {
-        final style = all[i];
-        final isSelected =
-            AppEffectController.I.effectId == _normalizeForCompare(style.id);
+        final eff = all[i];
+        final isSelected = AppEffectController.I.effectId == eff.id;
         final isDark = AppTok.isDark(context);
         return Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(18),
             onTap: () async {
-              await AppEffectController.I.setEffect(style.id);
+              await AppEffectController.I.setEffect(eff.id);
               if (context.mounted) Navigator.pop(context);
             },
             child: Container(
@@ -328,11 +311,11 @@ class _EffectGrid extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
                 color: isSelected
-                    ? style.primary.withValues(alpha: isDark ? 0.18 : 0.14)
+                    ? eff.primary.withValues(alpha: isDark ? 0.18 : 0.14)
                     : AppTok.card(context).withValues(alpha: 0.88),
                 border: Border.all(
                   color: isSelected
-                      ? style.primary
+                      ? eff.primary
                       : AppTok.border(context).withValues(alpha: 0.8),
                   width: isSelected ? 1.6 : 1,
                 ),
@@ -355,20 +338,20 @@ class _EffectGrid extends StatelessWidget {
                         height: 38,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          color: style.isOff
+                          color: eff.isNone
                               ? AppTok.cardSoft(context)
-                              : style.primary.withValues(alpha: 0.18),
+                              : eff.primary.withValues(alpha: 0.18),
                           border: Border.all(
-                            color: style.isOff
+                            color: eff.isNone
                                 ? AppTok.border(context)
-                                : style.primary.withValues(alpha: 0.25),
+                                : eff.primary.withValues(alpha: 0.25),
                           ),
                         ),
                         child: Icon(
-                          style.icon,
-                          color: style.isOff
+                          eff.icon,
+                          color: eff.isNone
                               ? AppTok.textSoft(context)
-                              : style.primary,
+                              : eff.primary,
                           size: 20,
                         ),
                       ),
@@ -376,14 +359,14 @@ class _EffectGrid extends StatelessWidget {
                       if (isSelected)
                         Icon(
                           Icons.check_circle_rounded,
-                          color: style.primary,
+                          color: eff.primary,
                           size: 20,
                         ),
                     ],
                   ),
                   const Spacer(),
                   Text(
-                    AppLang.tr(style.nameKey),
+                    AppLang.tr(eff.nameKey),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -394,7 +377,7 @@ class _EffectGrid extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    AppLang.tr(style.subtitleKey),
+                    AppLang.tr(eff.subtitleKey),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

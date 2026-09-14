@@ -808,7 +808,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       builder: (context, _) {
         if (isLoading) {
           return Scaffold(
-            backgroundColor: AppTok.background(context),
+            backgroundColor: Colors.transparent,
             body: Center(
               child: CircularProgressIndicator(color: AppTok.accent(context)),
             ),
@@ -836,7 +836,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           textDirection: AppLang.I.direction,
           child: Scaffold(
             key: _scaffoldKey,
-            backgroundColor: AppTok.background(context),
+            backgroundColor: Colors.transparent,
             drawer: AppDrawer(weddingId: widget.weddingId),
             // نوار پیشرفت ثابتِ پایین صفحه — دیگر روی آیتم‌ها نمی‌افتد
             bottomNavigationBar: SafeArea(
@@ -1170,15 +1170,88 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
-  // TASK 1 — premium checklist progress footer
+  // TASK 1 — compact checklist progress footer (fixed at bottom)
   Widget _buildProgressFooter(
     BuildContext context, {
     required int doneCount,
     required int total,
   }) {
-    return ChecklistProgressFooter(
-      doneCount: doneCount,
-      total: total,
+    final progress = total == 0 ? 0.0 : doneCount / total;
+    final pct = total == 0 ? 0 : ((doneCount / total) * 100).round();
+    final isDark = AppTok.isDark(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppDarkPalette.card.withValues(alpha: 0.92)
+            : AppPalette.card.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppTok.accent(context).withValues(alpha: 0.14),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTok.accent(context).withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.task_alt_rounded,
+              color: AppTok.accent(context),
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        AppLang.tr('checklist_progress'),
+                        style: TextStyle(
+                          color: AppTok.text(context),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${_displayNum(pct)}${AppLang.tr('percent_unit')}',
+                      style: TextStyle(
+                        color: AppTok.accentDeep(context),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                WeddingProgressBar(
+                  value: progress,
+                  size: WeddingProgressSize.thin,
+                  animate: true,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -61,7 +61,7 @@ class AppConfig {
   /// راه‌حل قطعی، آپلود از طریق یک endpoint در بک‌اند است.
   static const String imgbbApiKey = String.fromEnvironment(
     'IMGBB_API_KEY',
-    defaultValue: '',
+    defaultValue: '63ad9a49b307c10e9cbcbbe65c1e23bf',
   );
 
   static bool get hasImgbbKey => imgbbApiKey.trim().isNotEmpty;
