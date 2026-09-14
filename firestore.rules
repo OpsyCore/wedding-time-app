@@ -25,6 +25,9 @@ service cloud.firestore {
         );
     }
 
+    // ⚠️ این لیست باید دقیقاً با AppConfig.adminEmails در
+    // lib/core/app_config.dart یکی باشد. بعد از تغییر،
+    // با `firebase deploy --only firestore:rules` منتشر کنید.
     function isAdmin() {
       return isSignedIn()
         && request.auth.token.email is string

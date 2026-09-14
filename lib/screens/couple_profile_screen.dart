@@ -208,6 +208,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         maxWidth: 1400,
       );
       if (image == null) return;
+      if (!mounted) return;
       setState(() {
         _uploading = true;
         _uploadingKind = kind;

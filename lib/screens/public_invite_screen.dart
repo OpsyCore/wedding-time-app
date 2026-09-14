@@ -60,6 +60,13 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
   String _groomPhotoUrl = '';
   String _message = '';
 
+  // از profile/main می‌آیند (CoupleProfileScreen). قبلاً ذخیره می‌شدند اما
+  // هیچ‌جا نمایش داده نمی‌شدند.
+  String _brideShortName = '';
+  String _groomShortName = '';
+  String _brideBio = '';
+  String _groomBio = '';
+
   Timer? _timer;
   late final AnimationController _heartPulse;
   Duration _remaining = Duration.zero;
@@ -196,6 +203,11 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
               .trim();
           if (gp.isNotEmpty) groomPhoto = gp;
         }
+
+        _brideShortName = (pData['brideShortName'] ?? '').toString().trim();
+        _groomShortName = (pData['groomShortName'] ?? '').toString().trim();
+        _brideBio = (pData['brideBio'] ?? '').toString().trim();
+        _groomBio = (pData['groomBio'] ?? '').toString().trim();
       } catch (_) {}
 
       final rsvp = await GuestLocalStore.loadRsvp(widget.weddingId);
@@ -496,11 +508,11 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
         IconButton(
           tooltip: AppLang.tr('invite_share'),
           onPressed: _shareInvite,
-          icon: _InviteGlass(
+          icon: const _InviteGlass(
             opacity: 0.78,
             borderRadius: 10,
-            padding: const EdgeInsets.all(8),
-            child: const Icon(
+            padding: EdgeInsets.all(8),
+            child: Icon(
               Icons.ios_share,
               size: 18,
               color: AppPalette.text,
@@ -626,7 +638,15 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
                               children: [
                                 _buildHeroPhoto(groom: groom, bride: bride),
                                 const SizedBox(height: 10),
-                                _buildCoupleNames(groom, bride),
+                                _buildCoupleNames(
+                                  _groomShortName.isNotEmpty
+                                      ? _groomShortName
+                                      : groom,
+                                  _brideShortName.isNotEmpty
+                                      ? _brideShortName
+                                      : bride,
+                                ),
+                                _buildCoupleBios(),
                                 if (tagline.isNotEmpty) ...[
                                   const SizedBox(height: 12),
                                   Text(
@@ -693,6 +713,85 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
           fontWeight: FontWeight.w600,
           fontStyle: FontStyle.italic,
         ),
+      ),
+    );
+  }
+
+  /// بیوگرافیِ دو نفر — فقط اگر حداقل یکی پر شده باشد چیزی نشان می‌دهد.
+  Widget _buildCoupleBios() {
+    if (_brideBio.isEmpty && _groomBio.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    Widget card(String name, String bio, IconData icon) {
+      if (bio.isEmpty) return const SizedBox.shrink();
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppPalette.brandGreenSoft.withValues(alpha: 0.55),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16, color: AppPalette.accent),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppPalette.text,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                bio,
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                  color: AppPalette.text.withValues(alpha: 0.82),
+                  fontSize: 12.5,
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          card(
+            _brideShortName.isNotEmpty ? _brideShortName : AppLang.tr('bride'),
+            _brideBio,
+            Icons.female_outlined,
+          ),
+          if (_brideBio.isNotEmpty && _groomBio.isNotEmpty)
+            const SizedBox(width: 10),
+          card(
+            _groomShortName.isNotEmpty ? _groomShortName : AppLang.tr('groom'),
+            _groomBio,
+            Icons.male_outlined,
+          ),
+        ],
       ),
     );
   }

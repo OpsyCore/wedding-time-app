@@ -54,7 +54,7 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
     if (bytes.isEmpty) return;
 
     final kind = await _askKindAndTitle();
-    if (kind == null) return;
+    if (kind == null || !mounted) return;
 
     setState(() => _uploading = true);
     try {

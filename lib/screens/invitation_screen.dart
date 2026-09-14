@@ -65,6 +65,14 @@ class _InvitationScreenState extends State<InvitationScreen>
   DocumentReference get weddingRef =>
       FirebaseFirestore.instance.collection('weddings').doc(widget.weddingId);
 
+  /// همان داکی که CoupleProfileScreen می‌نویسد — منبع اصلیِ اسم‌ها و عکسِ دو نفر.
+  DocumentReference get profileRef =>
+      weddingRef.collection('profile').doc('main');
+
+  /// اسم‌هایی که از پروفایل زوج می‌آیند (برای تشخیصِ تغییرِ دستی هنگام ذخیره)
+  String _autoBride = '';
+  String _autoGroom = '';
+
   static const _faDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 
   String fa(String input) {
@@ -186,6 +194,19 @@ class _InvitationScreenState extends State<InvitationScreen>
     final weddingSnap = await weddingRef.get();
     final wedding = weddingSnap.data() as Map<String, dynamic>? ?? {};
 
+    final profileSnap = await profileRef.get();
+    final profile = profileSnap.data() as Map<String, dynamic>? ?? {};
+
+    // پروفایل زوج منبع اصلیِ اسم‌هاست؛ wedding doc هم هنگام ذخیره‌ی پروفایل
+    // همگام می‌شود. این‌طور اگر کاربر اسم را در پروفایل عوض کند، دعوتنامه هم
+    // به‌روز می‌شود (قبلاً فقط بارِ اول seed می‌شد و بعد دیگر عوض نمی‌شد).
+    final pBride = (profile['brideFullName'] ?? '').toString().trim();
+    final pGroom = (profile['groomFullName'] ?? '').toString().trim();
+    final wBride = (wedding['brideName'] ?? '').toString().trim();
+    final wGroom = (wedding['groomName'] ?? '').toString().trim();
+    final truthBride = pBride.isNotEmpty ? pBride : wBride;
+    final truthGroom = pGroom.isNotEmpty ? pGroom : wGroom;
+
     final inviteSnap = await inviteRef.get();
     Map<String, dynamic> data = {};
 
@@ -194,8 +215,8 @@ class _InvitationScreenState extends State<InvitationScreen>
         inviteSnap.data() as Map<String, dynamic>? ?? {},
       );
     } else {
-      final bride = (wedding['brideName'] ?? '').toString();
-      final groom = (wedding['groomName'] ?? '').toString();
+      final bride = truthBride;
+      final groom = truthGroom;
 
       data = {
         'coverTitle': AppLang.tr('default_cover_title'),
@@ -246,6 +267,24 @@ class _InvitationScreenState extends State<InvitationScreen>
         weddingId: widget.weddingId,
         model: InvitationModel.fromMap(data),
       );
+    }
+
+    // اسم‌ها با پروفایل زوج همگام می‌شوند، مگر اینکه کاربر در خودِ دعوتنامه
+    // اسمی متفاوت نوشته باشد (nameSource == 'manual').
+    final nameSource = (data['nameSource'] ?? 'auto').toString();
+    if (nameSource != 'manual') {
+      if (truthBride.isNotEmpty) data['brideName'] = truthBride;
+      if (truthGroom.isNotEmpty) data['groomName'] = truthGroom;
+    }
+    _autoBride = truthBride;
+    _autoGroom = truthGroom;
+
+    // عکسِ دو نفر فقط روی profile/main ذخیره می‌شد و دعوتنامه اصلاً آن را
+    // نمی‌دید → اینجا به دعوتنامه هم می‌رسد.
+    final pCouple = (profile['couplePhotoUrl'] ?? '').toString().trim();
+    if (pCouple.isNotEmpty &&
+        (data['couplePhotoUrl'] ?? '').toString().trim().isEmpty) {
+      data['couplePhotoUrl'] = pCouple;
     }
 
     final model = InvitationModel.fromMap(data);
@@ -412,6 +451,15 @@ class _InvitationScreenState extends State<InvitationScreen>
         weddingId: widget.weddingId,
         model: _currentModel,
       );
+
+      // اگر اسم‌ها همان اسم‌های پروفایل زوج است، در حالت خودکار بماند تا
+      // بعداً هم با پروفایل همگام بماند؛ وگرنه دستی تلقی شود.
+      final manual = _brideC.text.trim() != _autoBride ||
+          _groomC.text.trim() != _autoGroom;
+      await inviteRef.set({
+        'nameSource': manual ? 'manual' : 'auto',
+      }, SetOptions(merge: true));
+
       await _loadWeather();
 
       if (!mounted) return;

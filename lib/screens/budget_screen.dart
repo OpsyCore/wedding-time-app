@@ -654,7 +654,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
           textDirection: AppLang.I.direction,
           child: Scaffold(
             key: _scaffoldKey,
-            backgroundColor: AppTok.background(context),
+            backgroundColor: Colors.transparent,
             drawer: AppDrawer(weddingId: widget.weddingId),
             body: SafeArea(
               child: Column(

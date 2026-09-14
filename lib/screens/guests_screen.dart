@@ -364,7 +364,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
         return Directionality(
           textDirection: AppLang.I.direction,
           child: Scaffold(
-            backgroundColor: AppTok.background(context),
+            backgroundColor: Colors.transparent,
             drawer: AppDrawer(weddingId: widget.weddingId),
             body: SafeArea(
               child: Column(

@@ -165,6 +165,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     payload['inChecklist'] = payload['inChecklist'] ?? true;
     payload['done'] = payload['done'] ?? false;
     final doc = await ref.add(payload);
+    if (!mounted) return;
     payload['id'] = doc.id;
     setState(() => tasks.add(payload));
   }
@@ -807,7 +808,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       builder: (context, _) {
         if (isLoading) {
           return Scaffold(
-            backgroundColor: AppTok.background(context),
+            backgroundColor: Colors.transparent,
             body: Center(
               child: CircularProgressIndicator(color: AppTok.accent(context)),
             ),
@@ -835,8 +836,20 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           textDirection: AppLang.I.direction,
           child: Scaffold(
             key: _scaffoldKey,
-            backgroundColor: AppTok.background(context),
+            backgroundColor: Colors.transparent,
             drawer: AppDrawer(weddingId: widget.weddingId),
+            // نوار پیشرفت ثابتِ پایین صفحه — دیگر روی آیتم‌ها نمی‌افتد
+            bottomNavigationBar: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: _buildProgressFooter(
+                  context,
+                  doneCount: doneCount,
+                  total: activeTasks.length,
+                ),
+              ),
+            ),
             body: SafeArea(
               child: Column(
                 children: [
@@ -914,12 +927,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          _buildProgressFooter(
-                            context,
-                            doneCount: doneCount,
-                            total: activeTasks.length,
-                          ),
-                          const SizedBox(height: 80),
                         ],
                       ),
                     ),
@@ -1043,8 +1050,9 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 20),
       children: visibleGroups.map((group) {
-        final groupTasks =
-            filteredTasks.where((t) => t['group'] == group).toList();
+        final groupTasks = _sortByOrder(
+          filteredTasks.where((t) => t['group'] == group).toList(),
+        );
         final groupActive =
             tasks.where((t) => t['group'] == group && _isInChecklist(t));
         final groupTotal = groupActive.length;
@@ -1162,21 +1170,147 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
-  // TASK 1 — premium checklist progress footer
+  // TASK 1 — compact checklist progress footer (fixed at bottom)
   Widget _buildProgressFooter(
     BuildContext context, {
     required int doneCount,
     required int total,
   }) {
-    return ChecklistProgressFooter(
-      doneCount: doneCount,
-      total: total,
+    final progress = total == 0 ? 0.0 : doneCount / total;
+    final pct = total == 0 ? 0 : ((doneCount / total) * 100).round();
+    final isDark = AppTok.isDark(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppDarkPalette.card.withValues(alpha: 0.92)
+            : AppPalette.card.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppTok.accent(context).withValues(alpha: 0.14),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTok.accent(context).withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.task_alt_rounded,
+              color: AppTok.accent(context),
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        AppLang.tr('checklist_progress'),
+                        style: TextStyle(
+                          color: AppTok.text(context),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${_displayNum(pct)}${AppLang.tr('percent_unit')}',
+                      style: TextStyle(
+                        color: AppTok.accentDeep(context),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                WeddingProgressBar(
+                  value: progress,
+                  size: WeddingProgressSize.thin,
+                  animate: true,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  /// ترتیب ذخیره‌شدهٔ یک آیتم (آیتم‌های قدیمی order ندارند → آخر می‌روند)
+  int _orderOf(Map<String, dynamic> t) {
+    final v = t['order'];
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return 1 << 30;
+  }
+
+  List<Map<String, dynamic>> _sortByOrder(List<Map<String, dynamic>> list) {
+    final copy = List<Map<String, dynamic>>.from(list);
+    copy.sort((a, b) => _orderOf(a).compareTo(_orderOf(b)));
+    return copy;
+  }
+
+  /// آیتم‌های فعال یک گروه، مرتب‌شده بر اساس order
+  List<Map<String, dynamic>> _tasksInGroup(String group) => _sortByOrder(
+        tasks
+            .where((t) =>
+                (t['group'] ?? groups.first).toString() == group &&
+                _isInChecklist(t))
+            .toList(),
+      );
+
+  /// جابه‌جا کردن یک آیتم داخل گروه‌اش (delta: -1 بالا، 1 پایین)
+  Future<void> moveTask(Map<String, dynamic> task, int delta) async {
+    final group = (task['group'] ?? groups.first).toString();
+    final list = _tasksInGroup(group);
+    final index = list.indexWhere((t) => t['id'] == task['id']);
+    if (index < 0) return;
+
+    final target = index + delta;
+    if (target < 0 || target >= list.length) return;
+
+    final moved = list.removeAt(index);
+    list.insert(target, moved);
+
+    final batch = FirebaseFirestore.instance.batch();
+    for (var i = 0; i < list.length; i++) {
+      final id = list[i]['id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      batch.update(ref.doc(id), {'order': i});
+    }
+    await batch.commit();
+    await loadTasks();
   }
 
   Widget _buildTaskRow(BuildContext context, Map<String, dynamic> task) {
     final hasDesc = (task['desc'] ?? '').toString().isNotEmpty;
     final isDone = task['done'] == true;
+
+    // جایگاه این آیتم در گروه‌اش — برای فعال/غیرفعال کردن دکمه‌های جابه‌جایی
+    final group = (task['group'] ?? groups.first).toString();
+    final groupList = _tasksInGroup(group);
+    final index = groupList.indexWhere((t) => t['id'] == task['id']);
+    final canMoveUp = index > 0;
+    final canMoveDown = index >= 0 && index < groupList.length - 1;
 
     return Dismissible(
       key: ValueKey(task['id'] ?? task.hashCode),
@@ -1278,6 +1412,18 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   ],
                 ),
               ),
+              _MoveButton(
+                icon: Icons.arrow_upward_rounded,
+                tooltip: AppLang.tr('move_up'),
+                enabled: canMoveUp,
+                onTap: () => moveTask(task, -1),
+              ),
+              _MoveButton(
+                icon: Icons.arrow_downward_rounded,
+                tooltip: AppLang.tr('move_down'),
+                enabled: canMoveDown,
+                onTap: () => moveTask(task, 1),
+              ),
               Icon(
                 AppLang.I.isFa ? Icons.chevron_left : Icons.chevron_right,
                 color: AppTok.textSoft(context),
@@ -1287,6 +1433,39 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// دکمهٔ کوچک جابه‌جایی (بالا/پایین) — وقتی در انتهای لیست است خاکستری می‌شود
+class _MoveButton extends StatelessWidget {
+  const _MoveButton({
+    required this.icon,
+    required this.tooltip,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+      icon: Icon(
+        icon,
+        size: 16,
+        color: enabled
+            ? AppTok.textSoft(context)
+            : AppTok.textSoft(context).withValues(alpha: 0.28),
+      ),
+      onPressed: enabled ? onTap : null,
     );
   }
 }

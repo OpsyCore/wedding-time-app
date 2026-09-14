@@ -1,0 +1,32 @@
+# Line endings: always LF, on every platform.
+# Without this, Windows checkouts rewrite files to CRLF and every line
+# shows up as modified (VS Code paints the file orange) even though
+# nothing actually changed.
+* text=auto eol=lf
+
+# Flutter / Dart
+*.dart text eol=lf
+*.gradle text eol=lf
+*.kts text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.xml text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binaries — never convert
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.bmp binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary
+*.jks binary
+*.keystore binary

@@ -91,6 +91,10 @@ class GuestLoveStoryTab extends StatelessWidget {
                 }
 
                 final docs = snapshot.data!.docs.where((d) {
+                  // فقط داستان‌هایی که زوج «عمومی» علامت زده‌اند به مهمان
+                  // نشان داده می‌شود. داستان‌های قدیمی که این فیلد را ندارند
+                  // عمومی در نظر گرفته می‌شوند (سازگاری با داده‌های قبلی).
+                  if (d.data()['isPublic'] == false) return false;
                   return !_isEmptyStory(d.data());
                 }).toList()
                   ..sort((a, b) {

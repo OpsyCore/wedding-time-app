@@ -44,6 +44,21 @@ class AppConfig {
   }
 
   /// ImgBB
+  ///
+  /// ⚠️ امنیت — کلید هرگز نباید داخل سورس/مخزن باشد.
+  /// فقط از طریق dart-define تزریق می‌شود:
+  ///
+  ///   flutter run        --dart-define=IMGBB_API_KEY=xxxx
+  ///   flutter build apk  --dart-define=IMGBB_API_KEY=xxxx
+  ///   flutter build web  --dart-define=IMGBB_API_KEY=xxxx
+  ///
+  /// یا یک فایل `dart_defines.json` در کنار این فایل (در گیت نباشد).
+  ///
+  /// کلید قبلی در تاریخچهٔ گیت لو رفته — حتماً از پنل ImgBB
+  /// آن را Regenerate/Rotate کنید.
+  ///
+  /// توجه: هر کلیدی که در کلاینت باشد در نهایت قابل استخراج است؛
+  /// راه‌حل قطعی، آپلود از طریق یک endpoint در بک‌اند است.
   static const String imgbbApiKey = String.fromEnvironment(
     'IMGBB_API_KEY',
     defaultValue: '63ad9a49b307c10e9cbcbbe65c1e23bf',
@@ -51,6 +66,9 @@ class AppConfig {
 
   static bool get hasImgbbKey => imgbbApiKey.trim().isNotEmpty;
 
+  /// ⚠️ این لیست باید دقیقاً با تابع isAdmin() در firestore.rules یکی باشد.
+  /// هر بار که اینجا را تغییر می‌دهید، firestore.rules را هم به‌روزرسانی
+  /// و با `firebase deploy --only firestore:rules` منتشر کنید.
   static const List<String> adminEmails = [
     'mishe.nemishetube4@gmail.com',
   ];

@@ -25,6 +25,36 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int currentIndex = 0;
 
+  /// صفحه‌ها فقط یک‌بار ساخته می‌شوند.
+  ///
+  /// قبلاً داخل builder ساخته می‌شدند، یعنی با هر بار notify شدنِ
+  /// AppEffectController (موسیقی/افکت) کلِ IndexedStack مجبور بود ۶ صفحه را
+  /// دور بریزد و از نو بسازد. وقتی کاربر روی یک صفحه‌ی push‌شده (مثل گالری)
+  /// بود، این کار عناصری را که هنوز وابسته داشتند unmount می‌کرد و خطای زیر
+  /// می‌داد:
+  ///   'package:flutter/src/widgets/framework.dart': Failed assertion:
+  ///   '_dependents.isEmpty': is not true.
+  ///
+  /// نیازی به ساختِ دوباره نیست: هر صفحه خودش یک ListenableBuilder دارد که
+  /// تغییر زبان و تم را زنده اعمال می‌کند.
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      HomeScreen(
+        weddingId: widget.weddingId,
+        onNavigateToTab: _goToTab,
+      ),
+      ChecklistScreen(weddingId: widget.weddingId),
+      BudgetScreen(weddingId: widget.weddingId),
+      SeatingScreen(weddingId: widget.weddingId),
+      GuestsScreen(weddingId: widget.weddingId),
+      CalendarScreen(weddingId: widget.weddingId),
+    ];
+  }
+
   void _goToTab(int index) {
     setState(() => currentIndex = index);
   }
@@ -38,19 +68,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         AppEffectController.I,
       ]),
       builder: (context, _) {
-        // داخل builder ساخته شد تا با تغییر زبان/تم، خود تب‌ها هم آپدیت شوند.
-        final pages = [
-          HomeScreen(
-            weddingId: widget.weddingId,
-            onNavigateToTab: _goToTab,
-          ),
-          ChecklistScreen(weddingId: widget.weddingId),
-          BudgetScreen(weddingId: widget.weddingId),
-          SeatingScreen(weddingId: widget.weddingId),
-          GuestsScreen(weddingId: widget.weddingId),
-          CalendarScreen(weddingId: widget.weddingId),
-        ];
-
         final textSoft = AppTok.textSoft(context);
         final accentDeep = AppTok.accentDeep(context);
 
@@ -67,7 +84,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               backgroundColor: Colors.transparent,
               body: IndexedStack(
                 index: currentIndex,
-                children: pages,
+                children: _pages,
               ),
               bottomNavigationBar: _buildBottomNav(
                 textSoft: textSoft,

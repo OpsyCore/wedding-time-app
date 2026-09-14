@@ -58,6 +58,7 @@ class _LoveStoryScreenState extends State<LoveStoryScreen> {
         'content': '',
         'photoUrl': '',
         'storagePath': '',
+        'isPublic': true,
         'provider': 'imgbb',
         'order': DateTime.now().millisecondsSinceEpoch,
         'createdAt': FieldValue.serverTimestamp(),
@@ -381,9 +382,22 @@ class _LoveStoryScreenState extends State<LoveStoryScreen> {
                             index: index + 1,
                             doc: doc,
                             uploading: busy,
+                            isPublic: doc.data()['isPublic'] != false,
                             onPickPhoto: () => _pickPhoto(doc.id),
                             onSuggest: () => _applySuggestion(doc.id),
                             onDelete: () => _deleteStory(doc.id),
+                            onToggleVisibility: () {
+                              final cur = doc.data()['isPublic'] != false;
+                              _ref.doc(doc.id).set({
+                                'isPublic': !cur,
+                                'updatedAt': FieldValue.serverTimestamp(),
+                              }, SetOptions(merge: true));
+                              _toast(
+                                cur
+                                    ? AppLang.tr('story_now_private')
+                                    : AppLang.tr('story_now_public'),
+                              );
+                            },
                             onChanged: (title, dateText, content) {
                               _ref.doc(doc.id).set({
                                 'title': title,
@@ -551,14 +565,19 @@ class _LoveStoryScreenState extends State<LoveStoryScreen> {
 }
 
 class _StoryCard extends StatefulWidget {
+  final bool isPublic;
+  final VoidCallback onToggleVisibility;
+
   const _StoryCard({
     super.key,
     required this.index,
     required this.doc,
     required this.uploading,
+    required this.isPublic,
     required this.onPickPhoto,
     required this.onSuggest,
     required this.onDelete,
+    required this.onToggleVisibility,
     required this.onChanged,
   });
 
@@ -568,7 +587,8 @@ class _StoryCard extends StatefulWidget {
   final VoidCallback onPickPhoto;
   final VoidCallback onSuggest;
   final VoidCallback onDelete;
-  final void Function(String title, String dateText, String content) onChanged;
+  final void Function(String title, String dateText, String content)
+      onChanged;
 
   @override
   State<_StoryCard> createState() => _StoryCardState();
@@ -693,6 +713,11 @@ class _StoryCardState extends State<_StoryCard> {
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
+              ),
+              const Spacer(),
+              _VisibilityChip(
+                isPublic: widget.isPublic,
+                onTap: widget.uploading ? null : widget.onToggleVisibility,
               ),
             ],
           ),
@@ -865,6 +890,55 @@ class _StoryCardState extends State<_StoryCard> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: AppTok.accent(context)),
+      ),
+    );
+  }
+}
+
+class _VisibilityChip extends StatelessWidget {
+  final bool isPublic;
+  final VoidCallback? onTap;
+
+  const _VisibilityChip({required this.isPublic, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppTok.accent(context);
+    final textSoft = AppTok.textSoft(context);
+
+    final color = isPublic ? accent : textSoft;
+    final label = isPublic ? AppLang.tr('story_public') : AppLang.tr('story_private');
+    final icon =
+        isPublic ? Icons.visibility_outlined : Icons.visibility_off_outlined;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: isPublic ? 0.12 : 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: color),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

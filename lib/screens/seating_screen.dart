@@ -296,7 +296,7 @@ class _SeatingScreenState extends State<SeatingScreen> {
         return Directionality(
           textDirection: AppLang.I.direction,
           child: Scaffold(
-            backgroundColor: AppTok.background(context),
+            backgroundColor: Colors.transparent,
             drawer: AppDrawer(weddingId: widget.weddingId),
             body: SafeArea(
               child: !_hallsReady

@@ -18,3 +18,18 @@ android/*.jks
 firebase-debug.log
 firebase-debug.*.log
 .firebase/
+
+# IDE / editor
+.idea/
+*.iml
+
+# Analyzer / build output
+analyze_out.txt
+build_log*.txt
+flutter_run*.log
+
+# Local dart-define secrets (never commit)
+dart_defines.json
+
+# Local dev secrets (never commit)
+local_key.txt
