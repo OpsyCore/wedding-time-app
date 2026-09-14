@@ -1233,11 +1233,11 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     final isDone = task['done'] == true;
 
     // جایگاه این آیتم در گروه‌اش — برای فعال/غیرفعال کردن دکمه‌های جابه‌جایی
-    final _group = (task['group'] ?? groups.first).toString();
-    final _groupList = _tasksInGroup(_group);
-    final _index = _groupList.indexWhere((t) => t['id'] == task['id']);
-    final canMoveUp = _index > 0;
-    final canMoveDown = _index >= 0 && _index < _groupList.length - 1;
+    final group = (task['group'] ?? groups.first).toString();
+    final groupList = _tasksInGroup(group);
+    final index = groupList.indexWhere((t) => t['id'] == task['id']);
+    final canMoveUp = index > 0;
+    final canMoveDown = index >= 0 && index < groupList.length - 1;
 
     return Dismissible(
       key: ValueKey(task['id'] ?? task.hashCode),

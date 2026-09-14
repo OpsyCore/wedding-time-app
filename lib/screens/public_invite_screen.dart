@@ -508,11 +508,11 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
         IconButton(
           tooltip: AppLang.tr('invite_share'),
           onPressed: _shareInvite,
-          icon: _InviteGlass(
+          icon: const _InviteGlass(
             opacity: 0.78,
             borderRadius: 10,
-            padding: const EdgeInsets.all(8),
-            child: const Icon(
+            padding: EdgeInsets.all(8),
+            child: Icon(
               Icons.ios_share,
               size: 18,
               color: AppPalette.text,

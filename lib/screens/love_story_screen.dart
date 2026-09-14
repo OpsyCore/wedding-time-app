@@ -870,6 +870,31 @@ class _StoryCardState extends State<_StoryCard> {
     );
   }
 
+  InputDecoration _dec(BuildContext context, String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(
+        color: AppTok.textSoft(context).withValues(alpha: 0.7),
+      ),
+      filled: true,
+      fillColor: AppTok.cardSoft(context),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: AppTok.border(context)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: AppTok.border(context)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: AppTok.accent(context)),
+      ),
+    );
+  }
+}
+
 class _VisibilityChip extends StatelessWidget {
   final bool isPublic;
   final VoidCallback? onTap;
@@ -914,31 +939,6 @@ class _VisibilityChip extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-  InputDecoration _dec(BuildContext context, String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(
-        color: AppTok.textSoft(context).withValues(alpha: 0.7),
-      ),
-      filled: true,
-      fillColor: AppTok.cardSoft(context),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: AppTok.border(context)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: AppTok.border(context)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: AppTok.accent(context)),
       ),
     );
   }
