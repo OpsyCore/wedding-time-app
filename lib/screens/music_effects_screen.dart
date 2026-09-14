@@ -7,10 +7,12 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/app_effect.dart';
 import '../core/app_effects.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../widgets/effect_grid.dart';
 
 class MusicEffectsScreen extends StatefulWidget {
   const MusicEffectsScreen({super.key, required this.weddingId});
@@ -1284,19 +1286,11 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          gradient: LinearGradient(
-                            colors: [
-                              s.primary.withValues(alpha: 0.35),
-                              s.secondary.withValues(alpha: 0.2),
-                            ],
-                          ),
-                        ),
-                        child: Icon(s.icon, color: s.primary),
+                      EffectPatternIcon(
+                        effect: AppEffect.byId(s.id),
+                        size: 44,
+                        iconSize: 22,
+                        borderRadius: 14,
                       ),
                       const SizedBox(width: 12),
                       Expanded(

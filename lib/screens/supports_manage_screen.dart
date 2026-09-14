@@ -131,7 +131,7 @@ class _SupportsManageScreenState extends State<SupportsManageScreen>
     );
   }
 
-    Future<void> _openItemEditor([
+  Future<void> _openItemEditor([
     SupportItem? item,
     SupportSettings? settings,
   ]) async {
@@ -146,6 +146,7 @@ class _SupportsManageScreenState extends State<SupportsManageScreen>
     final titleC = TextEditingController(text: item?.title ?? '');
     final noteC = TextEditingController(text: item?.note ?? '');
     final imageC = TextEditingController(text: item?.imageUrl ?? '');
+    final purchaseUrlC = TextEditingController(text: item?.purchaseUrl ?? '');
     final targetTomanC =
         TextEditingController(text: item == null ? '' : '${item.targetToman}');
     final targetUsdC = TextEditingController(
@@ -324,6 +325,16 @@ class _SupportsManageScreenState extends State<SupportsManageScreen>
                         border: const OutlineInputBorder(),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: purchaseUrlC,
+                      keyboardType: TextInputType.url,
+                      decoration: InputDecoration(
+                        labelText: t('supports_purchase_url'),
+                        hintText: 'https://...',
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 48,
@@ -354,6 +365,7 @@ class _SupportsManageScreenState extends State<SupportsManageScreen>
           title: titleC.text,
           note: noteC.text,
           imageUrl: imageC.text,
+          purchaseUrl: purchaseUrlC.text,
           categoryId: categoryId,
           targetToman: targetToman,
           targetUsd: targetUsd,
@@ -365,6 +377,7 @@ class _SupportsManageScreenState extends State<SupportsManageScreen>
             title: titleC.text.trim(),
             note: noteC.text.trim(),
             imageUrl: imageC.text.trim(),
+            purchaseUrl: purchaseUrlC.text.trim(),
             categoryId: categoryId,
             targetToman: targetToman,
             targetUsd: targetUsd,
@@ -376,7 +389,7 @@ class _SupportsManageScreenState extends State<SupportsManageScreen>
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t('saved'))),
+        SnackBar(content: Text(t('item_saved'))),
       );
     } catch (e) {
       if (!mounted) return;
@@ -387,7 +400,7 @@ class _SupportsManageScreenState extends State<SupportsManageScreen>
   }
 }
 
-// ───────────────── Items ─────────────────
+// ───────────────── Items tab ─────────────────
 
 class _ItemsTab extends StatelessWidget {
   const _ItemsTab({
@@ -398,7 +411,7 @@ class _ItemsTab extends StatelessWidget {
 
   final SupportService svc;
   final SupportSettings settings;
-  final void Function(SupportItem item) onEdit;
+  final ValueChanged<SupportItem> onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -406,178 +419,250 @@ class _ItemsTab extends StatelessWidget {
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
     final accent = AppTok.accent(context);
-    final danger = AppTok.danger(context);
-    final card = AppTok.card(context);
-    final border = AppTok.border(context);
     final isFa = AppLang.I.isFa;
 
     return StreamBuilder<List<SupportItem>>(
       stream: svc.watchItemsSimple(),
       builder: (context, snap) {
-        final items = snap.data ?? const <SupportItem>[];
-        if (snap.connectionState == ConnectionState.waiting && items.isEmpty) {
+        if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+        final items = snap.data ?? const <SupportItem>[];
         if (items.isEmpty) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Text(
-                t('supports_empty_manage'),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: textSoft, height: 1.5),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.card_giftcard_rounded,
+                      size: 48, color: accent.withValues(alpha: 0.6)),
+                  const SizedBox(height: 12),
+                  Text(
+                    t('supports_empty_manage'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: textSoft, height: 1.5),
+                  ),
+                ],
               ),
             ),
           );
         }
 
-        final catMap = {for (final c in settings.categories) c.id: c};
+        final cats = settings.enabledCategories.isEmpty
+            ? SupportSettings.defaultCategories()
+            : settings.enabledCategories;
 
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, i) {
-            final item = items[i];
-            final cat = catMap[item.categoryId];
-            return Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: card,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+        final byCat = <String, List<SupportItem>>{};
+        for (final it in items) {
+          byCat.putIfAbsent(it.categoryId, () => []).add(it);
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+          children: [
+            for (final cat in cats) ...[
+              if ((byCat[cat.id] ?? const []).isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
                     children: [
-                      if (cat != null) ...[
-                        Icon(cat.icon, size: 18, color: accent),
-                        const SizedBox(width: 6),
-                        Text(
-                          cat.title(isFa),
-                          style: TextStyle(
-                            color: accent,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      Icon(cat.icon, size: 18, color: accent),
+                      const SizedBox(width: 8),
+                      Text(
+                        cat.title(isFa),
+                        style: TextStyle(
+                          color: text,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
                         ),
-                        const Spacer(),
-                      ] else
-                        const Spacer(),
-                      _StatusChip(status: item.status, item: item),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '(${byCat[cat.id]!.length})',
+                        style: TextStyle(color: textSoft, fontSize: 13),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    item.title,
-                    style: TextStyle(
-                      color: text,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15.5,
-                    ),
-                  ),
-                  if (item.note.trim().isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(item.note,
-                        style: TextStyle(color: textSoft, height: 1.45)),
-                  ],
-                  if (item.hasTarget && settings.showProgress) ...[
-                    const SizedBox(height: 12),
-                    SupportProgressBar(
+                ),
+                ...byCat[cat.id]!.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ManageItemTile(
+                      svc: svc,
                       item: item,
-                      showRemaining: settings.showRemaining,
-                      currencyMode: settings.currencyMode,
+                      onEdit: () => onEdit(item),
+                      settings: settings,
                     ),
-                  ],
-                  if (item.isClaimed && item.claimedByName.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${t('supports_claimed_by')}: ${item.claimedByName}'
-                        '${item.claimedByPhone.isEmpty ? '' : ' · ${item.claimedByPhone}'}'
-                        '${item.claimedNote.isEmpty ? '' : '\n${item.claimedNote}'}',
-                        style: TextStyle(color: text, height: 1.45, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 4,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () => onEdit(item),
-                        icon: Icon(Icons.edit_outlined, size: 18, color: accent),
-                        label: Text(t('edit'), style: TextStyle(color: accent)),
-                      ),
-                      if (item.status == SupportStatus.claimed)
-                        TextButton.icon(
-                          onPressed: () => svc.markReceived(item.id),
-                          icon: Icon(Icons.done_all, size: 18, color: accent),
-                          label: Text(t('supports_mark_received'),
-                              style: TextStyle(color: accent)),
-                        ),
-                      if (item.isClaimed || item.raisedToman > 0)
-                        TextButton.icon(
-                          onPressed: () => svc.releaseClaim(item.id),
-                          icon: Icon(Icons.undo, size: 18, color: textSoft),
-                          label: Text(t('supports_release'),
-                              style: TextStyle(color: textSoft)),
-                        ),
-                      TextButton.icon(
-                        onPressed: () async {
-                          final sure = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              backgroundColor: AppTok.card(ctx),
-                              title: Text(t('delete'),
-                                  style: TextStyle(color: AppTok.text(ctx))),
-                              content: Text(t('supports_delete_confirm'),
-                                  style:
-                                      TextStyle(color: AppTok.textSoft(ctx))),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: Text(t('cancel')),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: Text(t('delete'),
-                                      style: TextStyle(
-                                          color: AppTok.danger(ctx))),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (sure == true) await svc.deleteItem(item.id);
-                        },
-                        icon:
-                            Icon(Icons.delete_outline, size: 18, color: danger),
-                        label:
-                            Text(t('delete'), style: TextStyle(color: danger)),
-                      ),
-                    ],
                   ),
-                ],
-              ),
-            );
-          },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ],
         );
       },
     );
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status, required this.item});
-  final SupportStatus status;
+class _ManageItemTile extends StatelessWidget {
+  const _ManageItemTile({
+    required this.svc,
+    required this.item,
+    required this.onEdit,
+    required this.settings,
+  });
+
+  final SupportService svc;
+  final SupportItem item;
+  final VoidCallback onEdit;
+  final SupportSettings settings;
+
+  @override
+  Widget build(BuildContext context) {
+    const t = AppLang.tr;
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+    final accent = AppTok.accent(context);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTok.card(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTok.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: TextStyle(
+                    color: text,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14.5,
+                  ),
+                ),
+              ),
+              _StatusBadge(item: item),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, color: textSoft),
+                onSelected: (v) async {
+                  if (v == 'edit') {
+                    onEdit();
+                  } else if (v == 'received') {
+                    await svc.markReceived(item.id);
+                  } else if (v == 'release') {
+                    await svc.releaseClaim(item.id);
+                  } else if (v == 'delete') {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        title: Text(t('delete')),
+                        content: Text(t('supports_delete_confirm')),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(c, false),
+                            child: Text(t('cancel')),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(c, true),
+                            child: Text(t('delete')),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (ok == true) await svc.deleteItem(item.id);
+                  }
+                },
+                itemBuilder: (c) => [
+                  PopupMenuItem(value: 'edit', child: Text(t('edit'))),
+                  if (item.status != SupportStatus.received)
+                    PopupMenuItem(
+                      value: 'received',
+                      child: Text(t('supports_mark_received')),
+                    ),
+                  if (item.status != SupportStatus.open)
+                    PopupMenuItem(
+                      value: 'release',
+                      child: Text(t('supports_release')),
+                    ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text(
+                      t('delete'),
+                      style: TextStyle(color: AppTok.danger(context)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (item.note.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(item.note, style: TextStyle(color: textSoft, fontSize: 12.5)),
+          ],
+          if (item.hasTarget) ...[
+            const SizedBox(height: 8),
+            SupportProgressBar(
+              item: item,
+              showRemaining: settings.showRemaining,
+              currencyMode: settings.currencyMode,
+            ),
+          ],
+          if (item.claimedByName.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.person_outline, size: 14, color: accent),
+                const SizedBox(width: 4),
+                Text(
+                  '${t('supports_claimed_by')}: ${item.claimedByName}',
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (item.claimedByPhone.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '(${item.claimedByPhone})',
+                    style: TextStyle(color: textSoft, fontSize: 11),
+                  ),
+                ],
+              ],
+            ),
+          ],
+          if (item.purchaseUrl.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.link_rounded, size: 14, color: textSoft),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    item.purchaseUrl,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: textSoft, fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.item});
   final SupportItem item;
 
   @override
@@ -587,14 +672,14 @@ class _StatusChip extends StatelessWidget {
     final soft = AppTok.textSoft(context);
     final deep = AppTok.accentDeep(context);
 
-    late String label;
-    late Color color;
+    String label;
+    Color color;
 
     if (item.isFullyFunded && item.hasTarget) {
       label = t('supports_goal_reached');
-      color = const Color(0xFF5FA777);
+      color = deep;
     } else {
-      switch (status) {
+      switch (item.status) {
         case SupportStatus.open:
           label = t('supports_status_open');
           color = accent;
@@ -654,7 +739,12 @@ class _CategoriesTabState extends State<_CategoriesTab> {
     'gift',
     'heart',
     'home',
+    'kitchen',
+    'appliances',
     'travel',
+    'experience',
+    'furniture',
+    'decor',
     'ring',
     'party',
     'cash',
@@ -699,185 +789,227 @@ class _CategoriesTabState extends State<_CategoriesTab> {
   }
 
   void _add() {
-    setState(() {
-      _cats = [
-        ..._cats,
-        SupportCategory(
-          id: 'cat_${DateTime.now().millisecondsSinceEpoch}',
-          titleFa: 'دسته جدید',
-          titleEn: 'New category',
-          descFa: '',
-          descEn: '',
-          iconKey: 'gift',
-          sortOrder: _cats.length,
+    _openCatDialog();
+  }
+
+  void _edit(int index) {
+    _openCatDialog(_cats[index], index);
+  }
+
+  Future<void> _openCatDialog([SupportCategory? cat, int? index]) async {
+    const t = AppLang.tr;
+    final titleFaC = TextEditingController(text: cat?.titleFa ?? '');
+    final titleEnC = TextEditingController(text: cat?.titleEn ?? '');
+    final descFaC = TextEditingController(text: cat?.descFa ?? '');
+    final descEnC = TextEditingController(text: cat?.descEn ?? '');
+    var iconKey = cat?.iconKey ?? 'gift';
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setL) => AlertDialog(
+          title: Text(cat == null ? t('supports_add_category') : t('edit')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleFaC,
+                  decoration: InputDecoration(
+                    labelText: t('supports_cat_title_fa'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: titleEnC,
+                  decoration: InputDecoration(
+                    labelText: t('supports_cat_title_en'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: descFaC,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: t('supports_cat_desc_fa'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: descEnC,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: t('supports_cat_desc_en'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    t('supports_cat_icon'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final k in _icons)
+                      ChoiceChip(
+                        selected: iconKey == k,
+                        label: Text(k),
+                        avatar: Icon(
+                          SupportCategory(
+                            id: '',
+                            titleFa: '',
+                            titleEn: '',
+                            iconKey: k,
+                          ).icon,
+                          size: 16,
+                        ),
+                        onSelected: (_) => setL(() => iconKey = k),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(t('cancel')),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(t('save')),
+            ),
+          ],
         ),
-      ];
+      ),
+    );
+
+    if (ok != true) return;
+    final tFa = titleFaC.text.trim();
+    if (tFa.isEmpty) return;
+
+    final updated = SupportCategory(
+      id: cat?.id ?? 'cat_${DateTime.now().millisecondsSinceEpoch}',
+      titleFa: tFa,
+      titleEn: titleEnC.text.trim(),
+      descFa: descFaC.text.trim(),
+      descEn: descEnC.text.trim(),
+      iconKey: iconKey,
+      sortOrder: cat?.sortOrder ?? _cats.length,
+      enabled: cat?.enabled ?? true,
+    );
+
+    setState(() {
+      if (index != null && index >= 0 && index < _cats.length) {
+        _cats[index] = updated;
+      } else {
+        _cats.add(updated);
+      }
     });
+    await _save();
   }
 
   @override
   Widget build(BuildContext context) {
     const t = AppLang.tr;
     final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
     final accent = AppTok.accent(context);
-    final card = AppTok.card(context);
-    final border = AppTok.border(context);
+    final isFa = AppLang.I.isFa;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
       children: [
-        Text(
-          t('supports_categories_help'),
-          style: TextStyle(
-            color: AppTok.textSoft(context),
-            height: 1.5,
-            fontSize: 13,
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTok.cardSoft(context),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            t('supports_categories_help'),
+            style: TextStyle(color: textSoft, fontSize: 12.5, height: 1.45),
           ),
         ),
         const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: _add,
-            icon: Icon(Icons.add, color: accent),
-            label: Text(t('supports_add_category'),
-                style: TextStyle(color: accent)),
-          ),
-        ),
-        for (var i = 0; i < _cats.length; i++)
+        for (var i = 0; i < _cats.length; i++) ...[
           Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
-              color: card,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: border),
+              color: AppTok.card(context),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTok.border(context)),
             ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Icon(_cats[i].icon, color: accent),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _cats[i].titleFa.isEmpty
-                            ? _cats[i].id
-                            : _cats[i].titleFa,
-                        style: TextStyle(
-                          color: text,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    Switch(
-                      value: _cats[i].enabled,
-                      activeThumbColor: accent,
-                      onChanged: (v) {
-                        setState(() {
-                          _cats[i] = _cats[i].copyWith(enabled: v);
-                        });
-                      },
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        setState(() => _cats = [..._cats]..removeAt(i));
-                      },
-                      icon: Icon(Icons.delete_outline,
-                          color: AppTok.danger(context)),
-                    ),
-                  ],
+            child: ListTile(
+              leading: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accent.withValues(alpha: 0.12),
                 ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  initialValue: _cats[i].titleFa,
-                  onChanged: (v) =>
-                      _cats[i] = _cats[i].copyWith(titleFa: v),
-                  decoration: InputDecoration(
-                    labelText: t('supports_cat_title_fa'),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
+                child: Icon(_cats[i].icon, color: accent, size: 20),
+              ),
+              title: Text(
+                _cats[i].title(isFa),
+                style: TextStyle(color: text, fontWeight: FontWeight.w800),
+              ),
+              subtitle: _cats[i].desc(isFa).isNotEmpty
+                  ? Text(
+                      _cats[i].desc(isFa),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: textSoft, fontSize: 12),
+                    )
+                  : null,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: t('edit'),
+                    icon: Icon(Icons.edit_outlined, color: textSoft),
+                    onPressed: () => _edit(i),
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  initialValue: _cats[i].titleEn,
-                  onChanged: (v) =>
-                      _cats[i] = _cats[i].copyWith(titleEn: v),
-                  decoration: InputDecoration(
-                    labelText: t('supports_cat_title_en'),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
+                  IconButton(
+                    tooltip: t('delete'),
+                    icon: Icon(Icons.delete_outline,
+                        color: AppTok.danger(context)),
+                    onPressed: () async {
+                      if (_cats.length <= 1) return;
+                      setState(() => _cats.removeAt(i));
+                      await _save();
+                    },
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  initialValue: _cats[i].descFa,
-                  maxLines: 3,
-                  onChanged: (v) =>
-                      _cats[i] = _cats[i].copyWith(descFa: v),
-                  decoration: InputDecoration(
-                    labelText: t('supports_cat_desc_fa'),
-                    alignLabelWithHint: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  initialValue: _cats[i].descEn,
-                  maxLines: 3,
-                  onChanged: (v) =>
-                      _cats[i] = _cats[i].copyWith(descEn: v),
-                  decoration: InputDecoration(
-                    labelText: t('supports_cat_desc_en'),
-                    alignLabelWithHint: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _icons.contains(_cats[i].iconKey)
-                      ? _cats[i].iconKey
-                      : 'gift',
-                  items: [
-                    for (final k in _icons)
-                      DropdownMenuItem(value: k, child: Text(k)),
-                  ],
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() => _cats[i] = _cats[i].copyWith(iconKey: v));
-                  },
-                  decoration: InputDecoration(
-                    labelText: t('supports_cat_icon'),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        SizedBox(
-          height: 50,
-          child: ElevatedButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(t('save_settings')),
-          ),
+        ],
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _add,
+          icon: const Icon(Icons.add),
+          label: Text(t('supports_add_category')),
         ),
       ],
     );
   }
 }
 
-// ───────────────── Settings ─────────────────
+// ───────────────── Settings tab ─────────────────
 
 class _SettingsTab extends StatefulWidget {
   const _SettingsTab({required this.svc, required this.initial});
+
   final SupportService svc;
   final SupportSettings initial;
 
@@ -886,100 +1018,75 @@ class _SettingsTab extends StatefulWidget {
 }
 
 class _SettingsTabState extends State<_SettingsTab> {
-  late SupportSettings _local;
+  late bool _enabled;
+  late bool _cardSectionEnabled;
+  late bool _showProgress;
+  late bool _showRemaining;
+  late bool _guestClaimEnabled;
+  late String _currencyMode;
+  late TextEditingController _introFaC;
+  late TextEditingController _introEnC;
+  late TextEditingController _thanksFaC;
+  late TextEditingController _thanksEnC;
+  late List<SupportBankCard> _cards;
   bool _saving = false;
-
-  final _introFa = TextEditingController();
-  final _introEn = TextEditingController();
-  final _thanksFa = TextEditingController();
-  final _thanksEn = TextEditingController();
-  final _holderCtrls = <TextEditingController>[];
-  final _bankCtrls = <TextEditingController>[];
-  final _numberCtrls = <TextEditingController>[];
 
   @override
   void initState() {
     super.initState();
-    _bind(widget.initial);
+    _apply(widget.initial);
   }
 
   @override
   void didUpdateWidget(covariant _SettingsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initial != widget.initial && !_saving) {
-      // keep local edits unless first load empty cards mismatch
+    if (oldWidget.initial != widget.initial) {
+      _apply(widget.initial);
     }
   }
 
-  void _bind(SupportSettings s) {
-    _local = s;
-    _introFa.text = s.introFa;
-    _introEn.text = s.introEn;
-    _thanksFa.text = s.thanksFa;
-    _thanksEn.text = s.thanksEn;
-    _disposeCardCtrls();
-    for (final c in s.cards) {
-      _holderCtrls.add(TextEditingController(text: c.holderName));
-      _bankCtrls.add(TextEditingController(text: c.bankName));
-      _numberCtrls.add(TextEditingController(text: c.cardNumber));
-    }
-  }
-
-  void _disposeCardCtrls() {
-    for (final c in _holderCtrls) {
-      c.dispose();
-    }
-    for (final c in _bankCtrls) {
-      c.dispose();
-    }
-    for (final c in _numberCtrls) {
-      c.dispose();
-    }
-    _holderCtrls.clear();
-    _bankCtrls.clear();
-    _numberCtrls.clear();
+  void _apply(SupportSettings s) {
+    _enabled = s.enabled;
+    _cardSectionEnabled = s.cardSectionEnabled;
+    _showProgress = s.showProgress;
+    _showRemaining = s.showRemaining;
+    _guestClaimEnabled = s.guestClaimEnabled;
+    _currencyMode = s.currencyMode;
+    _introFaC = TextEditingController(text: s.introFa);
+    _introEnC = TextEditingController(text: s.introEn);
+    _thanksFaC = TextEditingController(text: s.thanksFa);
+    _thanksEnC = TextEditingController(text: s.thanksEn);
+    _cards = [...s.cards];
   }
 
   @override
   void dispose() {
-    _introFa.dispose();
-    _introEn.dispose();
-    _thanksFa.dispose();
-    _thanksEn.dispose();
-    _disposeCardCtrls();
+    _introFaC.dispose();
+    _introEnC.dispose();
+    _thanksFaC.dispose();
+    _thanksEnC.dispose();
     super.dispose();
-  }
-
-  List<SupportBankCard> _collectCards() {
-    final out = <SupportBankCard>[];
-    for (var i = 0; i < _local.cards.length; i++) {
-      out.add(
-        _local.cards[i].copyWith(
-          holderName:
-              i < _holderCtrls.length ? _holderCtrls[i].text.trim() : '',
-          bankName: i < _bankCtrls.length ? _bankCtrls[i].text.trim() : '',
-          cardNumber:
-              i < _numberCtrls.length ? _numberCtrls[i].text.trim() : '',
-        ),
-      );
-    }
-    return out;
   }
 
   Future<void> _save() async {
     const t = AppLang.tr;
     setState(() => _saving = true);
     try {
-      final next = _local.copyWith(
-        introFa: _introFa.text.trim(),
-        introEn: _introEn.text.trim(),
-        thanksFa: _thanksFa.text.trim(),
-        thanksEn: _thanksEn.text.trim(),
-        cards: _collectCards(),
+      final updated = widget.initial.copyWith(
+        enabled: _enabled,
+        cardSectionEnabled: _cardSectionEnabled,
+        showProgress: _showProgress,
+        showRemaining: _showRemaining,
+        guestClaimEnabled: _guestClaimEnabled,
+        currencyMode: _currencyMode,
+        introFa: _introFaC.text.trim(),
+        introEn: _introEnC.text.trim(),
+        thanksFa: _thanksFaC.text.trim(),
+        thanksEn: _thanksEnC.text.trim(),
+        cards: _cards,
       );
-      await widget.svc.saveSettings(next);
+      await widget.svc.saveSettings(updated);
       if (!mounted) return;
-      setState(() => _local = next);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(t('settings_saved'))),
       );
@@ -993,253 +1100,253 @@ class _SettingsTabState extends State<_SettingsTab> {
     }
   }
 
-  void _addCard() {
-    final cards = [
-      ..._collectCards(),
-      SupportBankCard(id: 'c_${DateTime.now().millisecondsSinceEpoch}'),
-    ];
-    _disposeCardCtrls();
-    for (final c in cards) {
-      _holderCtrls.add(TextEditingController(text: c.holderName));
-      _bankCtrls.add(TextEditingController(text: c.bankName));
-      _numberCtrls.add(TextEditingController(text: c.cardNumber));
-    }
-    setState(() => _local = _local.copyWith(cards: cards));
-  }
-
   @override
   Widget build(BuildContext context) {
     const t = AppLang.tr;
-    final s = _local;
     final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
     final accent = AppTok.accent(context);
-    final card = AppTok.card(context);
-    final border = AppTok.border(context);
-    final soft = AppTok.textSoft(context);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
       children: [
-        Text(t('supports_settings_general'),
-            style: TextStyle(color: accent, fontWeight: FontWeight.w800)),
+        Text(
+          t('supports_settings_general'),
+          style: TextStyle(
+            color: text,
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 8),
         SwitchListTile(
-          value: s.enabled,
+          value: _enabled,
           activeThumbColor: accent,
           title: Text(t('supports_enabled'), style: TextStyle(color: text)),
-          subtitle: Text(t('supports_enabled_hint'),
-              style: TextStyle(color: soft, fontSize: 12)),
-          onChanged: (v) => setState(() => _local = s.copyWith(enabled: v)),
+          subtitle: Text(
+            t('supports_enabled_hint'),
+            style: TextStyle(color: textSoft, fontSize: 12),
+          ),
+          onChanged: (v) => setState(() => _enabled = v),
         ),
         SwitchListTile(
-          value: s.showProgress,
+          value: _guestClaimEnabled,
+          activeThumbColor: accent,
+          title: Text(t('supports_guest_claim'), style: TextStyle(color: text)),
+          subtitle: Text(
+            t('supports_guest_claim_hint'),
+            style: TextStyle(color: textSoft, fontSize: 12),
+          ),
+          onChanged: (v) => setState(() => _guestClaimEnabled = v),
+        ),
+        SwitchListTile(
+          value: _showProgress,
           activeThumbColor: accent,
           title: Text(t('supports_show_progress'), style: TextStyle(color: text)),
-          subtitle: Text(t('supports_show_progress_hint'),
-              style: TextStyle(color: soft, fontSize: 12)),
-          onChanged: (v) =>
-              setState(() => _local = s.copyWith(showProgress: v)),
+          subtitle: Text(
+            t('supports_show_progress_hint'),
+            style: TextStyle(color: textSoft, fontSize: 12),
+          ),
+          onChanged: (v) => setState(() => _showProgress = v),
         ),
         SwitchListTile(
-          value: s.showRemaining,
+          value: _showRemaining,
           activeThumbColor: accent,
           title:
               Text(t('supports_show_remaining'), style: TextStyle(color: text)),
-          subtitle: Text(t('supports_show_remaining_hint'),
-              style: TextStyle(color: soft, fontSize: 12)),
-          onChanged: (v) =>
-              setState(() => _local = s.copyWith(showRemaining: v)),
+          subtitle: Text(
+            t('supports_show_remaining_hint'),
+            style: TextStyle(color: textSoft, fontSize: 12),
+          ),
+          onChanged: (v) => setState(() => _showRemaining = v),
         ),
-        SwitchListTile(
-          value: s.guestClaimEnabled,
-          activeThumbColor: accent,
-          title:
-              Text(t('supports_guest_claim'), style: TextStyle(color: text)),
-          subtitle: Text(t('supports_guest_claim_hint'),
-              style: TextStyle(color: soft, fontSize: 12)),
-          onChanged: (v) =>
-              setState(() => _local = s.copyWith(guestClaimEnabled: v)),
-        ),
-        SwitchListTile(
-          value: s.cardSectionEnabled,
-          activeThumbColor: accent,
-          title:
-              Text(t('supports_cards_enabled'), style: TextStyle(color: text)),
-          subtitle: Text(t('supports_cards_enabled_hint'),
-              style: TextStyle(color: soft, fontSize: 12)),
-          onChanged: (v) =>
-              setState(() => _local = s.copyWith(cardSectionEnabled: v)),
-        ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          initialValue: ['toman', 'usd', 'both'].contains(s.currencyMode)
-              ? s.currencyMode
-              : 'both',
+          initialValue: _currencyMode,
           items: [
             DropdownMenuItem(
-                value: 'both', child: Text(t('supports_currency_both'))),
+              value: 'both',
+              child: Text(t('supports_currency_both')),
+            ),
             DropdownMenuItem(
-                value: 'toman', child: Text(t('supports_currency_toman'))),
+              value: 'toman',
+              child: Text(t('supports_currency_toman')),
+            ),
             DropdownMenuItem(
-                value: 'usd', child: Text(t('supports_currency_usd'))),
+              value: 'usd',
+              child: Text(t('supports_currency_usd')),
+            ),
           ],
-          onChanged: (v) {
-            if (v == null) return;
-            setState(() => _local = s.copyWith(currencyMode: v));
-          },
+          onChanged: (v) => setState(() => _currencyMode = v ?? 'both'),
           decoration: InputDecoration(
             labelText: t('supports_currency_mode'),
             border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 16),
-        Text(t('supports_settings_texts'),
-            style: TextStyle(color: accent, fontWeight: FontWeight.w800)),
+        Text(
+          t('supports_settings_texts'),
+          style: TextStyle(
+            color: text,
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
-          controller: _introFa,
-          maxLines: 4,
+          controller: _introFaC,
+          maxLines: 2,
           decoration: InputDecoration(
             labelText: t('supports_intro_fa'),
-            alignLabelWithHint: true,
             helperText: t('supports_intro_help'),
             border: const OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         TextField(
-          controller: _introEn,
-          maxLines: 4,
+          controller: _introEnC,
+          maxLines: 2,
           decoration: InputDecoration(
             labelText: t('supports_intro_en'),
-            alignLabelWithHint: true,
             border: const OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         TextField(
-          controller: _thanksFa,
+          controller: _thanksFaC,
           maxLines: 2,
           decoration: InputDecoration(
             labelText: t('supports_thanks_fa'),
             border: const OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         TextField(
-          controller: _thanksEn,
+          controller: _thanksEnC,
           maxLines: 2,
           decoration: InputDecoration(
             labelText: t('supports_thanks_en'),
             border: const OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            Expanded(
-              child: Text(t('supports_bank_cards'),
-                  style: TextStyle(color: text, fontWeight: FontWeight.w800)),
-            ),
-            TextButton.icon(
-              onPressed: _addCard,
-              icon: Icon(Icons.add, color: accent),
-              label: Text(t('add'), style: TextStyle(color: accent)),
-            ),
-          ],
-        ),
-        for (var i = 0; i < s.cards.length; i++)
-          Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: card,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: border),
-            ),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: s.cards[i].enabled,
-                  activeThumbColor: accent,
-                  title: Text(t('supports_card_enabled'),
-                      style: TextStyle(color: text, fontSize: 13)),
-                  onChanged: (v) {
-                    final next = [..._collectCards()];
-                    next[i] = next[i].copyWith(enabled: v);
-                    _disposeCardCtrls();
-                    for (final c in next) {
-                      _holderCtrls
-                          .add(TextEditingController(text: c.holderName));
-                      _bankCtrls.add(TextEditingController(text: c.bankName));
-                      _numberCtrls
-                          .add(TextEditingController(text: c.cardNumber));
-                    }
-                    setState(() => _local = s.copyWith(cards: next));
-                  },
-                ),
-                TextField(
-                  controller: _holderCtrls[i],
-                  decoration: InputDecoration(
-                    labelText: t('supports_card_holder'),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _bankCtrls[i],
-                  decoration: InputDecoration(
-                    labelText: t('supports_card_bank'),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _numberCtrls[i],
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: t('supports_card_number'),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    onPressed: () {
-                      final next = [..._collectCards()]..removeAt(i);
-                      _disposeCardCtrls();
-                      for (final c in next) {
-                        _holderCtrls
-                            .add(TextEditingController(text: c.holderName));
-                        _bankCtrls
-                            .add(TextEditingController(text: c.bankName));
-                        _numberCtrls
-                            .add(TextEditingController(text: c.cardNumber));
-                      }
-                      setState(() => _local = s.copyWith(cards: next));
-                    },
-                    icon: Icon(Icons.delete_outline,
-                        color: AppTok.danger(context)),
-                  ),
-                ),
-              ],
-            ),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          value: _cardSectionEnabled,
+          activeThumbColor: accent,
+          title: Text(t('supports_cards_enabled'), style: TextStyle(color: text)),
+          subtitle: Text(
+            t('supports_cards_enabled_hint'),
+            style: TextStyle(color: textSoft, fontSize: 12),
           ),
-        const SizedBox(height: 12),
+          onChanged: (v) => setState(() => _cardSectionEnabled = v),
+        ),
+        if (_cardSectionEnabled) ...[
+          const SizedBox(height: 8),
+          for (var i = 0; i < _cards.length; i++)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTok.card(context),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTok.border(context)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${t('card')} ${i + 1}',
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: _cards[i].enabled,
+                        activeThumbColor: accent,
+                        onChanged: (v) =>
+                            setState(() => _cards[i] = _cards[i].copyWith(enabled: v)),
+                      ),
+                      IconButton(
+                        tooltip: t('delete'),
+                        icon: Icon(Icons.delete_outline,
+                            color: AppTok.danger(context)),
+                        onPressed: () => setState(() => _cards.removeAt(i)),
+                      ),
+                    ],
+                  ),
+                  TextField(
+                    decoration: InputDecoration(
+                      labelText: t('supports_card_holder'),
+                    ),
+                    controller:
+                        TextEditingController(text: _cards[i].holderName)
+                          ..selection = TextSelection.collapsed(
+                            offset: _cards[i].holderName.length,
+                          ),
+                    onChanged: (v) => _cards[i] = _cards[i].copyWith(holderName: v),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            labelText: t('supports_card_bank'),
+                          ),
+                          controller:
+                              TextEditingController(text: _cards[i].bankName)
+                                ..selection = TextSelection.collapsed(
+                                  offset: _cards[i].bankName.length,
+                                ),
+                          onChanged: (v) =>
+                              _cards[i] = _cards[i].copyWith(bankName: v),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: t('supports_card_number'),
+                          ),
+                          controller:
+                              TextEditingController(text: _cards[i].cardNumber)
+                                ..selection = TextSelection.collapsed(
+                                  offset: _cards[i].cardNumber.length,
+                                ),
+                          onChanged: (v) =>
+                              _cards[i] = _cards[i].copyWith(cardNumber: v),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => setState(
+              () => _cards.add(
+                SupportBankCard(
+                  id: 'card_${DateTime.now().millisecondsSinceEpoch}',
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.add),
+            label: Text(t('supports_bank_cards')),
+          ),
+        ],
+        const SizedBox(height: 20),
         SizedBox(
-          height: 50,
+          height: 48,
           child: ElevatedButton(
             onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(t('save_settings')),
+            child: Text(t('save_settings')),
           ),
         ),
       ],
