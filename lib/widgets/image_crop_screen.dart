@@ -204,8 +204,7 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
 
     // Viewport to image matrix
     // Point in viewport (pv) = transform * (Point on displayed image + (offsetX, offsetY))
-    final matrix = Matrix4.identity()
-      ..translate(offsetX, offsetY)
+    final matrix = Matrix4.translationValues(offsetX, offsetY, 0.0)
       ..multiply(transform);
 
     final inverted = Matrix4.tryInvert(matrix);
@@ -267,8 +266,7 @@ class _ImageCropScreenState extends State<ImageCropScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bg = const Color(0xFF100F17);
-    final text = Colors.white;
+    const bg = Color(0xFF100F17);
     final accent = AppTok.accent(context);
 
     return Scaffold(

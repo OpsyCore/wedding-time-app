@@ -977,17 +977,19 @@ class _CategoriesTabState extends State<_CategoriesTab> {
                   IconButton(
                     tooltip: t('edit'),
                     icon: Icon(Icons.edit_outlined, color: textSoft),
-                    onPressed: () => _edit(i),
+                    onPressed: _saving ? null : () => _edit(i),
                   ),
                   IconButton(
                     tooltip: t('delete'),
                     icon: Icon(Icons.delete_outline,
                         color: AppTok.danger(context)),
-                    onPressed: () async {
-                      if (_cats.length <= 1) return;
-                      setState(() => _cats.removeAt(i));
-                      await _save();
-                    },
+                    onPressed: _saving
+                        ? null
+                        : () async {
+                            if (_cats.length <= 1) return;
+                            setState(() => _cats.removeAt(i));
+                            await _save();
+                          },
                   ),
                 ],
               ),
@@ -996,7 +998,7 @@ class _CategoriesTabState extends State<_CategoriesTab> {
         ],
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: _add,
+          onPressed: _saving ? null : _add,
           icon: const Icon(Icons.add),
           label: Text(t('supports_add_category')),
         ),

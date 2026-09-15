@@ -143,6 +143,7 @@ class _BridalPartyScreenState extends State<BridalPartyScreen> {
       if (image == null) return;
 
       final raw = await image.readAsBytes();
+      if (!mounted) return;
       if (raw.isEmpty) {
         _toast(AppLang.tr('empty_file'), error: true);
         return;

@@ -52,7 +52,7 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
     if (x == null) return;
 
     final bytes = await x.readAsBytes();
-    if (bytes.isEmpty) return;
+    if (!mounted || bytes.isEmpty) return;
 
     final croppedBytes = await ImageCropScreen.crop(
       context,
