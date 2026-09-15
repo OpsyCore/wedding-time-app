@@ -15,6 +15,7 @@ class AmbientTrack {
   final String nameKey;
 }
 
+/// سرویس پخش موسیقی لایت و بی‌کلام پس‌زمینه با سیستم کش کامل
 class AmbientMusicService extends ChangeNotifier {
   AmbientMusicService._();
   static final AmbientMusicService I = AmbientMusicService._();
@@ -84,54 +85,62 @@ class AmbientMusicService extends ChangeNotifier {
 
     try {
       await _player.setLoopMode(LoopMode.one);
+      await _player.setVolume(_volume);
     } catch (_) {}
 
     _player.playerStateStream.listen(
       (state) {
-        final playing = state.playing &&
+        final isProcessing = state.processingState == ProcessingState.loading ||
+            state.processingState == ProcessingState.buffering;
+        _loading = isProcessing;
+
+        final isCurrentlyPlaying = state.playing &&
             state.processingState != ProcessingState.idle &&
             state.processingState != ProcessingState.completed;
-        if (playing != _playing) {
-          _playing = playing;
+
+        if (isCurrentlyPlaying != _playing) {
+          _playing = isCurrentlyPlaying;
           notifyListeners();
         }
       },
       onError: (Object e) {
-        _missingAsset = true;
         _error = e.toString();
         _playing = false;
+        _loading = false;
         notifyListeners();
       },
     );
 
     _ready = true;
-    if (_enabled) {
-      await _loadCurrent(autoplay: false);
-    }
     notifyListeners();
   }
 
   Future<void> setEnabled(bool value) async {
+    if (!_ready) await init();
     _enabled = value;
     notifyListeners();
     await _prefsBool(_kEnabled, value);
+
     if (value) {
-      await _loadCurrent(autoplay: true);
+      await _playOrResume();
     } else {
-      await _stop();
+      await _pauseOrStop();
     }
   }
 
   Future<void> setTrack(String id) async {
+    if (!_ready) await init();
     final t = tracks.firstWhere((e) => e.id == id, orElse: () => tracks.first);
-    if (t.id == _trackId && _loadedTrackId == t.id && !_missingAsset) return;
+    if (t.id == _trackId && _loadedTrackId == t.id && !_missingAsset && _player.audioSource != null) {
+      return;
+    }
     _trackId = t.id;
+    _loadedTrackId = null; // ترک عوض شد -> کش ترک قبلی باطل می‌شود
     notifyListeners();
     await _prefsString(_kTrack, _trackId);
+
     if (_enabled) {
-      await _loadCurrent(autoplay: true);
-    } else {
-      await _stop();
+      await _loadAndPlay();
     }
   }
 
@@ -145,37 +154,40 @@ class AmbientMusicService extends ChangeNotifier {
   }
 
   Future<void> togglePlay() async {
+    if (!_ready) await init();
+
     if (!_enabled) {
       await setEnabled(true);
       return;
     }
-    if (_playing) {
-      try {
-        await _player.pause();
-      } catch (_) {}
-      _playing = false;
-      notifyListeners();
+
+    if (_playing || _player.playing) {
+      await _pauseOrStop();
     } else {
-      await _loadCurrent(autoplay: true);
+      await _playOrResume();
     }
   }
 
-  Future<void> _loadCurrent({required bool autoplay}) async {
-    // اگر همین ترک قبلاً کش/لود شده است، نیازی به لود مجدد نیست
-    if (_loadedTrackId == track.id && !_missingAsset && _error == null) {
+  Future<void> _playOrResume() async {
+    // ۱. اگر ترک همین ترک است و قبلاً لود شده: بدون دانلود مجدد، فقط پخش کن (کش واقعی)
+    if (_loadedTrackId == track.id && _player.audioSource != null && !_missingAsset && _error == null) {
       try {
         await _player.setVolume(_volume);
-        if (autoplay) {
-          await _player.play();
-          _playing = true;
-        }
+        await _player.play();
+        _playing = true;
+        _loading = false;
         notifyListeners();
         return;
-      } catch (_) {
-        // Fallback to full reload below
+      } catch (e) {
+        if (kDebugMode) debugPrint('Resume failed, fallback to reload: $e');
       }
     }
 
+    // ۲. در غیر این صورت لود و پخش
+    await _loadAndPlay();
+  }
+
+  Future<void> _loadAndPlay() async {
     _loading = true;
     _missingAsset = false;
     _error = null;
@@ -186,34 +198,33 @@ class AmbientMusicService extends ChangeNotifier {
       await _player.setVolume(_volume);
       await _player.setLoopMode(LoopMode.one);
 
+      final assetPath = track.assetPath;
+
       if (kIsWeb) {
-        // روی وب در صورت عدم شناسایی setAsset، از setUrl استفاده می‌کنیم
+        // روی وب ابتدا setAsset فلاتر تست می‌شود، در صورت نیاز با URL استاتیک
         try {
-          await _player.setAsset(track.assetPath);
+          await _player.setAsset(assetPath, preload: true);
         } catch (_) {
           try {
-            await _player.setUrl('assets/${track.assetPath}');
+            await _player.setUrl('assets/$assetPath', preload: true);
           } catch (_) {
-            await _player.setUrl(track.assetPath);
+            await _player.setUrl(assetPath, preload: true);
           }
         }
       } else {
-        await _player.setAsset(track.assetPath);
+        await _player.setAsset(assetPath, preload: true);
       }
 
       _loadedTrackId = track.id;
-
-      if (autoplay) {
-        await _player.play();
-        _playing = true;
-      }
+      await _player.play();
+      _playing = true;
+      _missingAsset = false;
     } catch (e) {
-      _missingAsset = true;
       _error = e.toString();
       _playing = false;
       _loadedTrackId = null;
       if (kDebugMode) {
-        debugPrint('AmbientMusic load error: $e');
+        debugPrint('AmbientMusic playback error: $e');
       }
     } finally {
       _loading = false;
@@ -221,10 +232,14 @@ class AmbientMusicService extends ChangeNotifier {
     }
   }
 
-  Future<void> _stop() async {
+  Future<void> _pauseOrStop() async {
     try {
-      await _player.stop();
-    } catch (_) {}
+      await _player.pause();
+    } catch (_) {
+      try {
+        await _player.stop();
+      } catch (_) {}
+    }
     _playing = false;
     notifyListeners();
   }
