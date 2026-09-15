@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../core/app_date_picker.dart';
 import '../core/app_effect_controller.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
@@ -14,6 +15,7 @@ import '../services/media_upload_service.dart';
 import '../widgets/ambient_music_controls.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/effect_picker.dart';
+import '../widgets/image_crop_screen.dart';
 import '../widgets/page_glass.dart';
 import '../widgets/wedding_progress_bar.dart';
 
@@ -40,6 +42,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
   String? _coupleStoragePath;
   String? _brideStoragePath;
   String? _groomStoragePath;
+  DateTime? _weddingDate;
 
   String _rsvpMode = 'everyone';
   String _nameOrder = 'groom_first';
@@ -135,6 +138,13 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       _brideStoragePath = _emptyToNull(p['brideStoragePath']?.toString());
       _groomStoragePath = _emptyToNull(p['groomStoragePath']?.toString());
 
+      final rawDate = w['weddingDate'] ?? w['eventDate'] ?? p['weddingDate'];
+      if (rawDate is Timestamp) {
+        _weddingDate = rawDate.toDate();
+      } else if (rawDate is DateTime) {
+        _weddingDate = rawDate;
+      }
+
       _rsvpMode = (p['rsvpMode'] ?? 'everyone').toString();
       if (!const ['everyone', 'invitees', 'off'].contains(_rsvpMode)) {
         _rsvpMode = 'everyone';
@@ -204,24 +214,35 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     try {
       final image = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1400,
+        imageQuality: 88,
+        maxWidth: 1800,
       );
       if (image == null) return;
       if (!mounted) return;
-      setState(() {
-        _uploading = true;
-        _uploadingKind = kind;
-      });
+
       final raw = await image.readAsBytes();
+      if (!mounted) return;
       if (raw.isEmpty) {
         _toast(AppLang.tr('empty_file'), error: true);
         return;
       }
-      final bytes = Uint8List.fromList(raw);
+
+      final croppedBytes = await ImageCropScreen.crop(
+        context,
+        bytes: Uint8List.fromList(raw),
+        initialAspectRatio: kind == 'couple' ? 16.0 / 9.0 : 1.0,
+        title: AppLang.tr('crop_image'),
+      );
+      if (croppedBytes == null || !mounted) return;
+
+      setState(() {
+        _uploading = true;
+        _uploadingKind = kind;
+      });
+
       final fileName = 'profile_${kind}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final result = await MediaUploadService.uploadImageBytes(
-        bytes: bytes,
+        bytes: croppedBytes,
         fileName: fileName,
       );
       final url = _urlFromUploadResult(result);
@@ -278,6 +299,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         'groomFullName': _groomFullCtrl.text.trim(),
         'groomShortName': _groomShortCtrl.text.trim(),
         'groomBio': _groomBioCtrl.text.trim(),
+        'weddingDate': _weddingDate != null ? Timestamp.fromDate(_weddingDate!) : null,
         'rsvpMode': _rsvpMode,
         'nameOrder': _nameOrder,
         'completePercent': percent,
@@ -290,6 +312,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       await _weddingRef.set({
         'brideName': _brideFullCtrl.text.trim(),
         'groomName': _groomFullCtrl.text.trim(),
+        'weddingDate': _weddingDate != null ? Timestamp.fromDate(_weddingDate!) : null,
         'profileCompletePercent': percent,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
@@ -374,6 +397,82 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                             _progressHeader(context),
                             const SizedBox(height: 14),
                             _couplePhotoCard(context),
+                            const SizedBox(height: 14),
+                            _sectionCard(
+                              context,
+                              icon: Icons.calendar_month_rounded,
+                              title: AppLang.tr('wedding_date'),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () async {
+                                  final picked = await showAppDatePicker(
+                                    context,
+                                    initialDate: _weddingDate ??
+                                        DateTime.now().add(const Duration(days: 30)),
+                                  );
+                                  if (picked != null) {
+                                    setState(() {
+                                      _weddingDate = picked;
+                                      _recalcProgress();
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTok.cardSoft(context),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: AppTok.border(context)
+                                          .withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.event_available_rounded,
+                                        color: AppTok.accent(context),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              AppLang.tr('wedding_date'),
+                                              style: TextStyle(
+                                                color: AppTok.textSoft(context),
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              _weddingDate == null
+                                                  ? AppLang.tr('select_wedding_date')
+                                                  : '${_weddingDate!.year}/${_weddingDate!.month.toString().padLeft(2, '0')}/${_weddingDate!.day.toString().padLeft(2, '0')}',
+                                              style: TextStyle(
+                                                color: AppTok.text(context),
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.edit_calendar_rounded,
+                                        color: AppTok.accent(context),
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 14),
                             _sectionCard(
                               context,

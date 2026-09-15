@@ -41,6 +41,7 @@ class AmbientMusicService extends ChangeNotifier {
   bool _ready = false;
   bool _enabled = false;
   String _trackId = tracks.first.id;
+  String? _loadedTrackId;
   double _volume = 0.30;
   bool _playing = false;
   bool _loading = false;
@@ -123,7 +124,7 @@ class AmbientMusicService extends ChangeNotifier {
 
   Future<void> setTrack(String id) async {
     final t = tracks.firstWhere((e) => e.id == id, orElse: () => tracks.first);
-    if (t.id == _trackId && !_missingAsset) return;
+    if (t.id == _trackId && _loadedTrackId == t.id && !_missingAsset) return;
     _trackId = t.id;
     notifyListeners();
     await _prefsString(_kTrack, _trackId);
@@ -160,15 +161,48 @@ class AmbientMusicService extends ChangeNotifier {
   }
 
   Future<void> _loadCurrent({required bool autoplay}) async {
+    // اگر همین ترک قبلاً کش/لود شده است، نیازی به لود مجدد نیست
+    if (_loadedTrackId == track.id && !_missingAsset && _error == null) {
+      try {
+        await _player.setVolume(_volume);
+        if (autoplay) {
+          await _player.play();
+          _playing = true;
+        }
+        notifyListeners();
+        return;
+      } catch (_) {
+        // Fallback to full reload below
+      }
+    }
+
     _loading = true;
     _missingAsset = false;
     _error = null;
     notifyListeners();
+
     try {
       await _player.stop();
       await _player.setVolume(_volume);
       await _player.setLoopMode(LoopMode.one);
-      await _player.setAsset(track.assetPath);
+
+      if (kIsWeb) {
+        // روی وب در صورت عدم شناسایی setAsset، از setUrl استفاده می‌کنیم
+        try {
+          await _player.setAsset(track.assetPath);
+        } catch (_) {
+          try {
+            await _player.setUrl('assets/${track.assetPath}');
+          } catch (_) {
+            await _player.setUrl(track.assetPath);
+          }
+        }
+      } else {
+        await _player.setAsset(track.assetPath);
+      }
+
+      _loadedTrackId = track.id;
+
       if (autoplay) {
         await _player.play();
         _playing = true;
@@ -177,6 +211,7 @@ class AmbientMusicService extends ChangeNotifier {
       _missingAsset = true;
       _error = e.toString();
       _playing = false;
+      _loadedTrackId = null;
       if (kDebugMode) {
         debugPrint('AmbientMusic load error: $e');
       }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -380,12 +381,19 @@ class _GuestHomeTabState extends State<GuestHomeTab>
             final d = snap.data?.data() ?? {};
             final groom = (d['groomName'] ?? inv.groomName).toString().trim();
             final bride = (d['brideName'] ?? inv.brideName).toString().trim();
+            final couplePhoto = (d['couplePhotoUrl'] ??
+                    d['coverImageUrl'] ??
+                    inv.couplePhotoUrl ??
+                    inv.coverImageUrl ??
+                    '')
+                .toString()
+                .trim();
             final title = groom.isNotEmpty && bride.isNotEmpty
                 ? '$groom  &  $bride'
                 : inv.coupleTitle;
 
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // لیبل نرم بالای کارت
                 Align(
@@ -413,7 +421,47 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
+                if (couplePhoto.isNotEmpty) ...[
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTok.accent(context),
+                        width: 2.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTok.accent(context).withValues(alpha: 0.28),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: couplePhoto,
+                        fit: BoxFit.cover,
+                        placeholder: (c, _) => Container(
+                          color: AppTok.cardSoft(context),
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                        errorWidget: (c, _, __) => Container(
+                          color: AppTok.cardSoft(context),
+                          child: Icon(
+                            Icons.favorite_rounded,
+                            color: AppTok.accent(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 Text(
                   title,
                   textAlign: TextAlign.center,
