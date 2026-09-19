@@ -8,6 +8,8 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/budget_group_model.dart';
 import '../models/expense_item_model.dart';
+import '../services/export_service.dart';
+import '../services/plan_access.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/wedding_time_header.dart';
 
@@ -723,16 +725,118 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 ],
               ),
             ),
-            floatingActionButton: FloatingActionButton(
-              heroTag: 'budget_fab',
-              backgroundColor: AppTok.accent(context),
-              foregroundColor: Colors.white,
-              onPressed: () => openExpenseForm(),
-              child: const Icon(Icons.add, color: Colors.white),
+            floatingActionButton: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'budget_export_fab',
+                  tooltip: AppLang.I.isFa ? 'خروجی' : 'Export',
+                  backgroundColor: AppTok.card(context),
+                  onPressed: () => _openExportSheet(),
+                  child: Icon(
+                    Icons.file_download_outlined,
+                    color: AppTok.accent(context),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton(
+                  heroTag: 'budget_fab',
+                  backgroundColor: AppTok.accent(context),
+                  foregroundColor: Colors.white,
+                  onPressed: () => openExpenseForm(),
+                  child: const Icon(Icons.add, color: Colors.white),
+                ),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+
+  /// خروجی PDF/اکسل بودجه (ویژهٔ پرمیوم)
+  Future<void> _openExportSheet() async {
+    final limits = await PlanAccess.I.weddingLimits(widget.weddingId);
+    if (!limits.exportDocs) {
+      if (!mounted) return;
+      await PlanAccess.I.showUpgradeDialog(
+        context,
+        weddingId: widget.weddingId,
+        featureFa: 'خروجی PDF/اکسل',
+        featureEn: 'PDF/Excel export',
+      );
+      return;
+    }
+
+    final g = await groupsRef.get();
+    final expenses = <Map<String, dynamic>>[];
+    for (final gd in g.docs) {
+      final es = await groupsRef.doc(gd.id).collection('expenses').get();
+      for (final e in es.docs) {
+        expenses.add(e.data() as Map<String, dynamic>);
+      }
+    }
+    final w = await FirebaseFirestore.instance
+        .collection('weddings')
+        .doc(widget.weddingId)
+        .get();
+    final wd = w.data() ?? {};
+    final couple = '${wd['brideName'] ?? ''} & ${wd['groomName'] ?? ''}';
+
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTok.card(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: AppLang.I.direction,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.picture_as_pdf_outlined,
+                    color: AppTok.accent(ctx),
+                  ),
+                  title: Text(
+                    AppLang.I.isFa ? 'خروجی PDF' : 'PDF export',
+                    style: TextStyle(color: AppTok.text(ctx)),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await ExportService.budgetPdf(
+                      coupleTitle: couple,
+                      expenses: expenses,
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.table_view_outlined,
+                    color: AppTok.accent(ctx),
+                  ),
+                  title: Text(
+                    AppLang.I.isFa ? 'خروجی اکسل (CSV)' : 'Excel (CSV) export',
+                    style: TextStyle(color: AppTok.text(ctx)),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await ExportService.budgetCsv(
+                      coupleTitle: couple,
+                      expenses: expenses,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

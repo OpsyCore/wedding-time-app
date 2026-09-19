@@ -85,8 +85,21 @@ class _CameraManageScreenState extends State<CameraManageScreen> {
 
   Future<void> _saveSettings() async {
     final parsed = int.tryParse(_maxShotsC.text.trim());
-    final maxShots =
+    var maxShots =
         (parsed == null || parsed < 1) ? 30 : (parsed > 200 ? 200 : parsed);
+
+    // محدودیت پلن: سقف شات هر مهمان (پرمیوم = نامحدود)
+    final limits = await PlanAccess.I.weddingLimits(widget.weddingId);
+    if (limits.maxShotsPerGuest >= 0 && maxShots > limits.maxShotsPerGuest) {
+      maxShots = limits.maxShotsPerGuest;
+      if (mounted) {
+        _toast(
+          AppLang.I.isFa
+              ? 'سقف شات هر مهمان در پلن شما: ${limits.maxShotsPerGuest}'
+              : 'Your plan caps shots per guest at ${limits.maxShotsPerGuest}',
+        );
+      }
+    }
 
     setState(() => _saving = true);
     try {

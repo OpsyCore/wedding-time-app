@@ -185,6 +185,44 @@ class WeddingService {
     return weddingId;
   }
 
+  /// همهٔ مراسم‌هایی که کاربر عضو زوج آن‌هاست (برای سوییچر چند مراسم)
+  static Future<List<WeddingModel>> myWeddings(String uid) async {
+    final results = await Future.wait([
+      _firestore
+          .collection('weddings')
+          .where('brideUid', isEqualTo: uid)
+          .get(),
+      _firestore
+          .collection('weddings')
+          .where('groomUid', isEqualTo: uid)
+          .get(),
+    ]);
+    final map = <String, WeddingModel>{};
+    for (final snap in results) {
+      for (final d in snap.docs) {
+        map[d.id] = WeddingModel.fromDoc(d);
+      }
+    }
+    return map.values.toList();
+  }
+
+  /// سوییچ مراسم فعال کاربر + mirror پلن روی سند مراسم جدید
+  static Future<void> switchActiveWedding({
+    required String uid,
+    required String weddingId,
+    required String role,
+    String planId = 'free',
+  }) async {
+    await _firestore.collection('users').doc(uid).set({
+      'weddingId': weddingId,
+      'role': role,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    await _firestore.collection('weddings').doc(weddingId).set({
+      'planId': planId,
+    }, SetOptions(merge: true));
+  }
+
   static Future<String?> getUserWeddingId(String uid) async {
     final doc = await _firestore.collection('users').doc(uid).get();
     if (!doc.exists) return null;

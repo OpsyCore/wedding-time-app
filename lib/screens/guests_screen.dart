@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../services/export_service.dart';
+import '../services/plan_access.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/wedding_time_header.dart';
 
@@ -276,6 +278,25 @@ class _GuestsScreenState extends State<GuestsScreen> {
                               ),
                               onPressed: () async {
                                 if (nameC.text.trim().isEmpty) return;
+
+                                // محدودیت پلن: سقف تعداد مهمان
+                                if (guestDoc == null) {
+                                  final limits = await PlanAccess.I
+                                      .weddingLimits(widget.weddingId);
+                                  if (!limits.unlimitedGuests) {
+                                    final count = (await guestsRef.get()).size;
+                                    if (count >= limits.maxGuests) {
+                                      if (!mounted) return;
+                                      await PlanAccess.I.showUpgradeDialog(
+                                        context,
+                                        weddingId: widget.weddingId,
+                                        featureFa: 'مهمان‌های بیشتر',
+                                        featureEn: 'More guests',
+                                      );
+                                      return;
+                                    }
+                                  }
+                                }
 
                                 final payload = <String, dynamic>{
                                   'name': nameC.text.trim(),
@@ -625,19 +646,117 @@ class _GuestsScreenState extends State<GuestsScreen> {
                 ],
               ),
             ),
-            floatingActionButton: FloatingActionButton(
-              heroTag: 'guests_fab',
-              backgroundColor: AppTok.accent(context),
-              foregroundColor: Colors.white,
-              onPressed: () => openGuestForm(),
-              child: const Icon(
-                Icons.person_add_alt,
-                color: Colors.white,
-              ),
+            floatingActionButton: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // خروجی PDF/اکسل — ویژهٔ پرمیوم
+                FloatingActionButton.small(
+                  heroTag: 'guests_export_fab',
+                  tooltip: AppLang.I.isFa ? 'خروجی' : 'Export',
+                  backgroundColor: AppTok.card(context),
+                  onPressed: () => _openExportSheet(),
+                  child: Icon(
+                    Icons.file_download_outlined,
+                    color: AppTok.accent(context),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton(
+                  heroTag: 'guests_fab',
+                  backgroundColor: AppTok.accent(context),
+                  foregroundColor: Colors.white,
+                  onPressed: () => openGuestForm(),
+                  child: const Icon(
+                    Icons.person_add_alt,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+
+  /// خروجی PDF/اکسل فهرست مهمان‌ها (پرمیوم)
+  Future<void> _openExportSheet() async {
+    final limits = await PlanAccess.I.weddingLimits(widget.weddingId);
+    if (!limits.exportDocs) {
+      if (!mounted) return;
+      await PlanAccess.I.showUpgradeDialog(
+        context,
+        weddingId: widget.weddingId,
+        featureFa: 'خروجی PDF/اکسل',
+        featureEn: 'PDF/Excel export',
+      );
+      return;
+    }
+
+    final docs = (await guestsRef.get()).docs;
+    final guests = docs.map((d) => d.data() as Map<String, dynamic>).toList();
+    final w = await FirebaseFirestore.instance
+        .collection('weddings')
+        .doc(widget.weddingId)
+        .get();
+    final wd = w.data() ?? {};
+    final couple =
+        '${wd['brideName'] ?? ''} & ${wd['groomName'] ?? ''}';
+
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTok.card(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: AppLang.I.direction,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.picture_as_pdf_outlined,
+                    color: AppTok.accent(ctx),
+                  ),
+                  title: Text(
+                    AppLang.I.isFa ? 'خروجی PDF' : 'PDF export',
+                    style: TextStyle(color: AppTok.text(ctx)),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await ExportService.guestsPdf(
+                      coupleTitle: couple,
+                      guests: guests,
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.table_view_outlined,
+                    color: AppTok.accent(ctx),
+                  ),
+                  title: Text(
+                    AppLang.I.isFa ? 'خروجی اکسل (CSV)' : 'Excel (CSV) export',
+                    style: TextStyle(color: AppTok.text(ctx)),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await ExportService.guestsCsv(
+                      coupleTitle: couple,
+                      guests: guests,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
