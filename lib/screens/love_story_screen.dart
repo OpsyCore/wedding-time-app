@@ -10,6 +10,7 @@ import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../services/media_upload_service.dart';
+import '../widgets/image_crop_screen.dart';
 
 /// داستان عشق
 /// - آپلود: ImgBB (بدون Firebase Storage / بدون dart:io)
@@ -160,28 +161,36 @@ class _LoveStoryScreenState extends State<LoveStoryScreen> {
     try {
       final image = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1400,
+        imageQuality: 88,
+        maxWidth: 1800,
       );
       if (image == null) return;
+
+      final raw = await image.readAsBytes();
+      if (!mounted) return;
+      if (raw.isEmpty) {
+        _toast(AppLang.tr('empty_file'), error: true);
+        return;
+      }
+
+      final croppedBytes = await ImageCropScreen.crop(
+        context,
+        bytes: Uint8List.fromList(raw),
+        initialAspectRatio: 16.0 / 9.0,
+        title: AppLang.tr('crop_image'),
+      );
+      if (croppedBytes == null || !mounted) return;
 
       setState(() {
         _uploading = true;
         _uploadingDocId = docId;
       });
 
-      final raw = await image.readAsBytes();
-      if (raw.isEmpty) {
-        _toast(AppLang.tr('empty_file'), error: true);
-        return;
-      }
-
-      final bytes = Uint8List.fromList(raw);
       final fileName =
           'love_${docId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
       final result = await MediaUploadService.uploadImageBytes(
-        bytes: bytes,
+        bytes: croppedBytes,
         fileName: fileName,
       );
 

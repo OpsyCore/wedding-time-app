@@ -5,7 +5,11 @@ import '../../core/app_lang.dart';
 import '../../core/app_theme.dart';
 import '../../models/invitation_model.dart';
 
-/// تایم‌لاین فقط‌خواندنی مهمان — استایل عمودی چپ/راست مثل موکاپ زوج
+/// تایم‌لاین فقط‌خواندنی مهمان —
+/// محتوا دقیقاً مشابه صفحهٔ زوج (TimelineScreen) است:
+/// همان کالکشن `timeline`، همان مرتب‌سازی (time سپس order)، همان قالب ساعت،
+/// همان آیکون‌ها و همان ۱۰ رویداد پیش‌فرض وقتی لیست خالی است؛
+/// تنها تفاوت: مهمان هیچ دکمهٔ افزودن/ویرایش/حذف/ریست نمی‌بیند.
 class GuestTimelineTab extends StatelessWidget {
   const GuestTimelineTab({
     super.key,
@@ -22,88 +26,129 @@ class GuestTimelineTab extends StatelessWidget {
     return v;
   }
 
+  // ── دقیقاً مشابه _iconOf در TimelineScreen زوج ──
   IconData _iconOf(String? key) {
-    switch ((key ?? '').toLowerCase().trim()) {
+    switch (key) {
       case 'ring':
-      case 'diamond':
         return Icons.diamond_outlined;
       case 'guests':
-      case 'guest':
         return Icons.groups_outlined;
       case 'home':
-      case 'ceremony':
         return Icons.home_outlined;
       case 'party':
-      case 'welcome':
         return Icons.celebration_outlined;
       case 'food':
-      case 'dinner':
-      case 'lunch':
         return Icons.restaurant_outlined;
       case 'mic':
-      case 'speech':
         return Icons.mic_none_rounded;
       case 'music':
-      case 'dance':
-      case 'party_music':
         return Icons.music_note_outlined;
       case 'heart':
-      case 'first_dance':
         return Icons.favorite_border;
       case 'cake':
         return Icons.cake_outlined;
       case 'car':
-      case 'leave':
         return Icons.directions_car_outlined;
       case 'camera':
-      case 'photo':
         return Icons.photo_camera_outlined;
+      case 'place':
+        return Icons.place_outlined;
       default:
         return Icons.event_outlined;
     }
   }
 
+  // ── همان ۱۰ رویداد پیش‌فرض صفحهٔ زوج (فقط نمایش، بدون نوشتن در دیتابیس) ──
+  List<Map<String, dynamic>> get _defaultEvents => [
+        {
+          'time': '10:00',
+          'title': AppLang.tr('tl_prep'),
+          'icon': 'ring',
+          'order': 1,
+        },
+        {
+          'time': '11:00',
+          'title': AppLang.tr('tl_guests_arrive'),
+          'icon': 'guests',
+          'order': 2,
+        },
+        {
+          'time': '12:00',
+          'title': AppLang.tr('tl_ceremony_start'),
+          'icon': 'home',
+          'order': 3,
+        },
+        {
+          'time': '12:30',
+          'title': AppLang.tr('tl_reception_start'),
+          'icon': 'party',
+          'order': 4,
+        },
+        {
+          'time': '13:00',
+          'title': AppLang.tr('tl_lunch_tables'),
+          'icon': 'food',
+          'order': 5,
+        },
+        {
+          'time': '14:00',
+          'title': AppLang.tr('tl_speeches'),
+          'icon': 'mic',
+          'order': 6,
+        },
+        {
+          'time': '15:00',
+          'title': AppLang.tr('tl_games'),
+          'icon': 'music',
+          'order': 7,
+        },
+        {
+          'time': '16:00',
+          'title': AppLang.tr('tl_first_dance'),
+          'icon': 'heart',
+          'order': 8,
+        },
+        {
+          'time': '16:30',
+          'title': AppLang.tr('tl_cake_group_photo'),
+          'icon': 'cake',
+          'order': 9,
+        },
+        {
+          'time': '18:00',
+          'title': AppLang.tr('tl_farewell'),
+          'icon': 'car',
+          'order': 10,
+        },
+      ];
+
   int _timeToMinutes(String time) {
-    final cleaned = time.trim();
-    final parts = cleaned.split(':');
+    final parts = time.split(':');
     if (parts.length < 2) return 0;
-    return (int.tryParse(parts[0]) ?? 0) * 60 + (int.tryParse(parts[1]) ?? 0);
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = int.tryParse(parts[1]) ?? 0;
+    return h * 60 + m;
   }
 
-  List<_TimelineItem> _fromInvitation() {
-    final schedule = invitation?.schedule ?? const <ScheduleItem>[];
-    return schedule
-        .map(
-          (e) => _TimelineItem(
-            time: e.time,
-            title: e.title,
-            note: '',
-            iconKey: e.icon,
-          ),
-        )
-        .toList();
-  }
-
-  List<_TimelineItem> _fromDocs(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
-  ) {
-    return docs.map((doc) {
-      final d = doc.data();
-      return _TimelineItem(
-        time: (d['time'] ?? '').toString(),
-        title: (d['title'] ?? d['name'] ?? '').toString(),
-        note: (d['note'] ?? d['description'] ?? '').toString(),
-        iconKey: (d['icon'] ?? d['iconKey'] ?? 'custom').toString(),
-      );
-    }).toList();
-  }
-
-  List<_TimelineItem> _sorted(List<_TimelineItem> items) {
-    final list = List<_TimelineItem>.from(items);
-    list.sort(
-      (a, b) => _timeToMinutes(a.time).compareTo(_timeToMinutes(b.time)),
-    );
-    return list;
+  // ── دقیقاً مشابه _displayTime در TimelineScreen زوج ──
+  String _displayTime(String raw) {
+    final t = raw.trim();
+    if (t.isEmpty) return '--:--';
+    if (t.toUpperCase().contains('AM') || t.toUpperCase().contains('PM')) {
+      return t.toUpperCase();
+    }
+    final parts = t.split(':');
+    if (parts.length < 2) return t;
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = int.tryParse(parts[1].replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final mm = m.toString().padLeft(2, '0');
+    if (AppLang.I.isFa) {
+      return '${parts[0].padLeft(2, '0')}:$mm';
+    }
+    final isAm = h < 12;
+    var h12 = h % 12;
+    if (h12 == 0) h12 = 12;
+    return '$h12:$mm ${isAm ? 'AM' : 'PM'}';
   }
 
   @override
@@ -115,347 +160,161 @@ class GuestTimelineTab extends StatelessWidget {
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: ref.snapshots(),
-      builder: (context, snap) {
-        List<_TimelineItem> items = const [];
-
-        if (snap.hasError) {
-          items = _sorted(_fromInvitation());
-        } else if (!snap.hasData) {
-          return Center(
-            child: CircularProgressIndicator(color: AppTok.accent(context)),
-          );
-        } else {
-          final docs = snap.data!.docs;
-          items = docs.isEmpty
-              ? _sorted(_fromInvitation())
-              : _sorted(_fromDocs(docs));
-        }
-
-        if (items.isEmpty) {
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
                 _t(
-                  'no_schedule_yet',
-                  'هنوز برنامه‌ای ثبت نشده',
-                  'No schedule yet',
+                  'timeline_load_error',
+                  'خطا در بارگذاری تایم‌لاین',
+                  'Timeline load error',
                 ),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppTok.textSoft(context)),
+                style: TextStyle(color: AppTok.danger(context)),
               ),
             ),
           );
         }
+        if (!snapshot.hasData) {
+          return Center(
+            child: CircularProgressIndicator(color: AppTok.accent(context)),
+          );
+        }
 
-        return _TimelineView(items: items, iconOf: _iconOf);
+        // همان مرتب‌سازی صفحهٔ زوج: time سپس order
+        final docs = snapshot.data!.docs.toList();
+        docs.sort((a, b) {
+          final ta = _timeToMinutes(a.data()['time']?.toString() ?? '');
+          final tb = _timeToMinutes(b.data()['time']?.toString() ?? '');
+          if (ta != tb) return ta.compareTo(tb);
+          final oa = (a.data()['order'] ?? 0) as num;
+          final ob = (b.data()['order'] ?? 0) as num;
+          return oa.compareTo(ob);
+        });
+
+        // اگر زوج هنوز رویدادی ثبت نکرده، همان ۱۰ رویداد پیش‌فصف صفحهٔ زوج
+        // (فقط نمایش محلی — مهمان هرگز در دیتابیس نمی‌نویسد)
+        final items = docs.isEmpty
+            ? _defaultEvents
+            : docs.map((d) => d.data() as Map<String, dynamic>).toList();
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+          itemCount: items.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 22),
+                child: _HeaderCard(count: items.length),
+              );
+            }
+
+            final i = index - 1;
+            final data = items[i];
+            final isLast = i == items.length - 1;
+            final onStart = i.isEven;
+
+            return _TimelineNode(
+              isLast: isLast,
+              onStartSide: onStart,
+              time: _displayTime(data['time']?.toString() ?? ''),
+              title: data['title']?.toString() ?? '',
+              note: data['note']?.toString() ?? '',
+              icon: _iconOf(data['icon']?.toString()),
+            );
+          },
+        );
       },
     );
   }
 }
 
-class _TimelineItem {
-  const _TimelineItem({
-    required this.time,
-    required this.title,
-    required this.note,
-    required this.iconKey,
-  });
+// ═══════════════════════════════════════════
+// هدر مشابه صفحهٔ زوج (بدون چیپ ویرایش)
+// ═══════════════════════════════════════════
 
-  final String time;
-  final String title;
-  final String note;
-  final String iconKey;
-}
-
-class _TimelineView extends StatelessWidget {
-  const _TimelineView({
-    required this.items,
-    required this.iconOf,
-  });
-
-  final List<_TimelineItem> items;
-  final IconData Function(String?) iconOf;
+class _HeaderCard extends StatelessWidget {
+  const _HeaderCard({required this.count});
+  final int count;
 
   @override
   Widget build(BuildContext context) {
-    final dark = AppTok.isDark(context);
+    final accent = AppTok.accent(context);
+    final accentDeep = AppTok.accentDeep(context);
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+    final border = AppTok.border(context);
+    final card = AppTok.card(context);
 
-    final bg = dark ? const Color(0xFF14121C) : AppTok.background(context);
-    final line = dark
-        ? const Color(0xFFC6A75E).withValues(alpha: 0.55)
-        : AppTok.accent(context).withValues(alpha: 0.35);
-    final dotFill = dark ? const Color(0xFF1A1724) : AppTok.card(context);
-    final dotBorder = dark ? const Color(0xFFD4B56A) : AppTok.accent(context);
-    final cardBg = dark
-        ? const Color(0xFF1E1A2A).withValues(alpha: 0.92)
-        : AppTok.card(context);
-    final cardBorder = dark
-        ? const Color(0xFFD4B56A).withValues(alpha: 0.28)
-        : AppTok.border(context);
-    final titleColor = dark ? const Color(0xFFF3EFE6) : AppTok.text(context);
-    final timeColor =
-        dark ? const Color(0xFFE8D5A3) : AppTok.accentDeep(context);
-    final soft = dark
-        ? const Color(0xFFB8B0C4).withValues(alpha: 0.85)
-        : AppTok.textSoft(context);
-    final iconBg = dark
-        ? const Color(0xFFD4B56A).withValues(alpha: 0.12)
-        : AppTok.accent(context).withValues(alpha: 0.12);
-    final iconColor = dark ? const Color(0xFFE6C97A) : AppTok.accent(context);
-
-    return ColoredBox(
-      color: bg,
-      child: Stack(
-        children: [
-          if (dark)
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: _SoftSparkPainter()),
-              ),
-            ),
-          ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 18, 12, 28),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              final isRight = index.isEven;
-              final rtl = Directionality.of(context) == TextDirection.rtl;
-              final cardOnStart = rtl ? !isRight : isRight;
-
-              return _TimelineRow(
-                item: item,
-                isLast: index == items.length - 1,
-                cardOnStart: cardOnStart,
-                icon: iconOf(item.iconKey),
-                line: line,
-                dotFill: dotFill,
-                dotBorder: dotBorder,
-                cardBg: cardBg,
-                cardBorder: cardBorder,
-                titleColor: titleColor,
-                timeColor: timeColor,
-                soft: soft,
-                iconBg: iconBg,
-                iconColor: iconColor,
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimelineRow extends StatelessWidget {
-  const _TimelineRow({
-    required this.item,
-    required this.isLast,
-    required this.cardOnStart,
-    required this.icon,
-    required this.line,
-    required this.dotFill,
-    required this.dotBorder,
-    required this.cardBg,
-    required this.cardBorder,
-    required this.titleColor,
-    required this.timeColor,
-    required this.soft,
-    required this.iconBg,
-    required this.iconColor,
-  });
-
-  final _TimelineItem item;
-  final bool isLast;
-  final bool cardOnStart;
-  final IconData icon;
-  final Color line;
-  final Color dotFill;
-  final Color dotBorder;
-  final Color cardBg;
-  final Color cardBorder;
-  final Color titleColor;
-  final Color timeColor;
-  final Color soft;
-  final Color iconBg;
-  final Color iconColor;
-
-  @override
-  Widget build(BuildContext context) {
-    const rowMinHeight = 88.0;
-
-    final card = _EventCard(
-      item: item,
-      icon: icon,
-      cardBg: cardBg,
-      cardBorder: cardBorder,
-      titleColor: titleColor,
-      timeColor: timeColor,
-      soft: soft,
-      iconBg: iconBg,
-      iconColor: iconColor,
-    );
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: rowMinHeight),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: cardOnStart
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 4, 10, 16),
-                      child: card,
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            SizedBox(
-              width: 28,
-              child: Column(
-                children: [
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: dotFill,
-                      border: Border.all(color: dotBorder, width: 2.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: dotBorder.withValues(alpha: 0.35),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (!isLast)
-                    Expanded(
-                      child: Container(
-                        width: 2,
-                        margin: const EdgeInsets.symmetric(vertical: 2),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              line,
-                              line.withValues(alpha: 0.15),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox(height: 12),
-                ],
-              ),
-            ),
-            Expanded(
-              child: !cardOnStart
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 4, 4, 16),
-                      child: card,
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EventCard extends StatelessWidget {
-  const _EventCard({
-    required this.item,
-    required this.icon,
-    required this.cardBg,
-    required this.cardBorder,
-    required this.titleColor,
-    required this.timeColor,
-    required this.soft,
-    required this.iconBg,
-    required this.iconColor,
-  });
-
-  final _TimelineItem item;
-  final IconData icon;
-  final Color cardBg;
-  final Color cardBorder;
-  final Color titleColor;
-  final Color timeColor;
-  final Color soft;
-  final Color iconBg;
-  final Color iconColor;
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: cardBorder),
+        borderRadius: BorderRadius.circular(22),
+        gradient: AppTok.progressGradient(context),
+        border: Border.all(color: border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 14,
+            color: AppTok.shadow(context),
+            blurRadius: 16,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: iconColor.withValues(alpha: 0.25)),
+              shape: BoxShape.circle,
+              color: card.withValues(alpha: 0.85),
+              border: Border.all(color: accent.withValues(alpha: 0.35)),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(Icons.view_timeline_rounded, color: accent, size: 22),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 12),
+          Text(
+            'WEDDING TIMELINE',
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: accentDeep,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2.4,
+              fontFamily: 'serif',
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            AppLang.tr('timeline_hero_body'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: textSoft, fontSize: 12.5, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: card.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: border),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (item.time.trim().isNotEmpty)
-                  Text(
-                    item.time.trim(),
-                    textDirection: TextDirection.ltr,
-                    style: TextStyle(
-                      color: timeColor,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13.5,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                const SizedBox(height: 3),
+                Icon(Icons.event_available_outlined, size: 16, color: accent),
+                const SizedBox(width: 6),
                 Text(
-                  item.title.trim().isEmpty ? '—' : item.title.trim(),
+                  '$count',
                   style: TextStyle(
-                    color: titleColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13.5,
-                    height: 1.25,
+                    color: text,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (item.note.trim().isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    item.note.trim(),
-                    style: TextStyle(
-                      color: soft,
-                      fontSize: 11.5,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -465,28 +324,212 @@ class _EventCard extends StatelessWidget {
   }
 }
 
-class _SoftSparkPainter extends CustomPainter {
-  const _SoftSparkPainter();
+// ═══════════════════════════════════════════
+// نود تایم‌لاین مشابه صفحهٔ زوج (وسط + چپ/راست) — بدون onTap/onLongPress
+// ═══════════════════════════════════════════
+
+class _TimelineNode extends StatelessWidget {
+  const _TimelineNode({
+    required this.isLast,
+    required this.onStartSide,
+    required this.time,
+    required this.title,
+    required this.note,
+    required this.icon,
+  });
+
+  final bool isLast;
+  final bool onStartSide;
+  final String time;
+  final String title;
+  final String note;
+  final IconData icon;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFD4B56A).withValues(alpha: 0.10);
-    final points = <Offset>[
-      Offset(size.width * 0.12, size.height * 0.08),
-      Offset(size.width * 0.82, size.height * 0.14),
-      Offset(size.width * 0.20, size.height * 0.42),
-      Offset(size.width * 0.88, size.height * 0.48),
-      Offset(size.width * 0.15, size.height * 0.72),
-      Offset(size.width * 0.78, size.height * 0.80),
-      Offset(size.width * 0.50, size.height * 0.30),
-      Offset(size.width * 0.60, size.height * 0.62),
-    ];
-    for (final p in points) {
-      canvas.drawCircle(p, 1.6, paint);
+  Widget build(BuildContext context) {
+    final accent = AppTok.accent(context);
+    final accentDeep = AppTok.accentDeep(context);
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+    final border = AppTok.border(context);
+    final card = AppTok.card(context);
+    final cardSoft = AppTok.cardSoft(context);
+
+    Widget eventCard({required bool alignEnd}) {
+      final cross =
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+      final ta = alignEnd ? TextAlign.end : TextAlign.start;
+
+      return Container(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        decoration: BoxDecoration(
+          color: card.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: border),
+          boxShadow: [
+            BoxShadow(
+              color: AppTok.shadow(context),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: cross,
+          children: [
+            Row(
+              mainAxisAlignment:
+                  alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+              children: [
+                if (!alignEnd) ...[
+                  _iconBadge(icon, accent, cardSoft),
+                  const SizedBox(width: 10),
+                ],
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: cross,
+                    children: [
+                      Text(
+                        time,
+                        textDirection: TextDirection.ltr,
+                        textAlign: ta,
+                        style: TextStyle(
+                          color: accentDeep,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13.5,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        title.trim().isEmpty ? '—' : title.trim(),
+                        textAlign: ta,
+                        style: TextStyle(
+                          color: text,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.2,
+                          height: 1.25,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (alignEnd) ...[
+                  const SizedBox(width: 10),
+                  _iconBadge(icon, accent, cardSoft),
+                ],
+              ],
+            ),
+            if (note.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                note,
+                textAlign: ta,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: textSoft,
+                  fontSize: 11.5,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
     }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: onStartSide
+                ? Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      end: 10,
+                      top: 4,
+                      bottom: 4,
+                    ),
+                    child: eventCard(alignEnd: true),
+                  )
+                : const SizedBox.shrink(),
+          ),
+
+          // ستون وسط
+          SizedBox(
+            width: 26,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    width: 2.2,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          accent.withValues(alpha: 0.15),
+                          accent.withValues(alpha: 0.55),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: card,
+                    border: Border.all(color: accent, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    width: 2.2,
+                    color: isLast
+                        ? Colors.transparent
+                        : accent.withValues(alpha: 0.45),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: !onStartSide
+                ? Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 10,
+                      top: 4,
+                      bottom: 4,
+                    ),
+                    child: eventCard(alignEnd: false),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget _iconBadge(IconData icon, Color accent, Color soft) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.22)),
+      ),
+      child: Icon(icon, color: accent, size: 20),
+    );
+  }
 }
