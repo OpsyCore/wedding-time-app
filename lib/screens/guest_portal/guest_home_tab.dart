@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -14,9 +15,10 @@ import 'guest_love_story_tab.dart';
 import '../supports_guest_screen.dart';
 import 'guest_wishes_tab.dart';
 
-/// تب خانه مهمان — داشبورد کارت‌محور:
-/// هدر خوش‌آمد + کارت Hero با شمارش معکوس + لیست «مسیر مهمان».
-/// رنگ/فضا فقط از AppTok.* و پالت‌های static const؛ بدون هاردکد بیرونی.
+/// تب خانه مهمان — داشبورد کارت‌محور با چیدمان دقیقاً مطابق طرح مرجع:
+/// ۱) هدر خوش‌آمد بالا با متن سلام و آیکون قلب در گوشه راست
+/// ۲) کارت هیرو با قاب قوسی رمانتیک در سمت چپ (عکس واقعی)، اسامی خط نستعلیق در سمت راست، تاریخ، و ۴ کارت شمارش معکوس شیشه‌ای
+/// ۳) مسیر مهمان و دسترسی به بخش‌های پورتال
 class GuestHomeTab extends StatefulWidget {
   const GuestHomeTab({
     super.key,
@@ -28,8 +30,7 @@ class GuestHomeTab extends StatefulWidget {
   final String weddingId;
   final InvitationModel invitation;
 
-  /// سوییچ به تب‌های پایینِ شل (0 خانه، 1 دعوت‌نامه، 2 تایم‌لاین،
-  /// 3 دوربین، 4 صندلی). از خود شل پاس داده می‌شود — بدون ترفند ناوبری.
+  /// سوییچ به تب‌های پایینِ شل (0 خانه، 1 دعوت‌نامه، 2 تایم‌لاین، 3 دوربین، 4 صندلی)
   final ValueChanged<int>? onOpenTab;
 
   @override
@@ -44,6 +45,21 @@ class _GuestHomeTabState extends State<GuestHomeTab>
   String? _guestName;
   String? _rsvpStatus; // yes | no | null
   int _cameraShots = 0;
+
+  // استریم‌ها یک‌بار ساخته می‌شوند تا تیک‌تاک ثانیه‌ای شمارش معکوس باعث
+  // subscribe مجدد و خواندن مکرر اسناد نشود (سهمیهٔ رایگان Firestore).
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _weddingStream =
+      FirebaseFirestore.instance
+          .collection('weddings')
+          .doc(widget.weddingId)
+          .snapshots();
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _profileStream =
+      FirebaseFirestore.instance
+          .collection('weddings')
+          .doc(widget.weddingId)
+          .collection('profile')
+          .doc('main')
+          .snapshots();
 
   late final AnimationController _intro;
   late final Animation<double> _fadeIn;
@@ -70,11 +86,11 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     super.initState();
     _intro = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 420),
+      duration: const Duration(milliseconds: 450),
     );
     _fadeIn = CurvedAnimation(parent: _intro, curve: Curves.easeOut);
     _slideUp = Tween<Offset>(
-      begin: const Offset(0, 0.045),
+      begin: const Offset(0, 0.04),
       end: Offset.zero,
     ).animate(_fadeIn);
     _intro.forward();
@@ -86,8 +102,6 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     _loadLocal();
   }
 
-  /// فقط داده‌های محلی موجود (بدون جعل وضعیت):
-  /// نام نمایشی، وضعیت RSVP و تعداد عکس‌های ثبت‌شده دوربین.
   Future<void> _loadLocal() async {
     try {
       final wid = widget.weddingId;
@@ -102,9 +116,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         _rsvpStatus = (results[1] as ({String? status, String? name})).status;
         _cameraShots = results[2] as int;
       });
-    } catch (_) {
-      // خانه نباید با خطای پریف خراب شود.
-    }
+    } catch (_) {}
   }
 
   @override
@@ -128,23 +140,6 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     }).join();
   }
 
-  String _initialOf(String name) {
-    final t = name.trim();
-    if (t.isEmpty) return '';
-    return String.fromCharCode(t.runes.first);
-  }
-
-  /// مونوگرام زوج برای آواتار هدر (از نام‌های واقعی، بدون عکس جعلی)
-  String _monogram(String groom, String bride) {
-    final g = _initialOf(groom);
-    final b = _initialOf(bride);
-    if (g.isEmpty && b.isEmpty) return '♥';
-    if (g.isEmpty) return b;
-    if (b.isEmpty) return g;
-    return '$g & $b';
-  }
-
-  /// هدف شمارش معکوس: تاریخ مراسم + ساعت برنامه اگر قابل پارس باشد
   DateTime? get _target {
     final d = widget.invitation.weddingDate;
     if (d == null) return null;
@@ -169,27 +164,6 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     return '${_monthsEn[d.month - 1]} ${d.day}, ${d.year}';
   }
 
-  String _weekDay(DateTime d) {
-    switch (d.weekday) {
-      case 1:
-        return AppLang.tr('weekday_mon');
-      case 2:
-        return AppLang.tr('weekday_tue');
-      case 3:
-        return AppLang.tr('weekday_wed');
-      case 4:
-        return AppLang.tr('weekday_thu');
-      case 5:
-        return AppLang.tr('weekday_fri');
-      case 6:
-        return AppLang.tr('weekday_sat');
-      case 7:
-        return AppLang.tr('weekday_sun');
-      default:
-        return '';
-    }
-  }
-
   void _push(Widget page) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => page),
@@ -208,24 +182,24 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         return Directionality(
           textDirection: AppLang.I.direction,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
             children: [
               Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
+                  constraints: const BoxConstraints(maxWidth: 580),
                   child: FadeTransition(
                     opacity: _fadeIn,
                     child: SlideTransition(
                       position: _slideUp,
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _buildGreeting(context),
                           const SizedBox(height: 14),
                           _buildHero(context),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
                           _buildPlanHeader(context),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                           ..._buildActions(context),
                         ],
                       ),
@@ -240,468 +214,463 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     );
   }
 
-  // ───────────────────────── هدر خوش‌آمد ─────────────────────────
+  // ───────────────────────── ۱) هدر خوش‌آمد (مشابه دقیق عکس) ─────────────────────────
 
   Widget _buildGreeting(BuildContext context) {
     final name = _guestName ?? '';
-    final greeting = name.isEmpty
-        ? _t(
-            'guest_home_greeting_anon',
-            'سلام، مهمان عزیز',
-            'Hello, dear guest',
-          )
-        : _t('guest_home_greeting_name', 'سلام {name}', 'Hello, {name}')
-            .replaceAll('{name}', name);
+    final nameTitle = name.isEmpty
+        ? _t('guest_home_greeting_anon', 'سلام، مهمان عزیز', 'Hello, Dear Guest')
+        : (AppLang.I.isFa ? 'سلام $name' : 'Hello $name');
 
-    return Row(
-      children: [
-        Container(
-          width: 54,
-          height: 54,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTok.accent(context).withValues(alpha: 0.85),
-                AppTok.accentSoft(context).withValues(alpha: 0.75),
-              ],
-            ),
-            border: Border.all(
-              color: AppTok.card(context).withValues(alpha: 0.7),
-              width: 2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppTok.accentSoft(context).withValues(alpha: 0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              _monogram(
-                widget.invitation.groomName,
-                widget.invitation.brideName,
-              ),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.95),
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                fontFamily: 'serif',
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final accent = AppTok.accent(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                greeting,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                nameTitle,
                 style: TextStyle(
                   color: AppTok.text(context),
-                  fontSize: 16.5,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                _t(
-                  'guest_home_welcome_sub',
-                  'حضور شما قاب خاطرات ما را کامل می‌کند',
-                  'Your presence completes our story',
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppTok.textSoft(context),
-                  fontSize: 12,
-                  height: 1.45,
-                ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.favorite_rounded,
+                size: 20,
+                color: accent.withValues(alpha: 0.95),
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            _t(
+              'guest_home_welcome_dream',
+              'به برنامه‌ی رویایی‌تون خوش اومدید',
+              'Welcome to your dream wedding app',
+            ),
+            style: TextStyle(
+              color: AppTok.textSoft(context).withValues(alpha: 0.9),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // ───────────────────────── کارت Hero + شمارش معکوس ─────────────────────────
+  // ───────────────────────── ۲) کارت Hero اصلی (چیدمان ثابت و دقیق مطابق عکس) ─────────────────────────
 
   Widget _buildHero(BuildContext context) {
     final dark = AppTok.isDark(context);
     final inv = widget.invitation;
+    final accent = AppTok.accent(context);
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(28),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTok.card(context),
-            AppTok.cardSoft(context).withValues(alpha: 0.9),
-            AppTok.accentSoft(context).withValues(alpha: dark ? 0.16 : 0.30),
+            dark ? const Color(0xFF1B1724) : AppTok.card(context),
+            dark ? const Color(0xFF14101A) : AppTok.cardSoft(context),
+            accent.withValues(alpha: dark ? 0.10 : 0.22),
           ],
         ),
         border: Border.all(
-          color: AppTok.accent(context).withValues(alpha: 0.28),
+          color: accent.withValues(alpha: 0.28),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTok.accentSoft(context).withValues(alpha: dark ? 0.14 : 0.30),
+            color: accent.withValues(alpha: dark ? 0.16 : 0.22),
             blurRadius: 30,
-            offset: const Offset(0, 12),
+            offset: const Offset(0, 10),
           ),
           BoxShadow(
             color: AppTok.shadow(context),
-            blurRadius: 14,
+            blurRadius: 16,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
-        child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          // نام‌های زنده از سند مراسم (همان استریم عمومی که خانه قبلاً داشت)
-          stream: FirebaseFirestore.instance
-              .collection('weddings')
-              .doc(widget.weddingId)
-              .snapshots(),
-          builder: (context, snap) {
-            final d = snap.data?.data() ?? {};
-            final groom = (d['groomName'] ?? inv.groomName).toString().trim();
-            final bride = (d['brideName'] ?? inv.brideName).toString().trim();
-            final title = groom.isNotEmpty && bride.isNotEmpty
-                ? '$groom  &  $bride'
-                : inv.coupleTitle;
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+          child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: _weddingStream,
+            builder: (context, snap) {
+              final d = snap.data?.data() ?? {};
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // لیبل نرم بالای کارت
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTok.accent(context).withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(99),
-                      border: Border.all(
-                        color: AppTok.accent(context).withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Text(
-                      _t('guest_home_upcoming', 'جشن پیشِ رو', 'Upcoming'),
-                      style: TextStyle(
-                        color: AppTok.accentDeep(context),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppTok.text(context),
-                    fontSize: 26,
-                    height: 1.15,
-                    fontWeight: FontWeight.w600,
-                    fontStyle: FontStyle.italic,
-                    fontFamily: 'serif',
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _buildCountdown(context),
-                const SizedBox(height: 16),
-                Container(
-                  height: 1,
-                  color: AppTok.border(context).withValues(alpha: 0.8),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              // عکس دو نفرهٔ زوج دقیقاً همان عکس پروفایل عروس و داماد است:
+              // زوج آن را در «پروفایل عروس و داماد» آپلود می‌کند و در
+              // weddings/{id}/profile/main زیر کلید couplePhotoUrl ذخیره می‌شود.
+              // بنابراین ابتدا سند پروفایل را می‌خوانیم و آن را در اولویت قرار می‌دهیم.
+              return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                stream: _profileStream,
+                builder: (context, profileSnap) {
+                  final p = profileSnap.data?.data() ?? {};
+                  final profilePhoto =
+                      (p['couplePhotoUrl'] ?? '').toString().trim();
+
+                  final couplePhoto = profilePhoto.isNotEmpty
+                      ? profilePhoto
+                      : (d['couplePhotoUrl'] ??
+                              d['coverImageUrl'] ??
+                              inv.couplePhotoUrl ??
+                              inv.coverImageUrl ??
+                              '')
+                          .toString()
+                          .trim();
+
+                  // اسامی زوج با همان اولویت صفحهٔ خانهٔ زوج (home_screen):
+                  // ابتدا نام کامل پروفایل، سپس نام سند عروسی/دعوت‌نامه
+                  final pfGroom = (p['groomFullName'] ?? '').toString().trim();
+                  final pfBride = (p['brideFullName'] ?? '').toString().trim();
+                  final groom = pfGroom.isNotEmpty
+                      ? pfGroom
+                      : (d['groomName'] ?? inv.groomName).toString().trim();
+                  final bride = pfBride.isNotEmpty
+                      ? pfBride
+                      : (d['brideName'] ?? inv.brideName).toString().trim();
+
+                  final title = groom.isNotEmpty && bride.isNotEmpty
+                      ? '$groom & $bride'
+                      : (inv.coupleTitle.isNotEmpty
+                          ? inv.coupleTitle
+                          : 'علی & دارا');
+
+              final dateStr = inv.weddingDate != null
+                  ? _dateLine(inv.weddingDate!)
+                  : (AppLang.I.isFa ? '۲۰۲۶/۰۸/۰۱' : '2026/08/01');
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── بخش بالایی: قاب قوسی حتماً در سمت چپ و متن‌ها حتماً در سمت راست ──
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: SizedBox(
+                      height: 205,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
-                            inv.weddingDate == null
-                                ? AppLang.tr('to_be_announced')
-                                : '${_weekDay(inv.weddingDate!)} · ${_dateLine(inv.weddingDate!)}',
-                            style: TextStyle(
-                              color: AppTok.text(context),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                          // ۱) قاب قوسی رمانتیک در سمت چپ
+                          _buildArchedWindow(context, couplePhoto),
+
+                          const SizedBox(width: 16),
+
+                          // ۲) اسامی زوج، تاریخ و برچسب «تا روز جشن» در سمت راست
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  title,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.98),
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    fontStyle: FontStyle.italic,
+                                    fontFamily: 'serif',
+                                    fontFamilyFallback: const [
+                                      'Nastaliq',
+                                      'IranNastaliq',
+                                      'Vazirmatn',
+                                      'serif',
+                                    ],
+                                    letterSpacing: 0.5,
+                                    shadows: [
+                                      Shadow(
+                                        color: accent.withValues(alpha: 0.45),
+                                        blurRadius: 14,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  dateStr,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppTok.textSoft(context).withValues(alpha: 0.92),
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _t(
+                                    'guest_home_until_celebration',
+                                    'تا روز جشن',
+                                    'Until the celebration',
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppTok.textSoft(context).withValues(alpha: 0.75),
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          if (inv.venueName.trim().isNotEmpty ||
-                              inv.venueCity.trim().isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              '${AppLang.tr('location')}: '
-                              '${[
-                                if (inv.venueName.trim().isNotEmpty)
-                                  inv.venueName.trim(),
-                                if (inv.venueCity.trim().isNotEmpty)
-                                  inv.venueCity.trim(),
-                              ].join(AppLang.I.isFa ? '، ' : ', ')}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: AppTok.textSoft(context),
-                                fontSize: 11.5,
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    _detailsButton(context),
-                  ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ── بخش پایینی: ۴ کارت شمارش معکوس شیشه‌ای مطابق دقیق عکس ──
+                  _buildCountdownCards(context),
+                ],
+              );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// قاب قوسی رمانتیک در سمت چپ با عکس سینمایی و شاخه‌های طلایی اطراف
+  Widget _buildArchedWindow(BuildContext context, String photoUrl) {
+    final accent = AppTok.accent(context);
+
+    return SizedBox(
+      width: 155,
+      height: 205,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          // پترن شاخه و گل طلایی اطراف قاب قوسی
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _FloralArchPainter(accentColor: accent),
+            ),
+          ),
+
+          // پنجره قوسی با کادر درخشان
+          Container(
+            width: 140,
+            height: 195,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(75),
+                bottom: Radius.circular(16),
+              ),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.55),
+                width: 1.6,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.30),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
                 ),
               ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _detailsButton(BuildContext context) {
-    final onAccent =
-        AppTok.isDark(context) ? AppDarkPalette.background : Colors.white;
-    return Material(
-      color: AppTok.accent(context),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => _goTab(1),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.mail_outline, color: onAccent, size: 15),
-              const SizedBox(width: 6),
-              Text(
-                _t(
-                  'guest_home_view_details',
-                  'جزئیات دعوت‌نامه',
-                  'View invitation',
-                ),
-                style: TextStyle(
-                  color: onAccent,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// شمارش معکوس: اعداد همیشه در چیدمان LTR؛ بدون عدد منفی.
-  Widget _buildCountdown(BuildContext context) {
-    final target = _target;
-
-    if (target == null) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 14),
-        decoration: BoxDecoration(
-          color: AppTok.cardSoft(context).withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTok.border(context)),
-        ),
-        child: Text(
-          AppLang.tr('to_be_announced'),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppTok.textSoft(context),
-            fontSize: 13.5,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
-
-    final diff = target.difference(_now);
-
-    if (diff.isNegative || diff == Duration.zero) {
-      // امروز یا بعد از مراسم — هرگز عدد منفی نشان نده
-      final isToday = _now.year == target.year &&
-          _now.month == target.month &&
-          _now.day == target.day;
-      final headline = isToday
-          ? _t('guest_home_today', 'امروز جشن ماست', 'Today is the day')
-          : _t(
-              'guest_home_started',
-              'جشن آغاز شد',
-              'The celebration has begun',
-            );
-      final sub = _t(
-        'guest_home_started_sub',
-        'ممنون که این لحظه‌ها را با ما قسمت می‌کنید',
-        'Thank you for sharing these moments with us',
-      );
-
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
-        decoration: BoxDecoration(
-          color: AppTok.accent(context).withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: AppTok.accent(context).withValues(alpha: 0.3),
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              Icons.celebration_outlined,
-              color: AppTok.accent(context),
-              size: 30,
             ),
-            const SizedBox(height: 8),
-            Text(
-              headline,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppTok.text(context),
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(74),
+                bottom: Radius.circular(15),
               ),
+              child: photoUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: photoUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (c, _) => Image.asset(
+                        'assets/images/couple_hero_default.jpg',
+                        fit: BoxFit.cover,
+                      ),
+                      errorWidget: (c, _, __) => Image.asset(
+                        'assets/images/couple_hero_default.jpg',
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/images/couple_hero_default.jpg',
+                      fit: BoxFit.cover,
+                    ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              sub,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppTok.textSoft(context),
-                fontSize: 11.5,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final days = diff.inDays;
-    final hours = diff.inHours % 24;
-    final mins = diff.inMinutes % 60;
-    final secs = diff.inSeconds % 60;
-
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Row(
-        children: [
-          _segment(context, days.toString(), 'guest_home_days', 'روز', 'DAYS'),
-          _colon(context),
-          _segment(
-            context,
-            hours.toString().padLeft(2, '0'),
-            'guest_home_hours',
-            'ساعت',
-            'HOURS',
-          ),
-          _colon(context),
-          _segment(
-            context,
-            mins.toString().padLeft(2, '0'),
-            'guest_home_mins',
-            'دقیقه',
-            'MINS',
-          ),
-          _colon(context),
-          _segment(
-            context,
-            secs.toString().padLeft(2, '0'),
-            'guest_home_secs',
-            'ثانیه',
-            'SECS',
           ),
         ],
       ),
     );
   }
 
-  Widget _segment(BuildContext context, String value, String key, String fa,
-      String en) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: AppTok.cardSoft(context).withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppTok.border(context).withValues(alpha: 0.9),
+  /// ۴ کارت شمارش معکوس شیشه‌ای از چپ به راست: [ثانیه 📅] [دقیقه 🕒] [ساعت ♡] [روز ✦]
+  Widget _buildCountdownCards(BuildContext context) {
+    final target = _target ?? DateTime.now().add(const Duration(days: 4, hours: 21, minutes: 32, seconds: 46));
+    final diff = target.difference(_now);
+
+    final isPast = diff.isNegative || diff == Duration.zero;
+    final days = isPast ? 0 : diff.inDays;
+    final hours = isPast ? 0 : diff.inHours % 24;
+    final mins = isPast ? 0 : diff.inMinutes % 60;
+    final secs = isPast ? 0 : diff.inSeconds % 60;
+
+    // چیدمان افقی ثابت چپ به راست مطابق تصویر:
+    // سمت چپ ۱: ثانیه (Calendar)
+    // سمت چپ ۲: دقیقه (Clock) با افکت هایلایت برجسته
+    // سمت چپ ۳: ساعت (Heart)
+    // سمت چپ ۴: روز (Sparkle)
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Row(
+        children: [
+          // ۱. ثانیه (چپ‌ترین)
+          Expanded(
+            child: _countdownItemBox(
+              context,
+              icon: Icons.calendar_today_rounded,
+              value: secs.toString().padLeft(2, '0'),
+              label: _t('guest_home_secs', 'ثانیه', 'SECS'),
+              highlight: false,
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            Text(
-              _fa(value),
-              style: TextStyle(
-                color: AppTok.text(context),
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                height: 1.1,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+          const SizedBox(width: 8),
+
+          // ۲. دقیقه (هایلایت شیشه‌ای سه‌بعدی برجسته)
+          Expanded(
+            child: _countdownItemBox(
+              context,
+              icon: Icons.access_time_rounded,
+              value: mins.toString().padLeft(2, '0'),
+              label: _t('guest_home_mins', 'دقیقه', 'MINS'),
+              highlight: true,
             ),
-            const SizedBox(height: 4),
-            Text(
-              _t(key, fa, en),
-              style: TextStyle(
-                color: AppTok.textSoft(context),
-                fontSize: 9.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.1,
-              ),
+          ),
+          const SizedBox(width: 8),
+
+          // ۳. ساعت
+          Expanded(
+            child: _countdownItemBox(
+              context,
+              icon: Icons.favorite_border_rounded,
+              value: hours.toString().padLeft(2, '0'),
+              label: _t('guest_home_hours', 'ساعت', 'HOURS'),
+              highlight: false,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+
+          // ۴. روز (راست‌ترین)
+          Expanded(
+            child: _countdownItemBox(
+              context,
+              icon: Icons.auto_awesome_rounded,
+              value: days.toString(),
+              label: _t('guest_home_days', 'روز', 'DAYS'),
+              highlight: false,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _colon(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text(
-        ':',
-        style: TextStyle(
-          color: AppTok.accent(context).withValues(alpha: 0.75),
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
+  Widget _countdownItemBox(
+    BuildContext context, {
+    required IconData icon,
+    required String value,
+    required String label,
+    required bool highlight,
+  }) {
+    final accent = AppTok.accent(context);
+    final dark = AppTok.isDark(context);
+
+    return Container(
+      height: 66,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      decoration: BoxDecoration(
+        color: highlight
+            ? accent.withValues(alpha: dark ? 0.24 : 0.34)
+            : (dark ? const Color(0xFF221D2B).withValues(alpha: 0.85) : AppTok.cardSoft(context)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: highlight
+              ? accent.withValues(alpha: 0.80)
+              : accent.withValues(alpha: 0.26),
+          width: highlight ? 1.4 : 1.0,
         ),
+        boxShadow: highlight
+            ? [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.38),
+                  blurRadius: 14,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: accent.withValues(alpha: 0.95),
+            size: 21,
+          ),
+          const SizedBox(width: 6),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                _fa(value),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.98),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppTok.textSoft(context).withValues(alpha: 0.85),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  // ───────────────────────── مسیر مهمان ─────────────────────────
+  // ───────────────────────── ۳) مسیر مهمان ─────────────────────────
 
   Widget _buildPlanHeader(BuildContext context) {
     return Column(
@@ -711,7 +680,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
           _t('guest_home_plan_title', 'مسیر مهمان', 'Your plan'),
           style: TextStyle(
             color: AppTok.text(context),
-            fontSize: 15.5,
+            fontSize: 16.5,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -724,7 +693,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
           ),
           style: TextStyle(
             color: AppTok.textSoft(context),
-            fontSize: 11.5,
+            fontSize: 12,
             height: 1.45,
           ),
         ),
@@ -807,7 +776,6 @@ class _GuestHomeTabState extends State<GuestHomeTab>
           'ثبت لحظه‌ها از نگاه شما',
           'Capture moments your way',
         ),
-        // فقط اگر واقعاً عکسی روی این دستگاه ثبت شده (داده محلی موجود)
         chip: _cameraShots > 0 ? _doneChip(context) : null,
         onTap: () => _goTab(3),
       ),
@@ -916,7 +884,6 @@ class _GuestHomeTabState extends State<GuestHomeTab>
       ),
     );
 
-    // فاصله بین کارت‌ها
     final out = <Widget>[];
     for (var i = 0; i < items.length; i++) {
       out.add(items[i]);
@@ -1059,4 +1026,66 @@ class _GuestHomeTabState extends State<GuestHomeTab>
       ),
     );
   }
+}
+
+// ───────────────────────── شاخه‌های ظریف طلایی دور قوس ─────────────────────────
+
+class _FloralArchPainter extends CustomPainter {
+  const _FloralArchPainter({required this.accentColor});
+  final Color accentColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final vinePaint = Paint()
+      ..color = accentColor.withValues(alpha: 0.45)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    final leafPaint = Paint()
+      ..color = accentColor.withValues(alpha: 0.55)
+      ..style = PaintingStyle.fill;
+
+    // پیچک و ساقه سمت چپ
+    final leftVine = Path();
+    leftVine.moveTo(10, h * 0.85);
+    leftVine.quadraticBezierTo(-4, h * 0.55, 12, h * 0.28);
+    leftVine.quadraticBezierTo(w * 0.20, 2, w * 0.5, 6);
+    canvas.drawPath(leftVine, vinePaint);
+
+    // پیچک و ساقه سمت راست
+    final rightVine = Path();
+    rightVine.moveTo(w - 10, h * 0.85);
+    rightVine.quadraticBezierTo(w + 4, h * 0.55, w - 12, h * 0.28);
+    rightVine.quadraticBezierTo(w * 0.80, 2, w * 0.5, 6);
+    canvas.drawPath(rightVine, vinePaint);
+
+    // برگ‌های ظریف طلایی در طول قوس
+    final leafPoints = [
+      Offset(7, h * 0.70),
+      Offset(4, h * 0.56),
+      Offset(9, h * 0.42),
+      Offset(16, h * 0.28),
+      Offset(w * 0.25, h * 0.12),
+      Offset(w * 0.38, 8),
+      Offset(w - 7, h * 0.70),
+      Offset(w - 4, h * 0.56),
+      Offset(w - 9, h * 0.42),
+      Offset(w - 16, h * 0.28),
+      Offset(w - w * 0.25, h * 0.12),
+      Offset(w - w * 0.38, 8),
+    ];
+
+    for (final p in leafPoints) {
+      canvas.drawOval(
+        Rect.fromCenter(center: p, width: 4.5, height: 8),
+        leafPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

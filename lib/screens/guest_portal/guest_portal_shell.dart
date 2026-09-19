@@ -11,6 +11,7 @@ import '../../widgets/ambient_music_controls.dart';
 import '../../widgets/effect_background.dart';
 import '../../widgets/effect_picker.dart';
 import '../../widgets/page_glass.dart';
+import '../../widgets/plan_gate.dart';
 import '../guest_camera_screen.dart';
 import '../public_invite_screen.dart';
 import 'guest_home_tab.dart';
@@ -134,8 +135,20 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
             weddingId: widget.weddingId,
             invitation: widget.invitation,
           ),
-          GuestCameraScreen(weddingId: widget.weddingId),
-          GuestSeatingTab(weddingId: widget.weddingId),
+          PlanGate(
+            weddingId: widget.weddingId,
+            allow: (l) => l.camera,
+            featureFa: 'دوربین یک‌بارمصرف مهمان',
+            featureEn: 'Disposable guest camera',
+            child: GuestCameraScreen(weddingId: widget.weddingId),
+          ),
+          PlanGate(
+            weddingId: widget.weddingId,
+            allow: (l) => l.seating,
+            featureFa: 'چیدمان نشیمن',
+            featureEn: 'Seating chart',
+            child: GuestSeatingTab(weddingId: widget.weddingId),
+          ),
         ];
 
         return Directionality(

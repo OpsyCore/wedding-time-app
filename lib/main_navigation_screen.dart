@@ -12,6 +12,7 @@ import 'screens/home_screen.dart';
 import 'screens/seating_screen.dart';
 import 'widgets/effect_background.dart';
 import 'widgets/page_glass.dart';
+import 'widgets/plan_gate.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final String weddingId;
@@ -48,8 +49,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onNavigateToTab: _goToTab,
       ),
       ChecklistScreen(weddingId: widget.weddingId),
-      BudgetScreen(weddingId: widget.weddingId),
-      SeatingScreen(weddingId: widget.weddingId),
+      PlanGate(
+        weddingId: widget.weddingId,
+        allow: (l) => l.budget,
+        featureFa: 'بودجه و هزینه‌ها',
+        featureEn: 'Budget & expenses',
+        child: BudgetScreen(weddingId: widget.weddingId),
+      ),
+      PlanGate(
+        weddingId: widget.weddingId,
+        allow: (l) => l.seating,
+        featureFa: 'چیدمان نشیمن',
+        featureEn: 'Seating chart',
+        child: SeatingScreen(weddingId: widget.weddingId),
+      ),
       GuestsScreen(weddingId: widget.weddingId),
       CalendarScreen(weddingId: widget.weddingId),
     ];

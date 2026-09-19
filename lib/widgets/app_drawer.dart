@@ -1,10 +1,12 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../main_navigation_screen.dart';
+import '../models/wedding_model.dart';
 import '../screens/bridal_party_screen.dart';
 import '../screens/camera_manage_screen.dart';
 import '../screens/couple_profile_screen.dart';
@@ -22,10 +24,14 @@ import '../screens/profile_screen.dart';
 import '../screens/qr_gallery_screen.dart';
 import '../screens/rsvp_inbox_screen.dart';
 import '../screens/supports_manage_screen.dart';
+import '../screens/support_tickets_screen.dart';
 import '../screens/timeline_screen.dart';
 import '../screens/vendors_screen.dart';
 import '../screens/wishes_screen.dart';
 import '../services/notification_service.dart';
+import '../services/plan_access.dart';
+import '../services/wedding_service.dart';
+import 'plan_gate.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({
@@ -238,7 +244,204 @@ class AppDrawer extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     children: [
-                      // پروفایل از لیست حذف شد — فقط از هدر
+                      // ── برنامه‌ریزی (پراستفاده‌ترین‌ها اول) ──
+                      _section(context, 'برنامه‌ریزی مراسم', 'Planning'),
+                      _item(context, Icons.mail_outline, t('invitation'), () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                InvitationScreen(weddingId: weddingId),
+                          ),
+                        );
+                      }),
+                      _item(
+                        context,
+                        Icons.mark_email_read_outlined,
+                        t('rsvp_inbox'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  RsvpInboxScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.view_timeline_outlined,
+                        t('timeline'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  TimelineScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.storefront_outlined,
+                        t('vendors'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PlanGate(
+                                weddingId: weddingId,
+                                allow: (l) => l.vendors,
+                                featureFa: 'تأمین‌کننده‌ها',
+                                featureEn: 'Vendors',
+                                child: VendorsScreen(weddingId: weddingId),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.groups_2_outlined,
+                        t('bridal_party'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  BridalPartyScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // ── خاطرات و رسانه ──
+                      _section(context, 'خاطرات و رسانه', 'Memories & media'),
+                      _item(
+                        context,
+                        Icons.collections_outlined,
+                        t('media_library'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  MediaLibraryScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.manage_accounts_outlined,
+                        t('camera_manage'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PlanGate(
+                                weddingId: weddingId,
+                                allow: (l) => l.camera,
+                                featureFa: 'دوربین یک‌بارمصرف مهمان',
+                                featureEn: 'Disposable guest camera',
+                                child: CameraManageScreen(weddingId: weddingId),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.camera_alt_outlined,
+                        t('guest_camera'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  GuestCameraScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.photo_library_outlined,
+                        t('gallery'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PlanGate(
+                                weddingId: weddingId,
+                                allow: (l) => l.qr,
+                                featureFa: 'QR دعوت‌نامه',
+                                featureEn: 'Invite QR',
+                                child: QrGalleryScreen(weddingId: weddingId),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.music_note_outlined,
+                        t('music_effects'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  MusicEffectsScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // ── هدایا و حمایت ──
+                      _section(context, 'هدایا و حمایت', 'Gifts & support'),
+                      _item(
+                        context,
+                        Icons.card_giftcard_outlined,
+                        _t('gift_manage_title', 'مدیریت هدایا', 'Gift registry'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  GiftManageScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.volunteer_activism_outlined,
+                        t('supports_title'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SupportsManageScreen(
+                                weddingId: weddingId,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(context, Icons.favorite_border, t('wishes'), () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => WishesScreen(weddingId: weddingId),
+                          ),
+                        );
+                      }),
+
+                      // ── داستان ما ──
+                      _section(context, 'داستان ما', 'Our story'),
                       _item(
                         context,
                         Icons.favorite_outline,
@@ -267,179 +470,14 @@ class AppDrawer extends StatelessWidget {
                           );
                         },
                       ),
-                      _item(context, Icons.favorite_border, t('wishes'), () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => WishesScreen(weddingId: weddingId),
-                          ),
-                        );
-                      }),
+
+                      // ── حساب و تنظیمات ──
+                      _section(context, 'حساب و تنظیمات', 'Account & settings'),
                       _item(
                         context,
-                        Icons.groups_2_outlined,
-                        t('bridal_party'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  BridalPartyScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      _item(
-                        context,
-                        Icons.view_timeline_outlined,
-                        t('timeline'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  TimelineScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      Divider(color: AppTok.border(context)),
-                      _item(
-                        context,
-                        Icons.photo_library_outlined,
-                        t('gallery'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  QrGalleryScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      _item(
-                        context,
-                        Icons.collections_outlined,
-                        t('media_library'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  MediaLibraryScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      _item(
-                        context,
-                        Icons.manage_accounts_outlined,
-                        t('camera_manage'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CameraManageScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      _item(
-                        context,
-                        Icons.camera_alt_outlined,
-                        t('guest_camera'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  GuestCameraScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      _item(context, Icons.mail_outline, t('invitation'), () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                InvitationScreen(weddingId: weddingId),
-                          ),
-                        );
-                      }),
-                      _item(
-                        context,
-                        Icons.mark_email_read_outlined,
-                        t('rsvp_inbox'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  RsvpInboxScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      // ── هدایای عروسی (زوج) ──
-                      _item(
-                        context,
-                        Icons.card_giftcard_outlined,
-                        _t('gift_manage_title', 'مدیریت هدایا', 'Gift registry'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  GiftManageScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      _item(
-                        context,
-                        Icons.storefront_outlined,
-                        t('vendors'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  VendorsScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      _item(
-                        context,
-                        Icons.music_note_outlined,
-                        t('music_effects'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  MusicEffectsScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      _item(
-                        context,
-                        Icons.volunteer_activism_outlined,
-                        t('supports_title'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SupportsManageScreen(
-                                weddingId: weddingId,
-                              ),
-                            ),
-                          );
-                        },
+                        Icons.switch_account_outlined,
+                        AppLang.I.isFa ? 'مراسم‌های من' : 'My weddings',
+                        () => _openWeddingsSheet(context),
                       ),
                       _item(
                         context,
@@ -455,7 +493,21 @@ class AppDrawer extends StatelessWidget {
                           );
                         },
                       ),
-                      Divider(color: AppTok.border(context)),
+                      _notificationsItem(context),
+                      _item(
+                        context,
+                        Icons.support_agent_outlined,
+                        AppLang.I.isFa ? 'پشتیبانی' : 'Support',
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  SupportTicketsScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
                       _item(
                         context,
                         Icons.feedback_outlined,
@@ -470,7 +522,6 @@ class AppDrawer extends StatelessWidget {
                           );
                         },
                       ),
-                      _notificationsItem(context),
                       _item(
                         context,
                         Icons.info_outline,
@@ -613,6 +664,326 @@ class AppDrawer extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  // ─────────────── سوییچر چند مراسم (پرمیوم: ۲ مراسم) ───────────────
+
+  Future<void> _openWeddingsSheet(BuildContext context) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+    final limits = PlanLimits.forPlanId(await PlanAccess.I.myPlanId());
+    if (!context.mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTok.card(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: AppLang.I.direction,
+        child: FutureBuilder<List<WeddingModel>>(
+          future: WeddingService.myWeddings(uid),
+          builder: (context, snap) {
+            final list = snap.data ?? const <WeddingModel>[];
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      AppLang.I.isFa ? 'مراسم‌های من' : 'My weddings',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppTok.text(ctx),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (!snap.hasData)
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    ...list.map(
+                      (w) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          w.id == weddingId
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_outline,
+                          color: AppTok.accent(ctx),
+                        ),
+                        title: Text(
+                          '${w.brideName} & ${w.groomName}',
+                          style: TextStyle(color: AppTok.text(ctx)),
+                        ),
+                        subtitle: w.id == weddingId
+                            ? Text(
+                                AppLang.I.isFa ? 'مراسم فعال' : 'Active',
+                                style: TextStyle(
+                                  color: AppTok.accent(ctx),
+                                  fontSize: 11,
+                                ),
+                              )
+                            : null,
+                        onTap: w.id == weddingId
+                            ? null
+                            : () => _switchTo(ctx, w, uid),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTok.accent(ctx),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        if (list.length >= limits.maxWeddings) {
+                          PlanAccess.I.showUpgradeDialog(
+                            context,
+                            weddingId: weddingId,
+                            featureFa: 'مراسم دوم هم‌زمان',
+                            featureEn: 'Second active wedding',
+                          );
+                        } else {
+                          _createWeddingFlow(context, uid);
+                        }
+                      },
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: Text(
+                        AppLang.I.isFa ? 'مراسم جدید' : 'New wedding',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _switchTo(BuildContext ctx, WeddingModel w, String uid) async {
+    try {
+      final role = w.brideUid == uid ? 'bride' : 'groom';
+      final planId = await PlanAccess.I.myPlanId();
+      await WeddingService.switchActiveWedding(
+        uid: uid,
+        weddingId: w.id,
+        role: role,
+        planId: planId,
+      );
+      if (!ctx.mounted) return;
+      Navigator.pop(ctx);
+      Navigator.of(ctx).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => MainNavigationScreen(weddingId: w.id),
+        ),
+        (_) => false,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _createWeddingFlow(BuildContext context, String uid) async {
+    final brideC = TextEditingController();
+    final groomC = TextEditingController();
+    DateTime? date;
+    String role = 'bride';
+
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTok.card(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: AppLang.I.direction,
+        child: StatefulBuilder(
+          builder: (sheetCtx, setSheet) => Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 18,
+              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  AppLang.I.isFa ? 'مراسم جدید' : 'New wedding',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTok.text(sheetCtx),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: brideC,
+                  style: TextStyle(color: AppTok.text(sheetCtx)),
+                  decoration: InputDecoration(
+                    labelText: AppLang.I.isFa ? 'نام عروس' : 'Bride name',
+                    labelStyle: TextStyle(color: AppTok.textSoft(sheetCtx)),
+                    filled: true,
+                    fillColor: AppTok.cardSoft(sheetCtx),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: groomC,
+                  style: TextStyle(color: AppTok.text(sheetCtx)),
+                  decoration: InputDecoration(
+                    labelText: AppLang.I.isFa ? 'نام داماد' : 'Groom name',
+                    labelStyle: TextStyle(color: AppTok.textSoft(sheetCtx)),
+                    filled: true,
+                    fillColor: AppTok.cardSoft(sheetCtx),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          final d = await showDatePicker(
+                            context: sheetCtx,
+                            initialDate:
+                                date ?? DateTime.now().add(const Duration(days: 90)),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2035),
+                          );
+                          if (d != null) setSheet(() => date = d);
+                        },
+                        child: Text(
+                          date == null
+                              ? (AppLang.I.isFa ? 'تاریخ مراسم' : 'Wedding date')
+                              : '${date!.year}/${date!.month}/${date!.day}',
+                          style: TextStyle(color: AppTok.text(sheetCtx)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: Text(AppLang.I.isFa ? 'عروس' : 'Bride'),
+                              selected: role == 'bride',
+                              onSelected: (_) =>
+                                  setSheet(() => role = 'bride'),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: Text(AppLang.I.isFa ? 'داماد' : 'Groom'),
+                              selected: role == 'groom',
+                              onSelected: (_) =>
+                                  setSheet(() => role = 'groom'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTok.accent(sheetCtx),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () {
+                    if (brideC.text.trim().isEmpty ||
+                        groomC.text.trim().isEmpty ||
+                        date == null) {
+                      return;
+                    }
+                    Navigator.pop(sheetCtx, true);
+                  },
+                  child: Text(
+                    AppLang.I.isFa ? 'ساخت مراسم' : 'Create',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (ok != true) return;
+
+    try {
+      final res = await WeddingService.createWedding(
+        uid: uid,
+        role: role,
+        brideName: brideC.text.trim(),
+        groomName: groomC.text.trim(),
+        weddingDate: date!,
+        email: FirebaseAuth.instance.currentUser?.email,
+      );
+      final planId = await PlanAccess.I.myPlanId();
+      await WeddingService.switchActiveWedding(
+        uid: uid,
+        weddingId: res.weddingId,
+        role: role,
+        planId: planId,
+      );
+      if (!context.mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => MainNavigationScreen(weddingId: res.weddingId),
+        ),
+        (_) => false,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${AppLang.tr('error')}: $e')),
+      );
+    }
+  }
+
+  Widget _section(BuildContext context, String fa, String en) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 2),
+      child: Text(
+        AppLang.I.isFa ? fa : en,
+        style: TextStyle(
+          color: AppTok.textSoft(context),
+          fontSize: 11.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
+        ),
+      ),
     );
   }
 
