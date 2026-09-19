@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_plans.dart';
 import '../services/plan_access.dart' show PlanLimits;
+import '../services/plans_service.dart';
 
 /// قالب/تم دعوت‌نامه — سیستم قالب با ۴ تم؛ فقط «کلاسیک» رایگان است.
 class InviteTemplate {
@@ -122,5 +123,7 @@ class InviteTemplate {
 const inviteTemplateField = 'inviteTemplateId';
 
 /// آیا این پلن رایگان است؟ (برای بج پرمیوم روی قالب‌ها)
+/// وقتی سوییچ کلی مانتایزیشن خاموش است، همهٔ قالب‌ها برای همه بازند.
 bool templateAllowedOnFree(String id) =>
+    !PlansService.I.monetizationOn ||
     PlanLimits.forPlanId(AppPlans.freeId).templates.contains(id);

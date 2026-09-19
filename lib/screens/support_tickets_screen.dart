@@ -58,7 +58,9 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
           onPressed: _openNewTicket,
         ),
         body: StreamBuilder<PlanLimits>(
-          stream: PlanAccess.I.watchMyPlanId().map(PlanLimits.forPlanId),
+          stream: PlanAccess.I.watchMyPlanId().asyncMap(
+            (_) => PlanAccess.I.myLimits(),
+          ),
           builder: (context, planSnap) {
             final tier = planSnap.data?.supportTier ?? 'normal';
             return Column(
@@ -367,7 +369,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
     );
     if (ok != true) return;
 
-    final limits = PlanLimits.forPlanId(await PlanAccess.I.myPlanId());
+    final limits = await PlanAccess.I.myLimits();
     try {
       await _db.collection('support_tickets').add({
         'uid': _uid,

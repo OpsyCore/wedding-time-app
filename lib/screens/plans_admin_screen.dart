@@ -172,16 +172,109 @@ class _PlansEditor extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: plans.length,
+      itemCount: plans.length + 1,
       itemBuilder: (context, index) {
-        final p = plans[index];
+        if (index == 0) return const _MonetizationSwitchCard();
+        final p = plans[index - 1];
         return _PlanEditorCard(
           plan: p,
           onChanged: (np) {
             final next = [...plans];
-            next[index] = np;
+            next[index - 1] = np;
             onChanged(next);
           },
+        );
+      },
+    );
+  }
+}
+
+/// سوییچ کلی مانتایزیشن — خاموش = همهٔ قابلیت‌ها برای همه باز
+class _MonetizationSwitchCard extends StatefulWidget {
+  const _MonetizationSwitchCard();
+
+  @override
+  State<_MonetizationSwitchCard> createState() =>
+      _MonetizationSwitchCardState();
+}
+
+class _MonetizationSwitchCardState extends State<_MonetizationSwitchCard> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+    final border = AppTok.border(context);
+
+    return StreamBuilder<bool>(
+      stream: PlansService.I.watchMonetizationEnabled(),
+      builder: (context, snap) {
+        final on = snap.data ?? true;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: border),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                on ? Icons.payments_outlined : Icons.lock_open_outlined,
+                color: on ? AppTok.accent(context) : AppTok.danger(context),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLang.I.isFa
+                          ? 'اعمال محدودیت پلن‌ها'
+                          : 'Enforce plan limits',
+                      style: TextStyle(
+                        color: text,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      on
+                          ? (AppLang.I.isFa
+                              ? 'روشن — هر پلن فقط قابلیت‌های خودش را دارد.'
+                              : 'On — each plan has only its own features.')
+                          : (AppLang.I.isFa
+                              ? 'خاموش — همهٔ قابلیت‌ها برای همه باز است.'
+                              : 'Off — everything unlocked for everyone.'),
+                      style: TextStyle(
+                        color: textSoft,
+                        fontSize: 11.5,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Switch(
+                      value: on,
+                      onChanged: (v) async {
+                        setState(() => _busy = true);
+                        try {
+                          await PlansService.I.setMonetizationEnabled(v);
+                        } catch (_) {}
+                        if (mounted) setState(() => _busy = false);
+                      },
+                    ),
+            ],
+          ),
         );
       },
     );

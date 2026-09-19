@@ -672,7 +672,7 @@ class AppDrawer extends StatelessWidget {
   Future<void> _openWeddingsSheet(BuildContext context) async {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (uid.isEmpty) return;
-    final limits = PlanLimits.forPlanId(await PlanAccess.I.myPlanId());
+    final limits = await PlanAccess.I.myLimits();
     if (!context.mounted) return;
 
     await showModalBottomSheet<void>(

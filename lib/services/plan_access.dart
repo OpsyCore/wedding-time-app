@@ -82,6 +82,23 @@ class PlanLimits {
     supportTier: 'priority',
   );
 
+  /// وقتی ادمین «محدودیت پلن‌ها» را خاموش می‌کند: همه‌چیز برای همه باز
+  static const everythingOpen = PlanLimits(
+    maxGuests: -1,
+    maxMedia: -1,
+    maxStoryChapters: -1,
+    maxShotsPerGuest: -1,
+    budget: true,
+    vendors: true,
+    seating: true,
+    camera: true,
+    qr: true,
+    exportDocs: true,
+    templates: ['classic', 'royal_gold', 'floral_rose', 'minimal_modern'],
+    maxWeddings: -1,
+    supportTier: 'vip',
+  );
+
   static const premium = PlanLimits(
     maxGuests: -1,
     maxMedia: -1,
@@ -137,6 +154,7 @@ class PlanAccess {
   /// یعنی اگر ادمین قابلیتی را برای یک پلن روشن/خاموش کند، قفل‌ها واقعاً
   /// باز/بسته می‌شوند نه فقط نمایش متنی.
   static PlanLimits limitsFor(String planId, List<SubscriptionPlan> plans) {
+    if (!PlansService.I.monetizationOn) return PlanLimits.everythingOpen;
     final base = PlanLimits.forPlanId(planId);
     SubscriptionPlan? plan;
     for (final p in plans) {
@@ -174,6 +192,7 @@ class PlanAccess {
     late StreamController<PlanLimits> ctrl;
     StreamSubscription<String>? subPlan;
     StreamSubscription<List<SubscriptionPlan>>? subCfg;
+    StreamSubscription<bool>? subMon;
     String planId = AppPlans.freeId;
     List<SubscriptionPlan> plans = const [];
     void push() {
@@ -190,19 +209,31 @@ class PlanAccess {
           plans = v;
           push();
         });
+        subMon = PlansService.I.watchMonetizationEnabled().listen((_) {
+          push();
+        });
       },
       onCancel: () async {
         await subPlan?.cancel();
         await subCfg?.cancel();
+        await subMon?.cancel();
       },
     );
     return ctrl.stream;
   }
 
   Future<PlanLimits> weddingLimits(String weddingId) async {
+    if (!PlansService.I.monetizationOn) return PlanLimits.everythingOpen;
     final s = await _db.collection('weddings').doc(weddingId).get();
     final plans = await PlansService.I.fetchPlans();
     return limitsFor((s.data()?['planId'] ?? '').toString(), plans);
+  }
+
+  /// محدودیت‌های مبتنی بر پلن خودِ کاربر (با رعایت سوییچ کلی مانتایزیشن)
+  Future<PlanLimits> myLimits() async {
+    if (!PlansService.I.monetizationOn) return PlanLimits.everythingOpen;
+    final plans = await PlansService.I.fetchPlans();
+    return limitsFor(await myPlanId(), plans);
   }
 
   Future<String> myPlanId() async {
