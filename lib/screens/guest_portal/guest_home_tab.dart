@@ -16,7 +16,7 @@ import 'guest_love_story_tab.dart';
 import '../supports_guest_screen.dart';
 import 'guest_wishes_tab.dart';
 
-/// تب خانه مهمان — داشبورد کارت‌محور با بازطراحی کامل بخش Hero مطابق طرح:
+/// تب خانه مهمان — داشبورد کارت‌محور با بازطراحی کامل بخش Hero مطابق طرح مرجع:
 /// ۱) هدر خوش‌آمد بالا با متن سلام و آیکون قلب (راست‌چین و تمیز)
 /// ۲) کارت هیرو با قاب قوسی رمانتیک (عکس زوج / آرت شب ستاره‌ای)، اسامی خط نستعلیق، تاریخ، و ۴ کارت شمارش معکوس شیشه‌ای با آیکون‌های ویژه
 /// ۳) مسیر مهمان و دسترسی به بخش‌های پورتال
@@ -208,6 +208,8 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         ? _t('guest_home_greeting_anon', 'سلام، مهمان عزیز', 'Hello, Dear Guest')
         : (AppLang.I.isFa ? 'سلام $name' : 'Hello $name');
 
+    final accent = AppTok.accent(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
@@ -229,7 +231,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
               Icon(
                 Icons.favorite_rounded,
                 size: 20,
-                color: AppTok.accent(context).withValues(alpha: 0.95),
+                color: accent.withValues(alpha: 0.95),
               ),
             ],
           ),
@@ -266,8 +268,8 @@ class _GuestHomeTabState extends State<GuestHomeTab>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            dark ? const Color(0xFF1E1A25) : AppTok.card(context),
-            dark ? const Color(0xFF17131D) : AppTok.cardSoft(context),
+            dark ? const Color(0xFF1B1724) : AppTok.card(context),
+            dark ? const Color(0xFF15111B) : AppTok.cardSoft(context),
             accent.withValues(alpha: dark ? 0.12 : 0.25),
           ],
         ),
@@ -322,7 +324,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                 children: [
                   // ── بخش بالایی: قاب قوسی عکس زوج در یک سمت + متن و اسامی در سمت دیگر ──
                   SizedBox(
-                    height: 195,
+                    height: 200,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -414,7 +416,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
 
     return SizedBox(
       width: 155,
-      height: 195,
+      height: 200,
       child: Stack(
         alignment: Alignment.center,
         clipBehavior: Clip.none,
@@ -429,7 +431,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
           // محفظه قوسی با کادر درخشان
           Container(
             width: 140,
-            height: 185,
+            height: 190,
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(75),
@@ -556,7 +558,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     final dark = AppTok.isDark(context);
 
     return Container(
-      height: 64,
+      height: 66,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(
         color: highlight
@@ -592,7 +594,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
           Icon(
             icon,
             color: accent.withValues(alpha: 0.95),
-            size: 20,
+            size: 21,
           ),
           const SizedBox(width: 6),
           Column(
@@ -603,7 +605,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                 _fa(value),
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.98),
-                  fontSize: 16.5,
+                  fontSize: 17,
                   fontWeight: FontWeight.w800,
                   height: 1.1,
                   fontFeatures: const [FontFeature.tabularFigures()],
@@ -614,7 +616,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                 label,
                 style: TextStyle(
                   color: AppTok.textSoft(context).withValues(alpha: 0.85),
-                  fontSize: 10,
+                  fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -992,7 +994,7 @@ class _RomanticSilhouetteWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      size: const Size(140, 185),
+      size: const Size(140, 190),
       painter: _RomanticSilhouettePainter(accentColor: accentColor),
     );
   }
@@ -1013,11 +1015,11 @@ class _RomanticSilhouettePainter extends CustomPainter {
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        const Color(0xFF0F0D18),
-        const Color(0xFF1E162B),
-        const Color(0xFF35223A),
-        const Color(0xFF5A3648),
-        const Color(0xFF1E1324),
+        const Color(0xFF0E0C17),
+        const Color(0xFF1D152A),
+        const Color(0xFF332038),
+        const Color(0xFF563446),
+        const Color(0xFF1C1222),
       ],
       stops: const [0.0, 0.35, 0.65, 0.82, 1.0],
     );
@@ -1082,7 +1084,7 @@ class _RomanticSilhouettePainter extends CustomPainter {
     canvas.drawPath(moonPath, Paint()..color = const Color(0xFFFFF7E8));
 
     // ۵) سایه‌نمای جنگل درختان کاج در پایین
-    final forestPaint = Paint()..color = const Color(0xFF0F0B17);
+    final forestPaint = Paint()..color = const Color(0xFF0D0A15);
     final forestPath = Path()..moveTo(0, h);
     forestPath.lineTo(0, h * 0.72);
     forestPath.lineTo(w * 0.12, h * 0.68);
@@ -1098,7 +1100,7 @@ class _RomanticSilhouettePainter extends CustomPainter {
     canvas.drawPath(forestPath, forestPaint);
 
     // ۶) سیلوئت رمانتیک زوج (داماد در سمت چپ، عروس در سمت راست روبروی هم)
-    final silhouettePaint = Paint()..color = const Color(0xFF08050C);
+    final silhouettePaint = Paint()..color = const Color(0xFF07040B);
 
     // داماد
     final groomPath = Path();
