@@ -1,9 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/subscription_plan.dart';
+import '../services/plan_access.dart';
 import '../services/plans_service.dart';
 
 class PlansAdminScreen extends StatefulWidget {
@@ -23,7 +25,7 @@ class _PlansAdminScreenState extends State<PlansAdminScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 3, vsync: this);
     _load();
   }
 
@@ -137,6 +139,7 @@ class _PlansAdminScreenState extends State<PlansAdminScreen>
                 tabs: [
                   Tab(text: t('plans_admin_tab_plans')),
                   Tab(text: t('plans_admin_tab_reviews')),
+                  Tab(text: AppLang.I.isFa ? 'درخواست‌ها' : 'Requests'),
                 ],
               ),
             ),
@@ -150,6 +153,7 @@ class _PlansAdminScreenState extends State<PlansAdminScreen>
                         onChanged: (list) => setState(() => _plans = list),
                       ),
                       const _ReviewsAdmin(),
+                      const _RequestsAdmin(),
                     ],
                   ),
           ),
@@ -646,6 +650,119 @@ class _ReviewsAdmin extends StatelessWidget {
                     icon: Icon(
                       Icons.delete_outline,
                       color: AppTok.danger(context),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+// ═══════════════════════════════════════════
+// تب درخواست‌های فعال‌سازی پلن (تأیید دستی ادمین)
+// ═══════════════════════════════════════════
+
+class _RequestsAdmin extends StatelessWidget {
+  const _RequestsAdmin();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: PlanAccess.I.watchPendingRequests(),
+      builder: (context, snap) {
+        if (snap.hasError) {
+          return Center(
+            child: Text(
+              AppLang.I.isFa ? 'خطا در بارگذاری' : 'Load error',
+              style: TextStyle(color: AppTok.danger(context)),
+            ),
+          );
+        }
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final docs = snap.data!.docs;
+        if (docs.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                AppLang.I.isFa
+                    ? 'درخواست فعال‌سازی در انتظار نیست.'
+                    : 'No pending activation requests.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTok.textSoft(context)),
+              ),
+            ),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(12),
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (context, i) {
+            final d = docs[i].data();
+            final uid = (d['uid'] ?? '').toString();
+            final planId = (d['planId'] ?? '').toString();
+            final email = (d['email'] ?? '').toString();
+            return Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTok.card(context),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTok.border(context)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    color: AppTok.accent(context),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          email.isEmpty ? uid : email,
+                          style: TextStyle(
+                            color: AppTok.text(context),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${AppLang.I.isFa ? 'پلن درخواستی:' : 'Requested plan:'} $planId',
+                          style: TextStyle(
+                            color: AppTok.textSoft(context),
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTok.accent(context),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () async {
+                      await PlanAccess.I.approveRequest(
+                        docs[i].id,
+                        uid,
+                        planId,
+                      );
+                    },
+                    child: Text(
+                      AppLang.I.isFa ? 'فعال‌سازی' : 'Activate',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],

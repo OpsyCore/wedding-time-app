@@ -9,6 +9,8 @@ import '../core/app_date_picker.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../core/invite_templates.dart';
+import '../services/plan_access.dart';
 import '../core/map_launcher.dart';
 import '../models/invitation_model.dart';
 import '../services/invitation_service.dart';
@@ -755,6 +757,14 @@ class _InvitationScreenState extends State<InvitationScreen>
             ),
           ),
           IconButton(
+            tooltip: AppLang.I.isFa ? 'قالب دعوت‌نامه' : 'Invite template',
+            onPressed: () => _openTemplatePicker(context),
+            icon: Icon(
+              Icons.palette_outlined,
+              color: AppTok.accent(context),
+            ),
+          ),
+          IconButton(
             tooltip: _t(
               'share_guest_link',
               'اشتراک لینک مهمان',
@@ -764,6 +774,125 @@ class _InvitationScreenState extends State<InvitationScreen>
             icon: Icon(Icons.ios_share, color: AppTok.accent(context)),
           ),
         ],
+      ),
+    );
+  }
+
+  /// انتخاب قالب دعوت‌نامه — قالب‌های پرمیوم فقط برای پلن پرمیوم
+  Future<void> _openTemplatePicker(BuildContext context) async {
+    final w = await FirebaseFirestore.instance
+        .collection('weddings')
+        .doc(widget.weddingId)
+        .get();
+    final current =
+        (w.data()?[inviteTemplateField] ?? 'classic').toString();
+    final limits = await PlanAccess.I.weddingLimits(widget.weddingId);
+    if (!context.mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTok.card(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: AppLang.I.direction,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  AppLang.I.isFa
+                      ? 'قالب دعوت‌نامه'
+                      : 'Invite template',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTok.text(ctx),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children: InviteTemplate.all.map((tpl) {
+                    final allowed = limits.templates.contains(tpl.id);
+                    final selected = current == tpl.id;
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        if (!allowed) {
+                          Navigator.pop(ctx);
+                          await PlanAccess.I.showUpgradeDialog(
+                            context,
+                            weddingId: widget.weddingId,
+                            featureFa: 'قالب‌های اختصاصی دعوت‌نامه',
+                            featureEn: 'Exclusive invite templates',
+                          );
+                          return;
+                        }
+                        await FirebaseFirestore.instance
+                            .collection('weddings')
+                            .doc(widget.weddingId)
+                            .set({inviteTemplateField: tpl.id},
+                                SetOptions(merge: true));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        width: 108,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [tpl.bgTop, tpl.bgBottom],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: selected
+                                ? tpl.accent
+                                : tpl.border,
+                            width: selected ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              tpl.decor,
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              tpl.name(AppLang.I.isFa),
+                              style: TextStyle(
+                                color: tpl.text,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (!allowed)
+                              Icon(
+                                Icons.lock_outline,
+                                size: 13,
+                                color: tpl.accent,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
