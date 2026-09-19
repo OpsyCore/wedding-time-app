@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -5,7 +7,9 @@ import 'package:flutter/material.dart';
 import '../core/app_lang.dart';
 import '../core/app_plans.dart';
 import '../core/app_theme.dart';
+import '../models/subscription_plan.dart';
 import '../screens/plans_screen.dart';
+import 'plans_service.dart';
 
 /// سطح دسترسی هر پلن — منبع حقیقتِ اعمال محدودیت‌ها در کد.
 /// (-1 یعنی نامحدود)
@@ -129,12 +133,76 @@ class PlanAccess {
         .map((s) => (s.data()?['planId'] ?? AppPlans.freeId).toString());
   }
 
-  Stream<PlanLimits> watchWeddingLimits(String weddingId) =>
-      watchWeddingPlanId(weddingId).map(PlanLimits.forPlanId);
+  /// محدودیت‌ها = کد پایه + سوییچ‌های ادمین (app_config/plans).
+  /// یعنی اگر ادمین قابلیتی را برای یک پلن روشن/خاموش کند، قفل‌ها واقعاً
+  /// باز/بسته می‌شوند نه فقط نمایش متنی.
+  static PlanLimits limitsFor(String planId, List<SubscriptionPlan> plans) {
+    final base = PlanLimits.forPlanId(planId);
+    SubscriptionPlan? plan;
+    for (final p in plans) {
+      if (p.id == planId) {
+        plan = p;
+        break;
+      }
+    }
+    if (plan == null) return base;
+    bool flag(String id, bool fallback) {
+      for (final f in plan!.features) {
+        if (f.id == id) return f.included;
+      }
+      return fallback;
+    }
+
+    return PlanLimits(
+      maxGuests: base.maxGuests,
+      maxMedia: base.maxMedia,
+      maxStoryChapters: base.maxStoryChapters,
+      maxShotsPerGuest: base.maxShotsPerGuest,
+      budget: flag('budget', base.budget),
+      vendors: flag('vendors', base.vendors),
+      seating: flag('seating', base.seating),
+      camera: flag('camera', base.camera),
+      qr: flag('qr', base.qr),
+      exportDocs: flag('export', base.exportDocs),
+      templates: base.templates,
+      maxWeddings: base.maxWeddings,
+      supportTier: base.supportTier,
+    );
+  }
+
+  Stream<PlanLimits> watchWeddingLimits(String weddingId) {
+    late StreamController<PlanLimits> ctrl;
+    StreamSubscription<String>? subPlan;
+    StreamSubscription<List<SubscriptionPlan>>? subCfg;
+    String planId = AppPlans.freeId;
+    List<SubscriptionPlan> plans = const [];
+    void push() {
+      if (!ctrl.isClosed) ctrl.add(limitsFor(planId, plans));
+    }
+
+    ctrl = StreamController<PlanLimits>(
+      onListen: () {
+        subPlan = watchWeddingPlanId(weddingId).listen((v) {
+          planId = v;
+          push();
+        });
+        subCfg = PlansService.I.watchPlans().listen((v) {
+          plans = v;
+          push();
+        });
+      },
+      onCancel: () async {
+        await subPlan?.cancel();
+        await subCfg?.cancel();
+      },
+    );
+    return ctrl.stream;
+  }
 
   Future<PlanLimits> weddingLimits(String weddingId) async {
     final s = await _db.collection('weddings').doc(weddingId).get();
-    return PlanLimits.forPlanId((s.data()?['planId'] ?? '').toString());
+    final plans = await PlansService.I.fetchPlans();
+    return limitsFor((s.data()?['planId'] ?? '').toString(), plans);
   }
 
   Future<String> myPlanId() async {
