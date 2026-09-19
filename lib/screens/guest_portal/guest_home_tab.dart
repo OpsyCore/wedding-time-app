@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -1011,17 +1010,17 @@ class _RomanticSilhouettePainter extends CustomPainter {
 
     // ۱) گرادینت گرگ‌ومیش و آسمان شبانه
     final skyRect = Rect.fromLTWH(0, 0, w, h);
-    final skyGradient = LinearGradient(
+    const skyGradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        const Color(0xFF0E0C17),
-        const Color(0xFF1D152A),
-        const Color(0xFF332038),
-        const Color(0xFF563446),
-        const Color(0xFF1C1222),
+        Color(0xFF0E0C17),
+        Color(0xFF1D152A),
+        Color(0xFF332038),
+        Color(0xFF563446),
+        Color(0xFF1C1222),
       ],
-      stops: const [0.0, 0.35, 0.65, 0.82, 1.0],
+      stops: [0.0, 0.35, 0.65, 0.82, 1.0],
     );
     final skyPaint = Paint()..shader = skyGradient.createShader(skyRect);
     canvas.drawRect(skyRect, skyPaint);
