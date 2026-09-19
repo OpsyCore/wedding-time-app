@@ -198,7 +198,7 @@ class GuestTimelineTab extends StatelessWidget {
         // (فقط نمایش محلی — مهمان هرگز در دیتابیس نمی‌نویسد)
         final items = docs.isEmpty
             ? _defaultEvents
-            : docs.map((d) => d.data() as Map<String, dynamic>).toList();
+            : docs.map((d) => d.data()).toList();
 
         return ListView.builder(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),

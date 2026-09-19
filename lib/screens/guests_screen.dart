@@ -286,7 +286,7 @@ class _GuestsScreenState extends State<GuestsScreen> {
                                   if (!limits.unlimitedGuests) {
                                     final count = (await guestsRef.get()).size;
                                     if (count >= limits.maxGuests) {
-                                      if (!mounted) return;
+                                      if (!context.mounted) return;
                                       await PlanAccess.I.showUpgradeDialog(
                                         context,
                                         weddingId: widget.weddingId,

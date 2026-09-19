@@ -34,8 +34,6 @@ class ExportService {
         bold: font,
       );
 
-  static PdfColor _headerColor() => const PdfColor.fromInt(0xFF3E5A43);
-
   // ─────────────────────────── مهمان‌ها ───────────────────────────
 
   static Future<void> guestsPdf({
@@ -56,7 +54,8 @@ class ExportService {
           : status == 'no'
               ? (isFa ? 'عدم تأیید' : 'Declined')
               : (isFa ? 'در انتظار' : 'Pending');
-      return [name, phone, group, statusLabel];
+      // ترتیب RTL: ستون اول منطقی، راست‌ترین ستون بصری
+      return [name, phone, group, statusLabel].reversed.toList();
     }).toList();
 
     pdf.addPage(
@@ -69,7 +68,7 @@ class ExportService {
             style: pw.TextStyle(
               fontSize: 16,
               fontWeight: pw.FontWeight.bold,
-              color: _headerColor(),
+              color: const PdfColor.fromInt(0xFF3E5A43),
             ),
           ),
           pw.SizedBox(height: 10),
@@ -80,8 +79,7 @@ class ExportService {
             style: const pw.TextStyle(fontSize: 11),
           ),
           pw.SizedBox(height: 12),
-          pw.Table.fromTextArray(
-            textDirection: pw.TextDirection.rtl,
+          pw.TableHelper.fromTextArray(
             headerAlignment: pw.Alignment.centerRight,
             cellAlignment: pw.Alignment.centerRight,
             headerStyle: pw.TextStyle(
@@ -104,7 +102,7 @@ class ExportService {
               isFa ? 'شماره تماس' : 'Phone',
               isFa ? 'گروه' : 'Group',
               isFa ? 'وضعیت' : 'Status',
-            ],
+            ].reversed.toList(),
             data: rows,
           ),
         ],
@@ -124,9 +122,10 @@ class ExportService {
   }) async {
     final sb = StringBuffer();
     sb.writeln('name,phone,group,status,note');
+
+    String esc(Object? v) => '"${(v ?? '').toString().replaceAll('"', '""')}"';
+
     for (final g in guests) {
-      final esc = (Object? v) =>
-          '"${(v ?? '').toString().replaceAll('"', '""')}"';
       sb.writeln([
         esc(g['name']),
         esc(g['phone']),
@@ -161,7 +160,7 @@ class ExportService {
         (e['payer'] ?? '').toString(),
         _money(est),
         _money(act),
-      ];
+      ].reversed.toList();
     }).toList();
 
     pdf.addPage(
@@ -174,7 +173,7 @@ class ExportService {
             style: pw.TextStyle(
               fontSize: 16,
               fontWeight: pw.FontWeight.bold,
-              color: _headerColor(),
+              color: const PdfColor.fromInt(0xFF3E5A43),
             ),
           ),
           pw.SizedBox(height: 10),
@@ -185,8 +184,7 @@ class ExportService {
             style: const pw.TextStyle(fontSize: 11),
           ),
           pw.SizedBox(height: 12),
-          pw.Table.fromTextArray(
-            textDirection: pw.TextDirection.rtl,
+          pw.TableHelper.fromTextArray(
             headerAlignment: pw.Alignment.centerRight,
             cellAlignment: pw.Alignment.centerRight,
             headerStyle: pw.TextStyle(
@@ -202,7 +200,7 @@ class ExportService {
               isFa ? 'پرداخت‌کننده' : 'Payer',
               isFa ? 'برآورد' : 'Estimated',
               isFa ? 'واقعی' : 'Actual',
-            ],
+            ].reversed.toList(),
             data: rows,
           ),
         ],
@@ -219,9 +217,10 @@ class ExportService {
   }) async {
     final sb = StringBuffer();
     sb.writeln('title,category,payer,estimated,actual,note');
+
+    String esc(Object? v) => '"${(v ?? '').toString().replaceAll('"', '""')}"';
+
     for (final e in expenses) {
-      final esc = (Object? v) =>
-          '"${(v ?? '').toString().replaceAll('"', '""')}"';
       sb.writeln([
         esc(e['title']),
         esc(e['category']),

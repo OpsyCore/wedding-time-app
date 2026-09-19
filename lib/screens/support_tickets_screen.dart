@@ -252,8 +252,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _t('messages_count', 'پیام‌ها:', 'Messages:') +
-                              ' ${messages.length}',
+                          '${_t('messages_count', 'پیام‌ها:', 'Messages:')} ${messages.length}',
                           style: TextStyle(
                             color: AppTok.textSoft(context),
                             fontSize: 11,
@@ -351,7 +350,9 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 ),
                 onPressed: () {
                   if (subjectC.text.trim().isEmpty ||
-                      bodyC.text.trim().isEmpty) return;
+                      bodyC.text.trim().isEmpty) {
+                    return;
+                  }
                   Navigator.pop(ctx, true);
                 },
                 child: Text(
@@ -501,7 +502,9 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                     IconButton(
                       onPressed: () async {
                         final text = replyC.text.trim();
-                        if (text.isEmpty) return;
+                        if (text.isEmpty) {
+                          return;
+                        }
                         replyC.clear();
                         await _db
                             .collection('support_tickets')

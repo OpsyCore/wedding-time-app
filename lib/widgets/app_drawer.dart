@@ -913,7 +913,9 @@ class AppDrawer extends StatelessWidget {
                   onPressed: () {
                     if (brideC.text.trim().isEmpty ||
                         groomC.text.trim().isEmpty ||
-                        date == null) return;
+                        date == null) {
+                      return;
+                    }
                     Navigator.pop(sheetCtx, true);
                   },
                   child: Text(

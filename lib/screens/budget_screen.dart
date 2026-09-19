@@ -773,7 +773,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     for (final gd in g.docs) {
       final es = await groupsRef.doc(gd.id).collection('expenses').get();
       for (final e in es.docs) {
-        expenses.add(e.data() as Map<String, dynamic>);
+        expenses.add(e.data());
       }
     }
     final w = await FirebaseFirestore.instance

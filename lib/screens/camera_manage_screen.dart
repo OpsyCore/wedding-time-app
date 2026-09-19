@@ -8,6 +8,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/guest_media_model.dart';
 import '../services/disposable_camera_service.dart';
+import '../services/plan_access.dart';
 import 'guest_camera_screen.dart';
 
 /// مدیریت حرفه‌ای دوربین مهمان + تأیید عکس‌ها
