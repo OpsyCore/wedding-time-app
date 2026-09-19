@@ -719,7 +719,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         _personAvatar(photoUrl: leftPhoto, name: leftName),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Column(
                             children: [
                               Container(
@@ -890,46 +890,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Column(
       children: [
-        Container(
-          width: 78,
-          height: 78,
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [
-                accent,
-                _brandBlush,
-                _brandGreenSoft,
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.18),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+        SizedBox(
+          width: 116,
+          height: 106,
+          child: Stack(
+            children: [
+              // حاشیهٔ گرادیانیِ قلب
+              Positioned.fill(
+                child: ClipPath(
+                  clipper: _HeartClipper(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          accent,
+                          _brandBlush,
+                          _brandGreenSoft,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // داخل قلب: عکس یا حرف اول نام
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.all(3.5),
+                  child: ClipPath(
+                    clipper: _HeartClipper(),
+                    child: Container(
+                      color: card,
+                      child: photoUrl != null && photoUrl.isNotEmpty
+                          ? Image.network(
+                              photoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _avatarFallback(initial),
+                            )
+                          : _avatarFallback(initial),
+                    ),
+                  ),
+                ),
               ),
             ],
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: card,
-              border: Border.all(color: card, width: 2),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: photoUrl != null && photoUrl.isNotEmpty
-                ? Image.network(
-                    photoUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _avatarFallback(initial),
-                  )
-                : _avatarFallback(initial),
           ),
         ),
         const SizedBox(height: 8),
         SizedBox(
-          width: 88,
+          width: 110,
           child: Text(
             name.split(' ').first,
             textAlign: TextAlign.center,
@@ -954,7 +962,7 @@ class _HomeScreenState extends State<HomeScreen> {
           initial,
           style: TextStyle(
             color: AppTok.accentDeep(context),
-            fontSize: 26,
+            fontSize: 34,
             fontWeight: FontWeight.bold,
             fontFamily: 'serif',
           ),
@@ -1880,4 +1888,36 @@ class _FocusItem {
     this.priority = 5,
     required this.onTap,
   });
+}
+
+/// کلیپر شکل قلب برای آواتارهای صفحهٔ خانه
+class _HeartClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final w = size.width;
+    final h = size.height;
+    final path = Path();
+    path.moveTo(w / 2, h * 0.999);
+    path.cubicTo(
+      -w * 0.28,
+      h * 0.60,
+      w * 0.02,
+      h * 0.02,
+      w / 2,
+      h * 0.30,
+    );
+    path.cubicTo(
+      w * 0.98,
+      h * 0.02,
+      w * 1.28,
+      h * 0.60,
+      w / 2,
+      h * 0.999,
+    );
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
