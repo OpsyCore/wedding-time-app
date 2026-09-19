@@ -302,13 +302,32 @@ class _GuestHomeTabState extends State<GuestHomeTab>
               final d = snap.data?.data() ?? {};
               final groom = (d['groomName'] ?? inv.groomName).toString().trim();
               final bride = (d['brideName'] ?? inv.brideName).toString().trim();
-              final couplePhoto = (d['couplePhotoUrl'] ??
-                      d['coverImageUrl'] ??
-                      inv.couplePhotoUrl ??
-                      inv.coverImageUrl ??
-                      '')
-                  .toString()
-                  .trim();
+
+              // عکس دو نفرهٔ زوج دقیقاً همان عکس پروفایل عروس و داماد است:
+              // زوج آن را در «پروفایل عروس و داماد» آپلود می‌کند و در
+              // weddings/{id}/profile/main زیر کلید couplePhotoUrl ذخیره می‌شود.
+              // بنابراین ابتدا سند پروفایل را می‌خوانیم و آن را در اولویت قرار می‌دهیم.
+              return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance
+                    .collection('weddings')
+                    .doc(widget.weddingId)
+                    .collection('profile')
+                    .doc('main')
+                    .snapshots(),
+                builder: (context, profileSnap) {
+                  final p = profileSnap.data?.data() ?? {};
+                  final profilePhoto =
+                      (p['couplePhotoUrl'] ?? '').toString().trim();
+
+                  final couplePhoto = profilePhoto.isNotEmpty
+                      ? profilePhoto
+                      : (d['couplePhotoUrl'] ??
+                              d['coverImageUrl'] ??
+                              inv.couplePhotoUrl ??
+                              inv.coverImageUrl ??
+                              '')
+                          .toString()
+                          .trim();
 
               final title = groom.isNotEmpty && bride.isNotEmpty
                   ? '$groom & $bride'
@@ -404,6 +423,8 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                   // ── بخش پایینی: ۴ کارت شمارش معکوس شیشه‌ای مطابق دقیق عکس ──
                   _buildCountdownCards(context),
                 ],
+              );
+                },
               );
             },
           ),
