@@ -235,8 +235,34 @@ service cloud.firestore {
     // ─── Users ───
     match /users/{userId} {
       allow read: if isSignedIn() && uid() == userId;
-      allow create, update: if isSignedIn() && uid() == userId;
+      allow create: if isSignedIn() && uid() == userId;
+      // ادمین برای فعال‌سازی پلن، planId کاربر را می‌نویسد
+      allow update: if (isSignedIn() && uid() == userId) || isAdmin();
       allow delete: if false;
+    }
+
+    // ─── تیکت‌های پشتیبانی ───
+    match /support_tickets/{ticketId} {
+      allow create: if isSignedIn()
+        && request.resource.data.uid == uid()
+        && request.resource.data.keys().hasAll(['uid', 'subject', 'status', 'messages', 'createdAt'])
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() > 0
+        && request.resource.data.subject.size() <= 120;
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.uid == uid());
+      allow update: if isAdmin()
+        || (isSignedIn() && resource.data.uid == uid());
+      allow delete: if isAdmin();
+    }
+
+    // ─── درخواست‌های فعال‌سازی پلن ───
+    match /plan_requests/{reqId} {
+      allow create: if isSignedIn()
+        && request.resource.data.uid == uid();
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.uid == uid());
+      allow update, delete: if isAdmin();
     }
 
     match /invite_codes/{code} {
@@ -275,9 +301,11 @@ service cloud.firestore {
       allow get: if true;
       allow list: if isWeddingMember(weddingId);
       allow create: if isValidWeddingCreate();
+      // ادمین برای mirror کردن planId روی سند مراسم هم دسترسی دارد
       allow update: if isWeddingMember(weddingId)
         || isJoinBrideUpdate()
-        || isJoinGroomUpdate();
+        || isJoinGroomUpdate()
+        || isAdmin();
       allow delete: if false;
 
       match /invitation/{docId} {
