@@ -244,6 +244,37 @@ class AppDrawer extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     children: [
+                      // ── داستان ما (بالای همه) ──
+                      _section(context, 'داستان ما', 'Our story'),
+                      _item(
+                        context,
+                        Icons.favorite_outline,
+                        t('couple_profile'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  CoupleProfileScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.auto_stories_outlined,
+                        t('love_story'),
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  LoveStoryScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+
                       // ── برنامه‌ریزی (پراستفاده‌ترین‌ها اول) ──
                       _section(context, 'برنامه‌ریزی مراسم', 'Planning'),
                       _item(context, Icons.mail_outline, t('invitation'), () {
@@ -439,37 +470,6 @@ class AppDrawer extends StatelessWidget {
                           ),
                         );
                       }),
-
-                      // ── داستان ما ──
-                      _section(context, 'داستان ما', 'Our story'),
-                      _item(
-                        context,
-                        Icons.favorite_outline,
-                        t('couple_profile'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CoupleProfileScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
-                      _item(
-                        context,
-                        Icons.auto_stories_outlined,
-                        t('love_story'),
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  LoveStoryScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
 
                       // ── حساب و تنظیمات ──
                       _section(context, 'حساب و تنظیمات', 'Account & settings'),
@@ -973,15 +973,27 @@ class AppDrawer extends StatelessWidget {
   }
 
   Widget _section(BuildContext context, String fa, String en) {
+    const red = Color(0xFFFF3B3B); // قرمز روشن
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 2),
-      child: Text(
-        AppLang.I.isFa ? fa : en,
-        style: TextStyle(
-          color: AppTok.textSoft(context),
-          fontSize: 11.5,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.6,
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 4),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: red.withValues(alpha: 0.13),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: red.withValues(alpha: 0.28)),
+          ),
+          child: Text(
+            AppLang.I.isFa ? fa : en,
+            style: const TextStyle(
+              color: red,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
+          ),
         ),
       ),
     );
