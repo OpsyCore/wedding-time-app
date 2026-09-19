@@ -269,7 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                     ),
                                     child: _uploadingPhoto
-                                        ? SizedBox(
+                                        ? const SizedBox(
                                             width: 14,
                                             height: 14,
                                             child:
