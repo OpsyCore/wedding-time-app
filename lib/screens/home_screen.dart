@@ -77,6 +77,20 @@ class _HomeScreenState extends State<HomeScreen> {
   CollectionReference<Map<String, dynamic>> get _eventsRef =>
       _weddingDoc.collection('calendarEvents');
 
+  // استریم‌ها فقط یک‌بار ساخته می‌شوند؛ اگر داخل build هر بار snapshots()
+  // صدا زده شود، هر rebuild (مثل تیک‌تاک ثانیه‌ای شمارش معکوس) باعث
+  // subscribe مجدد و خواندن دوبارهٔ همهٔ اسناد می‌شود و سهمیهٔ رایگان را می‌سوزاند.
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _checklistStream =
+      _checklistRef.snapshots();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _guestsStream =
+      _guestsRef.snapshots();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _budgetGroupsStream =
+      _budgetGroupsRef.snapshots();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _vendorsStream =
+      _vendorsRef.snapshots();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _eventsStream =
+      _eventsRef.snapshots();
+
   bool get _dark => AppTok.isDark(context);
 
   Color get _brandGreenSoft =>
@@ -990,16 +1004,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final textSoft = AppTok.textSoft(context);
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _checklistRef.snapshots(),
+      stream: _checklistStream,
       builder: (context, checkSnap) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _guestsRef.snapshots(),
+          stream: _guestsStream,
           builder: (context, guestSnap) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: _vendorsRef.snapshots(),
+              stream: _vendorsStream,
               builder: (context, vendorSnap) {
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: _eventsRef.snapshots(),
+                  stream: _eventsStream,
                   builder: (context, eventSnap) {
                     final items = <_FocusItem>[];
                     final now = DateTime.now();
@@ -1461,16 +1475,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final accentSoft = AppTok.accentSoft(context);
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _checklistRef.snapshots(),
+      stream: _checklistStream,
       builder: (context, checkSnap) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _guestsRef.snapshots(),
+          stream: _guestsStream,
           builder: (context, guestSnap) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: _budgetGroupsRef.snapshots(),
+              stream: _budgetGroupsStream,
               builder: (context, budgetSnap) {
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: _vendorsRef.snapshots(),
+                  stream: _vendorsStream,
                   builder: (context, vendorSnap) {
                     int checkTotal = 0;
                     int checkDone = 0;

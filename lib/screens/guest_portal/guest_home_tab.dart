@@ -46,6 +46,21 @@ class _GuestHomeTabState extends State<GuestHomeTab>
   String? _rsvpStatus; // yes | no | null
   int _cameraShots = 0;
 
+  // استریم‌ها یک‌بار ساخته می‌شوند تا تیک‌تاک ثانیه‌ای شمارش معکوس باعث
+  // subscribe مجدد و خواندن مکرر اسناد نشود (سهمیهٔ رایگان Firestore).
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _weddingStream =
+      FirebaseFirestore.instance
+          .collection('weddings')
+          .doc(widget.weddingId)
+          .snapshots();
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _profileStream =
+      FirebaseFirestore.instance
+          .collection('weddings')
+          .doc(widget.weddingId)
+          .collection('profile')
+          .doc('main')
+          .snapshots();
+
   late final AnimationController _intro;
   late final Animation<double> _fadeIn;
   late final Animation<Offset> _slideUp;
@@ -294,10 +309,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
           child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('weddings')
-                .doc(widget.weddingId)
-                .snapshots(),
+            stream: _weddingStream,
             builder: (context, snap) {
               final d = snap.data?.data() ?? {};
 
@@ -306,12 +318,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
               // weddings/{id}/profile/main زیر کلید couplePhotoUrl ذخیره می‌شود.
               // بنابراین ابتدا سند پروفایل را می‌خوانیم و آن را در اولویت قرار می‌دهیم.
               return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance
-                    .collection('weddings')
-                    .doc(widget.weddingId)
-                    .collection('profile')
-                    .doc('main')
-                    .snapshots(),
+                stream: _profileStream,
                 builder: (context, profileSnap) {
                   final p = profileSnap.data?.data() ?? {};
                   final profilePhoto =
