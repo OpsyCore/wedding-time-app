@@ -65,10 +65,10 @@ class ExportService {
         build: (context) => [
           pw.Text(
             isFa ? 'فهرست مهمان‌ها — $coupleTitle' : 'Guest list — $coupleTitle',
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               fontSize: 16,
               fontWeight: pw.FontWeight.bold,
-              color: const PdfColor.fromInt(0xFF3E5A43),
+              color: PdfColor.fromInt(0xFF3E5A43),
             ),
           ),
           pw.SizedBox(height: 10),
@@ -82,9 +82,9 @@ class ExportService {
           pw.TableHelper.fromTextArray(
             headerAlignment: pw.Alignment.centerRight,
             cellAlignment: pw.Alignment.centerRight,
-            headerStyle: pw.TextStyle(
+            headerStyle: const pw.TextStyle(
               fontWeight: pw.FontWeight.bold,
-              color: const PdfColor.fromInt(0xFFFFFFFF),
+              color: PdfColor.fromInt(0xFFFFFFFF),
             ),
             headerDecoration: const pw.BoxDecoration(
               color: PdfColor.fromInt(0xFF3E5A43),
@@ -170,10 +170,10 @@ class ExportService {
         build: (context) => [
           pw.Text(
             isFa ? 'گزارش بودجه — $coupleTitle' : 'Budget report — $coupleTitle',
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               fontSize: 16,
               fontWeight: pw.FontWeight.bold,
-              color: const PdfColor.fromInt(0xFF3E5A43),
+              color: PdfColor.fromInt(0xFF3E5A43),
             ),
           ),
           pw.SizedBox(height: 10),
@@ -187,9 +187,9 @@ class ExportService {
           pw.TableHelper.fromTextArray(
             headerAlignment: pw.Alignment.centerRight,
             cellAlignment: pw.Alignment.centerRight,
-            headerStyle: pw.TextStyle(
+            headerStyle: const pw.TextStyle(
               fontWeight: pw.FontWeight.bold,
-              color: const PdfColor.fromInt(0xFFFFFFFF),
+              color: PdfColor.fromInt(0xFFFFFFFF),
             ),
             headerDecoration: const pw.BoxDecoration(
               color: PdfColor.fromInt(0xFF3E5A43),
