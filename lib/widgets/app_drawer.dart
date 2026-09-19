@@ -975,25 +975,14 @@ class AppDrawer extends StatelessWidget {
   Widget _section(BuildContext context, String fa, String en) {
     const red = Color(0xFFFF3B3B); // قرمز روشن
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 4),
-      child: Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: red.withValues(alpha: 0.13),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: red.withValues(alpha: 0.28)),
-          ),
-          child: Text(
-            AppLang.I.isFa ? fa : en,
-            style: const TextStyle(
-              color: red,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-            ),
-          ),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+      child: Text(
+        AppLang.I.isFa ? fa : en,
+        style: const TextStyle(
+          color: red,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
         ),
       ),
     );
