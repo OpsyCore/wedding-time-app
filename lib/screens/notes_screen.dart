@@ -548,16 +548,23 @@ class _NotesScreenState extends State<NotesScreen> {
                     final t = titleCtrl.text.trim();
                     final b = bodyCtrl.text.trim();
                     if (t.isEmpty && b.isEmpty) return;
-                    Navigator.pop(sheetCtx);
-                    await _col.doc(id ?? _col.doc().id).set({
-                      'title': t,
-                      'body': b,
-                      'color': color,
-                      'pinned': pinned,
-                      'updatedAt': FieldValue.serverTimestamp(),
-                      if (id == null)
-                        'createdAt': FieldValue.serverTimestamp(),
-                    }, SetOptions(merge: true));
+                    try {
+                      await _col.doc(id ?? _col.doc().id).set({
+                        'title': t,
+                        'body': b,
+                        'color': color,
+                        'pinned': pinned,
+                        'updatedAt': FieldValue.serverTimestamp(),
+                        if (id == null)
+                          'createdAt': FieldValue.serverTimestamp(),
+                      }, SetOptions(merge: true));
+                    } catch (e) {
+                      if (mounted) {
+                        _toast('${AppLang.tr('save_error')}: $e', error: true);
+                      }
+                      return;
+                    }
+                    if (sheetCtx.mounted) Navigator.pop(sheetCtx);
                   },
                   child: Text(
                     isFa ? 'ذخیره' : 'Save',
@@ -570,6 +577,9 @@ class _NotesScreenState extends State<NotesScreen> {
         ),
       ),
     );
+    // صبر تا پایان کامل انیمیشن بستن شیت، بعد dispose —
+    // جلوگیری از assert «_dependents.isEmpty» فریم‌ورک
+    await Future<void>.delayed(const Duration(milliseconds: 400));
     titleCtrl.dispose();
     bodyCtrl.dispose();
   }
