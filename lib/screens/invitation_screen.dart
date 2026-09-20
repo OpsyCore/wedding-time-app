@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -64,17 +66,18 @@ class _InvitationScreenState extends State<InvitationScreen>
   WeatherSnapshot? _weather;
   bool _weatherLoading = false;
 
-  DocumentReference get inviteRef => FirebaseFirestore.instance
-      .collection('weddings')
-      .doc(widget.weddingId)
-      .collection('invitation')
-      .doc('main');
+  DocumentReference<Map<String, dynamic>> get inviteRef =>
+      FirebaseFirestore.instance
+          .collection('weddings')
+          .doc(widget.weddingId)
+          .collection('invitation')
+          .doc('main');
 
-  DocumentReference get weddingRef =>
+  DocumentReference<Map<String, dynamic>> get weddingRef =>
       FirebaseFirestore.instance.collection('weddings').doc(widget.weddingId);
 
   /// همان داکی که CoupleProfileScreen می‌نویسد — منبع اصلیِ اسم‌ها و عکسِ دو نفر.
-  DocumentReference get profileRef =>
+  DocumentReference<Map<String, dynamic>> get profileRef =>
       weddingRef.collection('profile').doc('main');
 
   /// اسم‌هایی که از پروفایل زوج می‌آیند (برای تشخیصِ تغییرِ دستی هنگام ذخیره)
@@ -173,7 +176,8 @@ class _InvitationScreenState extends State<InvitationScreen>
     _bootstrap();
     // لایو شنیدن تغییر قالب از Firestore (وقتی _openTemplatePicker می‌زند)
     _templateSub = weddingRef.snapshots().listen((snap) {
-      final t = (snap.data()?[inviteTemplateField] ?? 'classic').toString().trim();
+      final data = snap.data() as Map<String, dynamic>?;
+      final t = (data?[inviteTemplateField] ?? 'classic').toString().trim();
       final id = t.isEmpty ? 'classic' : t;
       if (id != _templateId && mounted) {
         setState(() => _templateId = id);
