@@ -1712,7 +1712,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: border.withValues(alpha: 0.7),
                               ),
                               const SizedBox(height: 14),
-                              Row(
+                              IntrinsicHeight(
+                                child: Row(
                                 crossAxisAlignment:
                                     CrossAxisAlignment.stretch,
                                 children: [
@@ -1738,9 +1739,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                 ],
+                                ),
                               ),
                               const SizedBox(height: 10),
-                              Row(
+                              IntrinsicHeight(
+                                child: Row(
                                 crossAxisAlignment:
                                     CrossAxisAlignment.stretch,
                                 children: [
@@ -1765,6 +1768,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
                                 ],
+                                ),
                               ),
                             ],
                           ),
