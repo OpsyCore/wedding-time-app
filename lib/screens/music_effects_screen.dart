@@ -7,10 +7,13 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/app_effect.dart';
 import '../core/app_effects.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../services/ambient_music_service.dart';
+import '../widgets/effect_grid.dart';
 
 class MusicEffectsScreen extends StatefulWidget {
   const MusicEffectsScreen({super.key, required this.weddingId});
@@ -35,34 +38,13 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
 
   final _ambientUrlCtrl = TextEditingController();
 
-  static const _romanticPresets = <Map<String, String>>[
-    {'id': 'none', 'nameKey': 'music_amb_none', 'url': ''},
-    {
-      'id': 'romantic_piano',
-      'nameKey': 'music_amb_romantic_piano',
-      'url': 'https://www.youtube.com/watch?v=4Tr0otuiQuU',
-    },
-    {
-      'id': 'romantic_strings',
-      'nameKey': 'music_amb_romantic_strings',
-      'url': 'https://www.youtube.com/watch?v=1ZYbU82GVz4',
-    },
-    {
-      'id': 'romantic_acoustic',
-      'nameKey': 'music_amb_romantic_acoustic',
-      'url': 'https://www.youtube.com/watch?v=lTRiuFIWV54',
-    },
-    {
-      'id': 'romantic_jazz',
-      'nameKey': 'music_amb_romantic_jazz',
-      'url': 'https://www.youtube.com/watch?v=Dx5qFachd3A',
-    },
-    {
-      'id': 'romantic_cinematic',
-      'nameKey': 'music_amb_romantic_cinematic',
-      'url': 'https://www.youtube.com/watch?v=UfcAVejslrU',
-    },
-    {'id': 'custom', 'nameKey': 'music_amb_custom', 'url': ''},
+  // فقط موزیک‌های داخلی assets (بدون یوتیوب).
+  // سه ترک جدید به‌محض اینکه فایل mp3شان در پوشه گذاشته شود فعال می‌شوند.
+  static final List<Map<String, String>> _romanticPresets = [
+    {'id': 'none', 'nameKey': 'music_amb_none'},
+    for (final t in AmbientMusicService.tracks)
+      {'id': t.id, 'nameKey': t.nameKey, 'sub': t.assetPath},
+    {'id': 'custom', 'nameKey': 'music_amb_custom'},
   ];
 
   static const _defaultSections = <String>[
@@ -191,12 +173,18 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
       }
       if (_ambientId == 'classic' ||
           _ambientId == 'piano' ||
-          _ambientId == 'gold') {
-        _ambientId = 'romantic_piano';
-        if (_ambientUrl.isEmpty) {
-          _ambientUrl = _romanticPresets
-              .firstWhere((e) => e['id'] == 'romantic_piano')['url']!;
-        }
+          _ambientId == 'gold' ||
+          _ambientId == 'romantic_piano' ||
+          _ambientId == 'romantic_strings' ||
+          _ambientId == 'romantic_acoustic' ||
+          _ambientId == 'romantic_jazz' ||
+          _ambientId == 'romantic_cinematic') {
+        // id های قدیمی یوتیوب → اولین ترک داخلی
+        _ambientId = AmbientMusicService.tracks.first.id;
+        _ambientUrl = '';
+      }
+      if (!_romanticPresets.any((e) => e['id'] == _ambientId)) {
+        _ambientId = 'none';
       }
       _ambientUrlCtrl.text = _ambientUrl;
     } catch (_) {
@@ -243,12 +231,9 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       var url = _ambientUrlCtrl.text.trim();
-      if (_ambientId != 'custom' && _ambientId != 'none') {
-        final preset = _romanticPresets.firstWhere(
-          (e) => e['id'] == _ambientId,
-          orElse: () => _romanticPresets.first,
-        );
-        if (url.isEmpty) url = preset['url'] ?? '';
+      if (_ambientId != 'custom') {
+        // ترک‌های داخلی asset هستند — لینک خارجی ذخیره نمی‌شود
+        url = '';
       }
       final enabled = _ambientEnabled && _ambientId != 'none';
       final style = AppEffectStyle.byId(_effectId);
@@ -310,9 +295,9 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
         _ambientUrlCtrl.clear();
       } else if (id != 'custom') {
         _ambientEnabled = true;
-        final preset = _romanticPresets.firstWhere((e) => e['id'] == id);
-        _ambientUrl = preset['url'] ?? '';
-        _ambientUrlCtrl.text = _ambientUrl;
+        _ambientUrl = '';
+        _ambientUrlCtrl.clear();
+        AmbientMusicService.I.setTrack(id);
       } else {
         _ambientEnabled = true;
       }
@@ -340,7 +325,7 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
               left: 20,
               right: 20,
               top: 20,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 20,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -440,7 +425,7 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
                 left: 20,
                 right: 20,
                 top: 18,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 20,
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -1090,10 +1075,10 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
                   setState(() {
                     _ambientEnabled = v;
                     if (v && _ambientId == 'none') {
-                      _ambientId = 'romantic_piano';
-                      _ambientUrl = _romanticPresets
-                          .firstWhere((e) => e['id'] == 'romantic_piano')['url']!;
-                      _ambientUrlCtrl.text = _ambientUrl;
+                      _ambientId = AmbientMusicService.tracks.first.id;
+                      _ambientUrl = '';
+                      _ambientUrlCtrl.clear();
+                      AmbientMusicService.I.setTrack(_ambientId);
                     }
                   });
                   await _saveSettings();
@@ -1150,13 +1135,29 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          AppLang.tr(p['nameKey']!),
-                          style: TextStyle(
-                            color: AppTok.text(context),
-                            fontWeight:
-                                selected ? FontWeight.w800 : FontWeight.w600,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              AppLang.tr(p['nameKey']!),
+                              style: TextStyle(
+                                color: AppTok.text(context),
+                                fontWeight: selected
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                              ),
+                            ),
+                            if ((p['sub'] ?? '').isNotEmpty)
+                              Text(
+                                p['sub']!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppTok.textSoft(context),
+                                  fontSize: 9.5,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       if (selected)
@@ -1284,19 +1285,11 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          gradient: LinearGradient(
-                            colors: [
-                              s.primary.withValues(alpha: 0.35),
-                              s.secondary.withValues(alpha: 0.2),
-                            ],
-                          ),
-                        ),
-                        child: Icon(s.icon, color: s.primary),
+                      EffectPatternIcon(
+                        effect: AppEffect.byId(s.id),
+                        size: 44,
+                        iconSize: 22,
+                        borderRadius: 14,
                       ),
                       const SizedBox(width: 12),
                       Expanded(

@@ -582,7 +582,7 @@ class _VendorsScreenState extends State<VendorsScreen> {
                   ? AppDarkPalette.background
                   : Colors.white;
               return Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 28 + MediaQuery.of(ctx).padding.bottom),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
