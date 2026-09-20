@@ -43,65 +43,79 @@ class WeddingTimeHeader extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
             child: SizedBox(
               height: 48,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // ── Title centered across the full bar width with Henny Penny font ──
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 56),
-                    child: Center(
-                      child: Text(
-                        displayTitle,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: accent,
-                          fontSize: 21,
-                          fontWeight: FontWeight.normal,
-                          fontFamily: 'Henny Penny',
-                          fontFamilyFallback: const [
-                            'Henny Penny',
-                            'HennyPenny',
-                            'cursive',
-                            'serif',
-                          ],
-                          letterSpacing: 0.8,
-                        ),
-                      ),
+              child: LayoutBuilder(
+                builder: (context, cons) {
+                  final menuBtn = IconButton(
+                    tooltip: AppLang.tr('menu'),
+                    onPressed: onMenuPressed,
+                    icon: Icon(Icons.menu, color: text),
+                  );
+                  final actions = <Widget>[
+                    const _EffectsButton(),
+                    const _ThemeToggleButton(),
+                    if (showMusicButton)
+                      const AmbientMusicActionButton()
+                    else
+                      const SizedBox(width: 4),
+                    NotificationBadgeIcon(
+                      weddingId: weddingId,
+                      iconColor: text,
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                NotificationsScreen(weddingId: weddingId),
+                          ),
+                        );
+                      },
                     ),
-                  ),
+                  ];
+                  final title = Text(
+                    displayTitle,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 21,
+                      fontWeight: FontWeight.normal,
+                      fontFamily: 'Henny Penny',
+                      fontFamilyFallback: const [
+                        'Henny Penny',
+                        'HennyPenny',
+                        'cursive',
+                        'serif',
+                      ],
+                      letterSpacing: 0.8,
+                    ),
+                  );
 
-                  // ── Action Buttons Row ──
-                  Row(
+                  // صفحهٔ پهن: عنوان دقیقاً وسطِ کل نوار (طرح مرجع)
+                  if (cons.maxWidth >= 640) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 56),
+                          child: Center(child: title),
+                        ),
+                        Row(
+                          children: [menuBtn, const Spacer(), ...actions],
+                        ),
+                      ],
+                    );
+                  }
+
+                  // موبایل: عنوان بین دکمه‌ها — هرگز روی هم نمی‌افتند
+                  return Row(
                     children: [
-                      IconButton(
-                        tooltip: AppLang.tr('menu'),
-                        onPressed: onMenuPressed,
-                        icon: Icon(Icons.menu, color: text),
-                      ),
-                      const Spacer(),
-                      const _EffectsButton(),
-                      const _ThemeToggleButton(),
-                      if (showMusicButton)
-                        const AmbientMusicActionButton()
-                      else
-                        const SizedBox(width: 4),
-                      NotificationBadgeIcon(
-                        weddingId: weddingId,
-                        iconColor: text,
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  NotificationsScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
+                      menuBtn,
+                      Expanded(child: Center(child: title)),
+                      ...actions,
                     ],
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),
