@@ -43,10 +43,14 @@ class AppConfig {
     return '$base/invite/$clean';
   }
 
-  /// لینک دعوت پارتنر (همسر) — با باز شدن، مرحلهٔ پیوستن با کد باز می‌شود
-  /// مثال: .../invite/zaza-sara?join=WT-ABCD12
-  static String partnerJoinUrl(String slug, String code) {
-    return '${inviteUrl(slug)}?join=${Uri.encodeComponent(code.trim())}';
+  /// لینک دعوت پارتنر (همسر) — مسیر کاملاً جدا از لینک مهمان:
+  /// مثال: https://.../join/WT-ABCD12  (لینک مهمان: .../invite/slug)
+  /// با باز شدن، مرحلهٔ پیوستن با کد باز می‌شود.
+  static String partnerJoinUrl(String code) {
+    final base = publicBaseUrl.endsWith('/')
+        ? publicBaseUrl.substring(0, publicBaseUrl.length - 1)
+        : publicBaseUrl;
+    return '$base/join/${Uri.encodeComponent(code.trim())}';
   }
 
   /// کد پیوستنی که از URL آمده (؟join=) و منتظر مصرف در صفحهٔ ستاپ است

@@ -201,7 +201,7 @@ class InviteCodeCard extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  AppConfig.partnerJoinUrl(slug, code),
+                                  AppConfig.partnerJoinUrl(code),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -214,7 +214,7 @@ class InviteCodeCard extends StatelessWidget {
                                 tooltip: AppLang.tr('copy'),
                                 onPressed: () => _copy(
                                   context,
-                                  AppConfig.partnerJoinUrl(slug, code),
+                                  AppConfig.partnerJoinUrl(code),
                                 ),
                                 icon: Icon(Icons.link,
                                     color: accent, size: 20),

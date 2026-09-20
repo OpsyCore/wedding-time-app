@@ -37,10 +37,11 @@ class _WeddingSetupScreenState extends State<WeddingSetupScreen> {
   @override
   void initState() {
     super.initState();
-    // لینک دعوت پارتنر (?join=CODE) → مستقیم مرحلهٔ پیوستن با کد پرشده
+    // لینک دعوت پارتنر (?join=CODE) → مستقیم مرحلهٔ پیوستن با کد پرشده.
+    // کد تا موفقیت پیوستن/ساخت نگه داشته می‌شود تا مسیرهای دیگر
+    // (لاگین و…) در حالت join باقی بمانند و به مهمان تبدیل نشوند.
     final pending = AppConfig.pendingJoinCode;
     if (pending != null && pending.isNotEmpty) {
-      AppConfig.pendingJoinCode = null;
       _joinCodeCtrl.text = pending;
       _step = 3;
     }
@@ -120,6 +121,7 @@ class _WeddingSetupScreenState extends State<WeddingSetupScreen> {
       setState(() {
         _currentWeddingId = result.weddingId;
         _inviteCode = result.inviteCode;
+        AppConfig.pendingJoinCode = null;
         _step = 2;
       });
     } catch (e) {
@@ -157,6 +159,7 @@ class _WeddingSetupScreenState extends State<WeddingSetupScreen> {
       );
 
       _currentWeddingId = weddingId;
+      AppConfig.pendingJoinCode = null; // حالت پیوستن تمام شد
       await _goHome();
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
