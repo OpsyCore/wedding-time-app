@@ -870,169 +870,177 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  /// قلب بزرگ تپنده — داخلش اسم زوج + تاریخ (بدون عکس) با نبض 900ms
-  /// طرح بولد و مشخص: گرادیان رز پررنگ + فونت ساده بولد سفید با سایه
+  /// قلب بزرگ تپنده — شبیه رفرنس: قرمز آجری یکدست + ستاره‌های سفید/تیره + متن سفید بولد
+  /// متن داخل: «سارا & علی / تبریک / ما ازدواج می‌کنیم / تاریخ»
   Widget _buildBigPulsingHeart({
     required String groom,
     required String bride,
     DateTime? date,
   }) {
-    final accent = AppTok.accent(context);
-    final coupleLine = '$groom  &  $bride';
+    final coupleLine = _nameOrder == 'bride_first'
+        ? '$bride  &  $groom'
+        : '$groom  &  $bride';
     final dateStr = date != null ? _formatDate(date) : '';
     return ScaleTransition(
       scale: _pulseScale,
       child: SizedBox(
-        width: 196,
-        height: 178,
+        width: 210,
+        height: 192,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // سایه نرم پشت
+            // سایه نرم پشت قلب
             Container(
-              width: 196,
-              height: 178,
+              width: 210,
+              height: 192,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFE8475F).withValues(alpha: 0.22),
-                    blurRadius: 32,
-                    spreadRadius: 8,
-                  ),
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.18),
-                    blurRadius: 18,
-                    spreadRadius: 2,
+                    color: const Color(0xFFD75445).withValues(alpha: 0.28),
+                    blurRadius: 28,
+                    spreadRadius: 6,
                   ),
                 ],
               ),
             ),
-            // حاشیه قلب — گرادیان پررنگ رز/قرمز ملایم
+            // قلب — رنگ یکدست آجری مثل رفرنس (بدون گرادیان چندرنگ)
             Positioned.fill(
               child: ClipPath(
                 clipper: _HeartClipper(),
                 child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFFE8475F),
-                        Color(0xFFD93A55),
-                        Color(0xFFB02E4A),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                  color: const Color(0xFFD75445),
+                ),
+              ),
+            ),
+            // حاشیه نازک سفید داخل قلب
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(2.2),
+                child: ClipPath(
+                  clipper: _HeartClipper(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.14),
+                        width: 1,
+                      ),
+                      color: const Color(0xFFD75445),
                     ),
                   ),
                 ),
               ),
             ),
-            // داخل قلب — گرادیان روشن رز تا سفید مایل به صورتی
-            Positioned.fill(
+            // ستاره‌ها — سفید و تیره مثل رفرنس
+            Positioned(
+              top: 18,
+              right: 24,
+              child: _sparkle(size: 28, color: Colors.white, angle: 0.15),
+            ),
+            Positioned(
+              top: 34,
+              right: 52,
+              child: _sparkle(size: 14, color: const Color(0xFF4A2520), angle: -0.2),
+            ),
+            Positioned(
+              top: 40,
+              left: 28,
+              child: _sparkle(size: 20, color: const Color(0xFF4A2520), angle: 0.25),
+            ),
+            Positioned(
+              top: 58,
+              left: 44,
+              child: _sparkle(size: 10, color: const Color(0xFF4A2520), angle: -0.3),
+            ),
+            Positioned(
+              bottom: 44,
+              left: 84,
+              child: _sparkle(size: 26, color: Colors.white, angle: 0.1),
+            ),
+            Positioned(
+              bottom: 32,
+              left: 62,
+              child: _sparkle(size: 12, color: Colors.white, angle: -0.25),
+            ),
+            Positioned(
+              bottom: 36,
+              right: 68,
+              child: _sparkle(size: 10, color: Colors.white, angle: 0.2),
+            ),
+            // متن داخل قلب — سفید بولد ساده
+            Center(
               child: Padding(
-                padding: const EdgeInsets.all(3.6),
-                child: ClipPath(
-                  clipper: _HeartClipper(),
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Color(0xFFFF6B81),
-                          Color(0xFFEE4F6B),
-                          Color(0xFFD93A55),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                padding: const EdgeInsets.fromLTRB(22, 18, 22, 30),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      coupleLine,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                        height: 1.2,
                       ),
                     ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.28),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 16, 18, 26),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withValues(alpha: 0.18),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.45),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.favorite_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                coupleLine,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.4,
-                                  height: 1.25,
-                                  shadows: [
-                                    Shadow(
-                                      color: Color(0x66000000),
-                                      blurRadius: 6,
-                                      offset: Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (dateStr.isNotEmpty) ...[
-                                const SizedBox(height: 7),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.32),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    dateStr,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.8,
-                                      height: 1,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'تبریک',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.3,
+                        height: 1.1,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      AppLang.I.isFa ? 'ما ازدواج می‌کنیم' : 'We are getting married',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.96),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        height: 1.2,
+                      ),
+                    ),
+                    if (dateStr.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        dateStr,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// ستاره چهارپر کوچک — شبیه ستاره‌های رفرنس
+  Widget _sparkle({required double size, required Color color, double angle = 0}) {
+    return Transform.rotate(
+      angle: angle,
+      child: Icon(
+        Icons.auto_awesome,
+        size: size,
+        color: color,
       ),
     );
   }
