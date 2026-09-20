@@ -18,6 +18,7 @@ import '../screens/login_screen.dart';
 import '../screens/love_story_screen.dart';
 import '../screens/media_library_screen.dart';
 import '../screens/music_effects_screen.dart';
+import '../screens/honeymoon_screen.dart';
 import '../screens/notes_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/plans_screen.dart';
@@ -358,6 +359,20 @@ class AppDrawer extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (_) =>
                                   NotesScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.flight_takeoff_outlined,
+                        AppLang.I.isFa ? 'ماه عسل' : 'Honeymoon',
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  HoneymoonScreen(weddingId: weddingId),
                             ),
                           );
                         },
