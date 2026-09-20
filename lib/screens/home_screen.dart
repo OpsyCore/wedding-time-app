@@ -871,49 +871,54 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   /// قلب بزرگ تپنده — داخلش اسم زوج + تاریخ (بدون عکس) با نبض 900ms
+  /// طرح بولد و مشخص: گرادیان رز پررنگ + فونت ساده بولد سفید با سایه
   Widget _buildBigPulsingHeart({
     required String groom,
     required String bride,
     DateTime? date,
   }) {
     final accent = AppTok.accent(context);
-    final card = AppTok.card(context);
-    final text = AppTok.text(context);
-    final textSoft = AppTok.textSoft(context);
     final coupleLine = '$groom  &  $bride';
     final dateStr = date != null ? _formatDate(date) : '';
     return ScaleTransition(
       scale: _pulseScale,
       child: SizedBox(
-        width: 190,
-        height: 172,
+        width: 196,
+        height: 178,
         child: Stack(
           alignment: Alignment.center,
           children: [
+            // سایه نرم پشت
             Container(
-              width: 190,
-              height: 172,
+              width: 196,
+              height: 178,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
+                    color: const Color(0xFFE8475F).withValues(alpha: 0.22),
+                    blurRadius: 32,
+                    spreadRadius: 8,
+                  ),
+                  BoxShadow(
                     color: accent.withValues(alpha: 0.18),
-                    blurRadius: 28,
-                    spreadRadius: 6,
+                    blurRadius: 18,
+                    spreadRadius: 2,
                   ),
                 ],
               ),
             ),
+            // حاشیه قلب — گرادیان پررنگ رز/قرمز ملایم
             Positioned.fill(
               child: ClipPath(
                 clipper: _HeartClipper(),
                 child: Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        accent.withValues(alpha: 0.95),
-                        const Color(0xFFE8B4B8),
-                        accent.withValues(alpha: 0.85),
+                        Color(0xFFE8475F),
+                        Color(0xFFD93A55),
+                        Color(0xFFB02E4A),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -922,52 +927,103 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
             ),
+            // داخل قلب — گرادیان روشن رز تا سفید مایل به صورتی
             Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.all(3.8),
+                padding: const EdgeInsets.all(3.6),
                 child: ClipPath(
                   clipper: _HeartClipper(),
                   child: Container(
-                    color: card,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.favorite_rounded,
-                              color: accent.withValues(alpha: 0.90),
-                              size: 22,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              coupleLine,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: text,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                fontFamily: 'serif',
-                                height: 1.2,
-                              ),
-                            ),
-                            if (dateStr.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                dateStr,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: textSoft,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.3,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFFFF6B81),
+                          Color(0xFFEE4F6B),
+                          Color(0xFFD93A55),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.28),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 16, 18, 26),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.favorite_rounded,
+                                  color: Colors.white,
+                                  size: 18,
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              Text(
+                                coupleLine,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.4,
+                                  height: 1.25,
+                                  shadows: [
+                                    Shadow(
+                                      color: Color(0x66000000),
+                                      blurRadius: 6,
+                                      offset: Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (dateStr.isNotEmpty) ...[
+                                const SizedBox(height: 7),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.32),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    dateStr,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.8,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
