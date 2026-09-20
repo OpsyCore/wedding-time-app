@@ -1829,13 +1829,13 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: [
                 Container(
-                  width: 34,
-                  height: 34,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.pie_chart_outline, color: color, size: 19),
+                  child: const Icon(Icons.pie_chart_outline, color: color, size: 17),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1843,14 +1843,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     AppLang.tr('stat_budget'),
                     style: TextStyle(
                       color: text,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             Center(
               child: CustomPaint(
                 painter: _HalfGaugePainter(
@@ -1859,8 +1859,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   fill: color,
                 ),
                 child: SizedBox(
-                  width: 150,
-                  height: 76,
+                  width: 120,
+                  height: 61,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -1870,18 +1870,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: text,
-                          fontSize: 16,
+                          fontSize: 13,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 1),
                       Text(
                         AppLang.I.isFa
                             ? 'از ${_formatAmount(estimated)}'
                             : 'of ${_formatAmount(estimated)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: textSoft, fontSize: 10.5),
+                        style: TextStyle(color: textSoft, fontSize: 9.5),
                       ),
                     ],
                   ),
@@ -2067,13 +2067,13 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: [
                 Container(
-                  width: 34,
-                  height: 34,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: color, size: 19),
+                  child: Icon(icon, color: color, size: 17),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -2083,32 +2083,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: text,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: text,
-                fontSize: 20,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 1),
             Text(
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: color.withValues(alpha: 0.95),
-                fontSize: 10.5,
+                fontSize: 9.5,
                 fontWeight: FontWeight.w600,
               ),
             ),
