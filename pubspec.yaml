@@ -42,6 +42,22 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.3
+
+# یک عکس در assets/icon/app_icon.png بگذار و بزن:
+#   dart run flutter_launcher_icons
+# خودش همهٔ سایزهای اندروید/iOS/وب را می‌سازد.
+flutter_launcher_icons:
+  android: true # همان ic_launcher فعلی
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#0D0C1A"
+    theme_color: "#0D0C1A"
 
 flutter:
   uses-material-design: true
