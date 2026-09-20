@@ -5,6 +5,14 @@ This folder contains 2 tiny local MP3s used only as **in-app ambient background*
 - `ambient/soft_ambient.mp3` — Soft Ambient, warm & calm
 - `ambient/calm_dreamscape.mp3` — Calm Dreamscape, dreamy & soft
 
+### 4 track slots ready (فایل mp3 را با همین نام‌ها اینجا بگذار)
+- `ambient/arpmedia.mp3` — Arpmedia
+- `ambient/freesoundserver.mp3` — Freesoundserver
+- `ambient/ikoliks.mp3` — Ikoliks
+- `ambient/mondamusic.mp3` — Mondamusic
+
+Until the file exists the app shows a friendly «file missing» hint and never crashes.
+
 ## Source & License
 
 Both tracks are sourced from **Pixabay Music** (free for commercial use, no attribution required, but credited here for transparency).
