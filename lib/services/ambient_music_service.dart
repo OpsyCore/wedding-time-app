@@ -35,6 +35,21 @@ class AmbientMusicService extends ChangeNotifier {
       assetPath: 'assets/audio/ambient/calm_dreamscape.mp3',
       nameKey: 'music_track_calm_dreamscape',
     ),
+    AmbientTrack(
+      id: 'golden_waltz',
+      assetPath: 'assets/audio/ambient/golden_waltz.mp3',
+      nameKey: 'music_track_golden_waltz',
+    ),
+    AmbientTrack(
+      id: 'love_piano',
+      assetPath: 'assets/audio/ambient/love_piano.mp3',
+      nameKey: 'music_track_love_piano',
+    ),
+    AmbientTrack(
+      id: 'wedding_morning',
+      assetPath: 'assets/audio/ambient/wedding_morning.mp3',
+      nameKey: 'music_track_wedding_morning',
+    ),
   ];
 
   final AudioPlayer _player = AudioPlayer();

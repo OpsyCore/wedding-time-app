@@ -5,6 +5,13 @@ This folder contains 2 tiny local MP3s used only as **in-app ambient background*
 - `ambient/soft_ambient.mp3` — Soft Ambient, warm & calm
 - `ambient/calm_dreamscape.mp3` — Calm Dreamscape, dreamy & soft
 
+### 3 track slots ready (فایل mp3 را با همین نام‌ها اینجا بگذار)
+- `ambient/golden_waltz.mp3` — Golden Waltz (والس طلایی)
+- `ambient/love_piano.mp3` — Love Piano (پیانوی عاشقانه)
+- `ambient/wedding_morning.mp3` — Wedding Morning (صبح عروسی)
+
+Until the file exists the app shows a friendly «file missing» hint and never crashes.
+
 ## Source & License
 
 Both tracks are sourced from **Pixabay Music** (free for commercial use, no attribution required, but credited here for transparency).
