@@ -1,7 +1,8 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/app_config.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
@@ -22,7 +23,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _isLoading = false;
-  bool _isLogin = true;
+  // لینک دعوت پارتنر (/join/CODE) → اول ثبت‌نام، نه ورود
+  bool _isLogin = (AppConfig.pendingJoinCode ?? '').isEmpty;
   bool _obscurePassword = true;
 
   @override
@@ -420,6 +422,43 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
+                    if ((AppConfig.pendingJoinCode ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color:
+                              AppTok.accent(context).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color:
+                                AppTok.accent(context).withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.link,
+                              color: AppTok.accent(context),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                AppLang.I.isFa
+                                    ? 'با لینک دعوت پارتنر آمده‌ای — برای پیوستن، اول حساب بساز.'
+                                    : 'You came with a partner invite — create your account first to join.',
+                                style: TextStyle(
+                                  color: AppTok.text(context),
+                                  fontSize: 12,
+                                  height: 1.6,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 40),
                     Form(
                       key: _formKey,

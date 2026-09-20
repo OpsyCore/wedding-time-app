@@ -145,6 +145,23 @@
     href="https://wedding-time-app2.netlify.app/"
   >
 
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Henny+Penny&display=swap" rel="stylesheet">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Henny+Penny&display=swap');
+
+    .font-preload-henny {
+      font-family: 'Henny Penny', cursive;
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      visibility: hidden;
+    }
+  </style>
+
   <!-- Icons -->
 
   <link
@@ -176,6 +193,7 @@
 </head>
 
 <body>
+  <span class="font-preload-henny">Wedding Time</span>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

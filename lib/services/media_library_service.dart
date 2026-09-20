@@ -18,6 +18,8 @@ class MediaLibraryService {
       .doc(weddingId)
       .collection('mediaLibrary');
 
+  Future<int> count() async => (await _col.get()).size;
+
   Stream<List<MediaItemModel>> watchAll({MediaKind? kind}) {
     // فیلتر سمت کلاینت — بدون composite index
     return _col.orderBy('createdAt', descending: true).snapshots().map((snap) {

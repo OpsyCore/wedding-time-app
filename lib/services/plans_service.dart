@@ -6,13 +6,40 @@ import '../core/app_plans.dart';
 import '../models/subscription_plan.dart';
 
 class PlansService {
-  PlansService._();
+  PlansService._() {
+    // کش زندهٔ پرچم مانتایزیشن — وقتی خاموش شود همهٔ قابلیت‌ها برای همه باز است
+    _plansDoc.snapshots().listen((s) {
+      _monetizationOn = (s.data()?['monetizationEnabled'] ?? true) != false;
+    });
+  }
   static final PlansService I = PlansService._();
 
   final _db = FirebaseFirestore.instance;
 
   DocumentReference<Map<String, dynamic>> get _plansDoc =>
       _db.collection('app_config').doc('plans');
+
+  bool _monetizationOn = true;
+
+  /// آیا محدودیت پلن‌ها فعال است؟ (false = همه‌چیز برای همه باز)
+  bool get monetizationOn => _monetizationOn;
+
+  Stream<bool> watchMonetizationEnabled() => _plansDoc.snapshots()
+      .map((s) => (s.data()?['monetizationEnabled'] ?? true) != false);
+
+  Future<bool> fetchMonetizationEnabled() async {
+    final s = await _plansDoc.get();
+    return (s.data()?['monetizationEnabled'] ?? true) != false;
+  }
+
+  Future<void> setMonetizationEnabled(bool on) async {
+    if (!isAdmin) throw Exception('admin_only');
+    await _plansDoc.set({
+      'monetizationEnabled': on,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedBy': FirebaseAuth.instance.currentUser?.email,
+    }, SetOptions(merge: true));
+  }
 
   CollectionReference<Map<String, dynamic>> get _reviewsCol =>
       _db.collection('plan_reviews');

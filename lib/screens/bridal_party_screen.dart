@@ -11,6 +11,7 @@ import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../services/media_upload_service.dart';
+import '../widgets/image_crop_screen.dart';
 
 /// ساقدوش‌ها — دو ستون عروس/داماد در یک صفحه + جزئیات با ضربه
 class BridalPartyScreen extends StatefulWidget {
@@ -136,24 +137,33 @@ class _BridalPartyScreenState extends State<BridalPartyScreen> {
     try {
       final image = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 82,
-        maxWidth: 900,
+        imageQuality: 85,
+        maxWidth: 1200,
       );
       if (image == null) return;
+
+      final raw = await image.readAsBytes();
+      if (!mounted) return;
+      if (raw.isEmpty) {
+        _toast(AppLang.tr('empty_file'), error: true);
+        return;
+      }
+
+      final croppedBytes = await ImageCropScreen.crop(
+        context,
+        bytes: Uint8List.fromList(raw),
+        initialAspectRatio: 1.0,
+        title: AppLang.tr('crop_image'),
+      );
+      if (croppedBytes == null || !mounted) return;
 
       setState(() {
         _uploading = true;
         _uploadingDocId = docId;
       });
 
-      final raw = await image.readAsBytes();
-      if (raw.isEmpty) {
-        _toast(AppLang.tr('empty_file'), error: true);
-        return;
-      }
-
       final result = await MediaUploadService.uploadImageBytes(
-        bytes: Uint8List.fromList(raw),
+        bytes: croppedBytes,
         fileName:
             'bridal_${docId}_${DateTime.now().millisecondsSinceEpoch}.jpg',
       );

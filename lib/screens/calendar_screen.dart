@@ -1003,26 +1003,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       size: 28,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$temp°',
-                        style: TextStyle(
-                          color: AppTok.text(context),
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$temp°',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppTok.text(context),
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                      Text(
-                        _weatherLabel(w.weatherCode),
-                        style: TextStyle(
-                          color: AppTok.textSoft(context),
-                          fontSize: 11.5,
+                        Text(
+                          _weatherLabel(w.weatherCode),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppTok.textSoft(context),
+                            fontSize: 11.5,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

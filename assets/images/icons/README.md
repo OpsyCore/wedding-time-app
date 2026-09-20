@@ -1,0 +1,1 @@
+# Icons inside the app (not launcher)\n# Put your custom tab/feature icons here as PNG/WebP/SVG\n# Example: assets/images/icons/tab_home.png\n# Usage: Image.asset('assets/images/icons/tab_home.png')\n

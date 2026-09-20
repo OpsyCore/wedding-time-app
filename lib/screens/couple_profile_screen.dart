@@ -3,17 +3,23 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../core/app_config.dart';
+import '../core/app_date_picker.dart';
 import '../core/app_effect_controller.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../core/hero_styles.dart';
 import '../services/ambient_music_service.dart';
 import '../services/media_upload_service.dart';
 import '../widgets/ambient_music_controls.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/effect_picker.dart';
+import '../widgets/image_crop_screen.dart';
 import '../widgets/page_glass.dart';
 import '../widgets/wedding_progress_bar.dart';
 
@@ -33,6 +39,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
   final _groomFullCtrl = TextEditingController();
   final _groomShortCtrl = TextEditingController();
   final _groomBioCtrl = TextEditingController();
+  final _hashtagCtrl = TextEditingController();
 
   String? _couplePhotoUrl;
   String? _bridePhotoUrl;
@@ -40,9 +47,16 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
   String? _coupleStoragePath;
   String? _brideStoragePath;
   String? _groomStoragePath;
+  DateTime? _weddingDate;
 
   String _rsvpMode = 'everyone';
   String _nameOrder = 'groom_first';
+
+  // ── ظاهر هیرو (بنر + قلب) ──
+  String _heroBannerId = kDefaultHeroBannerId;
+  String _heroHeartId = kDefaultHeroHeartId;
+  bool _heroHeartVisible = true;
+  bool _heroBannerAnimated = true;
 
   bool _loading = true;
   bool _saving = false;
@@ -85,6 +99,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     _groomFullCtrl.dispose();
     _groomShortCtrl.dispose();
     _groomBioCtrl.dispose();
+    _hashtagCtrl.dispose();
     super.dispose();
   }
 
@@ -135,6 +150,13 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       _brideStoragePath = _emptyToNull(p['brideStoragePath']?.toString());
       _groomStoragePath = _emptyToNull(p['groomStoragePath']?.toString());
 
+      final rawDate = w['weddingDate'] ?? w['eventDate'] ?? p['weddingDate'];
+      if (rawDate is Timestamp) {
+        _weddingDate = rawDate.toDate();
+      } else if (rawDate is DateTime) {
+        _weddingDate = rawDate;
+      }
+
       _rsvpMode = (p['rsvpMode'] ?? 'everyone').toString();
       if (!const ['everyone', 'invitees', 'off'].contains(_rsvpMode)) {
         _rsvpMode = 'everyone';
@@ -143,6 +165,14 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       if (!const ['groom_first', 'bride_first'].contains(_nameOrder)) {
         _nameOrder = 'groom_first';
       }
+      _hashtagCtrl.text = (p['hashtag'] ?? '').toString();
+
+      _heroBannerId = (p[heroBannerField] ?? kDefaultHeroBannerId).toString();
+      if (_heroBannerId.trim().isEmpty) _heroBannerId = kDefaultHeroBannerId;
+      _heroHeartId = (p[heroHeartField] ?? kDefaultHeroHeartId).toString();
+      if (_heroHeartId.trim().isEmpty) _heroHeartId = kDefaultHeroHeartId;
+      _heroHeartVisible = p[heroHeartVisibleField] is bool ? p[heroHeartVisibleField] as bool : true;
+      _heroBannerAnimated = p[heroBannerAnimatedField] is bool ? p[heroBannerAnimatedField] as bool : true;
 
       _completePercent = _calcProgress();
     } catch (e) {
@@ -169,6 +199,14 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
 
   void _recalcProgress() {
     _completePercent = _calcProgress();
+  }
+
+  Future<void> _saveHeroField(Map<String, dynamic> patch) async {
+    try {
+      await _profileRef.set(patch, SetOptions(merge: true));
+    } catch (e) {
+      _toast('${AppLang.tr('save_error')}: $e', error: true);
+    }
   }
 
   String _pathFromUploadResult(dynamic result, String url) {
@@ -204,24 +242,35 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     try {
       final image = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1400,
+        imageQuality: 88,
+        maxWidth: 1800,
       );
       if (image == null) return;
       if (!mounted) return;
-      setState(() {
-        _uploading = true;
-        _uploadingKind = kind;
-      });
+
       final raw = await image.readAsBytes();
+      if (!mounted) return;
       if (raw.isEmpty) {
         _toast(AppLang.tr('empty_file'), error: true);
         return;
       }
-      final bytes = Uint8List.fromList(raw);
+
+      final croppedBytes = await ImageCropScreen.crop(
+        context,
+        bytes: Uint8List.fromList(raw),
+        initialAspectRatio: kind == 'couple' ? 16.0 / 9.0 : 1.0,
+        title: AppLang.tr('crop_image'),
+      );
+      if (croppedBytes == null || !mounted) return;
+
+      setState(() {
+        _uploading = true;
+        _uploadingKind = kind;
+      });
+
       final fileName = 'profile_${kind}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final result = await MediaUploadService.uploadImageBytes(
-        bytes: bytes,
+        bytes: croppedBytes,
         fileName: fileName,
       );
       final url = _urlFromUploadResult(result);
@@ -278,8 +327,14 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         'groomFullName': _groomFullCtrl.text.trim(),
         'groomShortName': _groomShortCtrl.text.trim(),
         'groomBio': _groomBioCtrl.text.trim(),
+        'weddingDate': _weddingDate != null ? Timestamp.fromDate(_weddingDate!) : null,
         'rsvpMode': _rsvpMode,
         'nameOrder': _nameOrder,
+        'hashtag': _hashtagCtrl.text.trim(),
+        heroBannerField: _heroBannerId,
+        heroHeartField: _heroHeartId,
+        heroHeartVisibleField: _heroHeartVisible,
+        heroBannerAnimatedField: _heroBannerAnimated,
         'completePercent': percent,
         'completePercentInt': (percent * 100).round(),
         'provider': 'imgbb',
@@ -290,6 +345,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       await _weddingRef.set({
         'brideName': _brideFullCtrl.text.trim(),
         'groomName': _groomFullCtrl.text.trim(),
+        'weddingDate': _weddingDate != null ? Timestamp.fromDate(_weddingDate!) : null,
         'profileCompletePercent': percent,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
@@ -375,6 +431,84 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                             const SizedBox(height: 14),
                             _couplePhotoCard(context),
                             const SizedBox(height: 14),
+                            _heroAppearanceCard(context),
+                            const SizedBox(height: 14),
+                            _sectionCard(
+                              context,
+                              icon: Icons.calendar_month_rounded,
+                              title: AppLang.tr('wedding_date'),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () async {
+                                  final picked = await showAppDatePicker(
+                                    context,
+                                    initialDate: _weddingDate ??
+                                        DateTime.now().add(const Duration(days: 30)),
+                                  );
+                                  if (picked != null) {
+                                    setState(() {
+                                      _weddingDate = picked;
+                                      _recalcProgress();
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTok.cardSoft(context),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: AppTok.border(context)
+                                          .withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.event_available_rounded,
+                                        color: AppTok.accent(context),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              AppLang.tr('wedding_date'),
+                                              style: TextStyle(
+                                                color: AppTok.textSoft(context),
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              _weddingDate == null
+                                                  ? AppLang.tr('select_wedding_date')
+                                                  : '${_weddingDate!.year}/${_weddingDate!.month.toString().padLeft(2, '0')}/${_weddingDate!.day.toString().padLeft(2, '0')}',
+                                              style: TextStyle(
+                                                color: AppTok.text(context),
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.edit_calendar_rounded,
+                                        color: AppTok.accent(context),
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
                             _sectionCard(
                               context,
                               icon: Icons.woman_2_rounded,
@@ -459,13 +593,15 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                             const SizedBox(height: 14),
                             _sectionCard(
                               context,
-                              icon: Icons.auto_awesome_rounded,
-                              title: AppLang.tr('effect'),
+                              icon: Icons.badge_outlined,
+                              title: AppLang.I.isFa ? 'هویت مراسم' : 'Ceremony identity',
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    AppLang.tr('effect_hint'),
+                                    AppLang.I.isFa
+                                        ? 'هشتگ اختصاصی‌تان را بسازید و کارت زوج را یک‌ضرب برای خانواده بفرستید.'
+                                        : 'Create your own hashtag and share your couple card in one tap.',
                                     style: TextStyle(
                                       color: AppTok.textSoft(context),
                                       fontSize: 12,
@@ -473,28 +609,116 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  const EffectPicker(showLabel: false),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            _sectionCard(
-                              context,
-                              icon: Icons.music_note_rounded,
-                              title: AppLang.tr('ambient_music'),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    AppLang.tr('ambient_music_hint'),
-                                    style: TextStyle(
-                                      color: AppTok.textSoft(context),
-                                      fontSize: 12,
-                                      height: 1.4,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTok.cardSoft(context),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: AppTok.border(context)
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.tag_rounded,
+                                          color: AppTok.accent(context),
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _hashtagCtrl,
+                                            style: TextStyle(
+                                              color: AppTok.text(context),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            decoration: InputDecoration(
+                                              border: InputBorder.none,
+                                              isDense: true,
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 10),
+                                              hintText: AppLang.I.isFa
+                                                  ? '#علی_و_سارا'
+                                                  : '#Ali_And_Sara',
+                                              hintStyle: TextStyle(
+                                                color: AppTok.textSoft(context)
+                                                    .withValues(alpha: 0.6),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: AppLang.I.isFa
+                                              ? 'پیشنهاد خودکار'
+                                              : 'Auto suggest',
+                                          onPressed: _suggestHashtag,
+                                          icon: Icon(
+                                            Icons.auto_fix_high_rounded,
+                                            color: AppTok.accent(context),
+                                            size: 19,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: AppLang.tr('copy'),
+                                          onPressed: () async {
+                                            final t =
+                                                _hashtagCtrl.text.trim();
+                                            if (t.isEmpty) return;
+                                            await Clipboard.setData(
+                                              ClipboardData(text: t),
+                                            );
+                                            if (!mounted) return;
+                                            _toast(AppLang.tr('copied'));
+                                          },
+                                          icon: Icon(
+                                            Icons.copy_rounded,
+                                            color: AppTok.textSoft(context),
+                                            size: 18,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  const AmbientMusicControls(showTitle: false),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(
+                                          color: AppTok.accent(context)
+                                              .withValues(alpha: 0.5),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
+                                      ),
+                                      onPressed: _shareCoupleCard,
+                                      icon: Icon(
+                                        Icons.share_rounded,
+                                        color: AppTok.accent(context),
+                                        size: 18,
+                                      ),
+                                      label: Text(
+                                        AppLang.I.isFa
+                                            ? 'اشتراک کارت زوج'
+                                            : 'Share couple card',
+                                        style: TextStyle(
+                                          color: AppTok.accent(context),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -567,6 +791,49 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         );
       },
     );
+  }
+
+  void _suggestHashtag() {
+    final b = _brideShortCtrl.text.trim().isNotEmpty
+        ? _brideShortCtrl.text.trim()
+        : _brideFullCtrl.text.trim();
+    final g = _groomShortCtrl.text.trim().isNotEmpty
+        ? _groomShortCtrl.text.trim()
+        : _groomFullCtrl.text.trim();
+    if (b.isEmpty || g.isEmpty) {
+      _toast(
+        AppLang.I.isFa
+            ? 'اول نام عروس و داماد را بنویس'
+            : 'Enter bride & groom names first',
+      );
+      return;
+    }
+    setState(() {
+      _hashtagCtrl.text = AppLang.I.isFa
+          ? '#${b}_و_$g'
+          : '#${b.replaceAll(' ', '')}And${g.replaceAll(' ', '')}';
+    });
+  }
+
+  Future<void> _shareCoupleCard() async {
+    final bride = _brideFullCtrl.text.trim();
+    final groom = _groomFullCtrl.text.trim();
+    final names =
+        _nameOrder == 'bride_first' ? '$bride & $groom' : '$groom & $bride';
+    String link = '';
+    try {
+      final w = await _weddingRef.get();
+      final slug = ((w.data()?['slug'] ?? w.data()?['inviteSlug'] ?? '')
+          .toString());
+      if (slug.isNotEmpty) link = AppConfig.inviteUrl(slug);
+    } catch (_) {}
+    final tag = _hashtagCtrl.text.trim();
+    final date = _weddingDate == null
+        ? ''
+        : '📅 ${_weddingDate!.year}/${_weddingDate!.month.toString().padLeft(2, '0')}/${_weddingDate!.day.toString().padLeft(2, '0')}\n';
+    final text =
+        '💍 $names\n$date${tag.isNotEmpty ? '$tag\n' : ''}${link.isNotEmpty ? '🔗 $link' : ''}';
+    await Share.share(text);
   }
 
   Widget _progressHeader(BuildContext context) {
@@ -694,6 +961,261 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── انتخاب بنر + قلب هیرو ──
+  Widget _heroAppearanceCard(BuildContext context) {
+    return PageGlass(
+      opacity: 0.84,
+      blurSigma: 12,
+      borderRadius: 22,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppTok.accent(context).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.auto_awesome_rounded, color: AppTok.accent(context), size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                AppLang.I.isFa ? 'ظاهر کارت خانه' : 'Home card style',
+                style: TextStyle(color: AppTok.text(context), fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            AppLang.I.isFa
+                ? 'بنر پشت کارت و آیکون قلب را انتخاب کن — یا قلب را کلا مخفی کن تا فقط عکس دو نفره و تایمر بماند.'
+                : 'Pick banner & heart icon — or hide heart to show only photo + timer.',
+            style: TextStyle(color: AppTok.textSoft(context), fontSize: 11.5, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          Text('Banner Image', style: TextStyle(color: AppTok.textSoft(context), fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 86,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: HeroBannerOption.all.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final opt = HeroBannerOption.all[i];
+                final selected = opt.id == _heroBannerId;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _heroBannerId = opt.id);
+                    _saveHeroField({heroBannerField: opt.id});
+                  },
+                  child: Container(
+                    width: 76,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: selected ? AppTok.accent(context) : AppTok.border(context).withValues(alpha: 0.6), width: selected ? 2.2 : 1),
+                      boxShadow: selected ? [BoxShadow(color: AppTok.accent(context).withValues(alpha: 0.22), blurRadius: 8)] : null,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: opt.id == 'none'
+                          ? Container(
+                              color: AppTok.cardSoft(context),
+                              child: Center(child: Icon(Icons.block_rounded, color: AppTok.textSoft(context), size: 28)),
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: opt.gradient,
+                                ),
+                              ),
+                              child: Center(child: Icon(opt.icon, size: 28, color: Colors.white.withValues(alpha: 0.9))),
+                            ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text('Heart Icon', style: TextStyle(color: AppTok.textSoft(context), fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 86,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: HeroHearts.all.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final h = HeroHearts.all[i];
+                final selected = h.id == _heroHeartId && _heroHeartVisible;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _heroHeartId = h.id;
+                      _heroHeartVisible = true;
+                    });
+                    _saveHeroField({heroHeartField: h.id, heroHeartVisibleField: true});
+                  },
+                  child: Container(
+                    width: 76,
+                    decoration: BoxDecoration(
+                      color: AppTok.cardSoft(context),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: selected ? AppTok.accent(context) : AppTok.border(context).withValues(alpha: 0.6), width: selected ? 2.2 : 1),
+                      boxShadow: selected ? [BoxShadow(color: AppTok.accent(context).withValues(alpha: 0.18), blurRadius: 8)] : null,
+                    ),
+                    child: Center(child: _miniHeartPreview(h)),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          // دکمه مخفی‌سازی قلب
+          InkWell(
+            onTap: () {
+              final next = !_heroHeartVisible;
+              setState(() => _heroHeartVisible = next);
+              _saveHeroField({heroHeartVisibleField: next});
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: _heroHeartVisible ? AppTok.cardSoft(context) : AppTok.accent(context).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _heroHeartVisible ? AppTok.border(context) : AppTok.accent(context).withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  Icon(_heroHeartVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      size: 18, color: _heroHeartVisible ? AppTok.textSoft(context) : AppTok.accent(context)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      AppLang.I.isFa
+                          ? (_heroHeartVisible ? 'قلب نمایش داده می‌شود — بزن برای مخفی کردن' : 'قلب مخفی است — فقط عکس و تایمر')
+                          : (_heroHeartVisible ? 'Heart visible — tap to hide' : 'Heart hidden — photo + timer only'),
+                      style: TextStyle(color: _heroHeartVisible ? AppTok.textSoft(context) : AppTok.accent(context), fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // سوییچ انیمیشن بنر
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTok.cardSoft(context),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTok.border(context).withValues(alpha: 0.6)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppLang.I.isFa ? 'فعال/غیرفعال کردن انیمیشن بنر' : 'Banner animation',
+                    style: TextStyle(color: AppTok.text(context), fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Switch(
+                  value: _heroBannerAnimated,
+                  activeTrackColor: AppTok.accent(context).withValues(alpha: 0.45),
+                  activeThumbColor: AppTok.accent(context),
+                  onChanged: (v) {
+                    setState(() => _heroBannerAnimated = v);
+                    _saveHeroField({heroBannerAnimatedField: v});
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniHeartPreview(HeroHeartOption h) {
+    const double w = 56, hh = 50;
+    Widget heartFill = Container(color: h.base);
+    // بافت‌های کوچک
+    Widget? overlay;
+    switch (h.style) {
+      case HeartStyle.purpleBow:
+        overlay = Stack(children: [
+          Positioned.fill(child: Padding(padding: const EdgeInsets.all(3), child: ClipPath(clipper: _MiniHeartClipper(), child: CustomPaint(painter: _MiniStitchPainter())))),
+          Positioned(top: 2, left: 19, child: _miniBow(color: const Color(0xFFD8C6F0), knot: const Color(0xFFB89EE8))),
+        ]);
+        break;
+      case HeartStyle.pinkStars:
+        overlay = Stack(children: [
+          Positioned(left: 8, top: 8, child: Icon(Icons.star, size: 7, color: const Color(0xFFFFEB3B).withValues(alpha: 0.95))),
+          Positioned(left: 28, top: 7, child: Icon(Icons.star, size: 6, color: const Color(0xFF81D4FA).withValues(alpha: 0.95))),
+          Positioned(left: 38, top: 14, child: Icon(Icons.star, size: 6, color: const Color(0xFFFFB74D).withValues(alpha: 0.95))),
+          Positioned(left: 14, top: 20, child: Icon(Icons.star, size: 6, color: Colors.white.withValues(alpha: 0.85))),
+          Positioned(left: 32, top: 26, child: Icon(Icons.star, size: 5, color: const Color(0xFF80CBC4).withValues(alpha: 0.95))),
+        ]);
+        break;
+      case HeartStyle.blueWatercolor:
+        overlay = Opacity(opacity: 0.45, child: Center(child: Container(width: 18, height: 18, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle))));
+        break;
+      case HeartStyle.goldVelvet:
+        overlay = Stack(children: [
+          Align(alignment: Alignment.center, child: Container(width: 1, color: const Color(0xFF8C6F00).withValues(alpha: 0.55))),
+          Positioned(top: 6, right: 8, child: Icon(Icons.auto_awesome, size: 7, color: Colors.white.withValues(alpha: 0.6))),
+        ]);
+        break;
+      case HeartStyle.pinkRuffleBow:
+        overlay = Stack(children: [
+          Positioned.fill(child: CustomPaint(painter: _MiniRufflePainter(color: const Color(0xFFF8BBD0)))),
+          Positioned(top: 1, left: 21, child: _miniBow(color: const Color(0xFFE53935), knot: const Color(0xFFB71C1C), small: true)),
+        ]);
+        break;
+      case HeartStyle.greenRuffle:
+        overlay = Positioned.fill(child: CustomPaint(painter: _MiniRufflePainter(color: const Color(0xFF7CB342))));
+        break;
+    }
+    return SizedBox(
+      width: w,
+      height: hh,
+      child: Stack(alignment: Alignment.center, children: [
+        // سایه
+        Container(width: w, height: hh, decoration: BoxDecoration(boxShadow: [BoxShadow(color: h.base.withValues(alpha: 0.25), blurRadius: 6)])),
+        ClipPath(
+          clipper: _MiniHeartClipper(),
+          child: SizedBox(width: w, height: hh, child: Stack(fit: StackFit.expand, children: [heartFill, if (overlay != null) overlay])),
+        ),
+      ]),
+    );
+  }
+
+  Widget _miniBow({required Color color, required Color knot, bool small = false}) {
+    final lw = small ? 8.0 : 10.0;
+    final lh = small ? 6.0 : 7.0;
+    return SizedBox(
+      width: small ? 18 : 22,
+      height: small ? 9 : 11,
+      child: Stack(alignment: Alignment.center, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(width: lw, height: lh, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+          SizedBox(width: 2, height: lh),
+          Container(width: lw, height: lh, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+        ]),
+        Container(width: 5, height: 7, decoration: BoxDecoration(color: knot, borderRadius: BorderRadius.circular(2))),
+      ]),
     );
   }
 
@@ -909,4 +1431,87 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       ],
     );
   }
+}
+
+class _MiniHeartClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final w = size.width, h = size.height;
+    final path = Path();
+    path.moveTo(w / 2, h * 0.97);
+    path.cubicTo(-w * 0.25, h * 0.60, w * 0.02, h * 0.02, w / 2, h * 0.30);
+    path.cubicTo(w * 0.98, h * 0.02, w * 1.25, h * 0.60, w / 2, h * 0.97);
+    path.close();
+    return path;
+  }
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _MiniStitchPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = _MiniHeartClipper().getClip(size);
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.stroke..strokeWidth = 0.9..strokeCap = StrokeCap.round;
+    final dashed = Path();
+    for (final m in path.computeMetrics()) {
+      double d = 0;
+      while (d < m.length) {
+        final e = (d + 3.5).clamp(0.0, m.length);
+        dashed.addPath(m.extractPath(d, e), Offset.zero);
+        d = e + 2.5;
+      }
+    }
+    canvas.drawPath(dashed, paint);
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MiniRufflePainter extends CustomPainter {
+  final Color color;
+  const _MiniRufflePainter({required this.color});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = _MiniHeartClipper().getClip(size);
+    final fill = Paint()..color = color..style = PaintingStyle.fill;
+    final stitch = Paint()..color = Colors.white.withValues(alpha: 0.55)..style = PaintingStyle.stroke..strokeWidth = 0.7..strokeCap = StrokeCap.round;
+    for (final m in path.computeMetrics()) {
+      final len = m.length;
+      for (double d = 0; d < len; d += 7) {
+        final t = m.getTangentForOffset(d);
+        if (t == null) continue;
+        canvas.drawCircle(t.position, 2.3, fill);
+      }
+      // inner stitch
+      final dashed = Path();
+      double dist = 0;
+      while (dist < len) {
+        final e = (dist + 2.5).clamp(0.0, len);
+        dashed.addPath(m.extractPath(dist, e), Offset.zero);
+        dist = e + 2.5;
+      }
+      canvas.drawPath(dashed, stitch);
+      break;
+    }
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MiniDotPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = Colors.white.withValues(alpha: 0.55)..style = PaintingStyle.fill;
+    final cx = size.width / 2, cy = size.height / 2;
+    const r = 1.6;
+    for (final a in [0.0, 0.9, 1.8, 2.7, 3.6, 4.5, 5.4]) {
+      canvas.drawCircle(Offset(cx + 18 * (a > 3 ? 1 : -1) * 0.5, cy), r, p);
+    }
+    canvas.drawCircle(Offset(cx, cy - 16), r, p);
+    canvas.drawCircle(Offset(cx - 12, cy - 10), r, p);
+    canvas.drawCircle(Offset(cx + 12, cy - 10), r, p);
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

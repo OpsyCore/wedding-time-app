@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +11,9 @@ import '../core/app_date_picker.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../core/invite_templates.dart';
+import '../services/entertainment_service.dart';
+import '../services/plan_access.dart';
 import '../core/map_launcher.dart';
 import '../models/invitation_model.dart';
 import '../services/invitation_service.dart';
@@ -53,20 +58,26 @@ class _InvitationScreenState extends State<InvitationScreen>
   double? _lat;
   double? _lng;
 
+  /// قالب فعال دعوت‌نامه — از سند مراسم (inviteTemplateId)، لایو آپدیت می‌شود
+  String _templateId = 'classic';
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _templateSub;
+  InviteTemplate get _template => InviteTemplate.byId(_templateId);
+
   WeatherSnapshot? _weather;
   bool _weatherLoading = false;
 
-  DocumentReference get inviteRef => FirebaseFirestore.instance
-      .collection('weddings')
-      .doc(widget.weddingId)
-      .collection('invitation')
-      .doc('main');
+  DocumentReference<Map<String, dynamic>> get inviteRef =>
+      FirebaseFirestore.instance
+          .collection('weddings')
+          .doc(widget.weddingId)
+          .collection('invitation')
+          .doc('main');
 
-  DocumentReference get weddingRef =>
+  DocumentReference<Map<String, dynamic>> get weddingRef =>
       FirebaseFirestore.instance.collection('weddings').doc(widget.weddingId);
 
   /// همان داکی که CoupleProfileScreen می‌نویسد — منبع اصلیِ اسم‌ها و عکسِ دو نفر.
-  DocumentReference get profileRef =>
+  DocumentReference<Map<String, dynamic>> get profileRef =>
       weddingRef.collection('profile').doc('main');
 
   /// اسم‌هایی که از پروفایل زوج می‌آیند (برای تشخیصِ تغییرِ دستی هنگام ذخیره)
@@ -163,10 +174,20 @@ class _InvitationScreenState extends State<InvitationScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _bootstrap();
+    // لایو شنیدن تغییر قالب از Firestore (وقتی _openTemplatePicker می‌زند)
+    _templateSub = weddingRef.snapshots().listen((snap) {
+      final data = snap.data() as Map<String, dynamic>?;
+      final t = (data?[inviteTemplateField] ?? 'classic').toString().trim();
+      final id = t.isEmpty ? 'classic' : t;
+      if (id != _templateId && mounted) {
+        setState(() => _templateId = id);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _templateSub?.cancel();
     _tabController.dispose();
     _coverTitleC.dispose();
     _brideC.dispose();
@@ -193,6 +214,9 @@ class _InvitationScreenState extends State<InvitationScreen>
   Future<void> _bootstrap() async {
     final weddingSnap = await weddingRef.get();
     final wedding = weddingSnap.data() as Map<String, dynamic>? ?? {};
+    // مقدار اولیه قالب
+    final tpl0 = (wedding[inviteTemplateField] ?? 'classic').toString().trim();
+    _templateId = tpl0.isEmpty ? 'classic' : tpl0;
 
     final profileSnap = await profileRef.get();
     final profile = profileSnap.data() as Map<String, dynamic>? ?? {};
@@ -755,6 +779,14 @@ class _InvitationScreenState extends State<InvitationScreen>
             ),
           ),
           IconButton(
+            tooltip: AppLang.I.isFa ? 'قالب دعوت‌نامه' : 'Invite template',
+            onPressed: () => _openTemplatePicker(context),
+            icon: Icon(
+              Icons.palette_outlined,
+              color: AppTok.accent(context),
+            ),
+          ),
+          IconButton(
             tooltip: _t(
               'share_guest_link',
               'اشتراک لینک مهمان',
@@ -764,6 +796,126 @@ class _InvitationScreenState extends State<InvitationScreen>
             icon: Icon(Icons.ios_share, color: AppTok.accent(context)),
           ),
         ],
+      ),
+    );
+  }
+
+  /// انتخاب قالب دعوت‌نامه — قالب‌های پرمیوم فقط برای پلن پرمیوم
+  Future<void> _openTemplatePicker(BuildContext context) async {
+    final w = await FirebaseFirestore.instance
+        .collection('weddings')
+        .doc(widget.weddingId)
+        .get();
+    final current =
+        (w.data()?[inviteTemplateField] ?? 'classic').toString();
+    final limits = await PlanAccess.I.weddingLimits(widget.weddingId);
+    if (!context.mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTok.card(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: AppLang.I.direction,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  AppLang.I.isFa
+                      ? 'قالب دعوت‌نامه'
+                      : 'Invite template',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTok.text(ctx),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children: InviteTemplate.all.map((tpl) {
+                    final allowed = limits.templates.contains(tpl.id);
+                    final selected = current == tpl.id;
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        if (!allowed) {
+                          Navigator.pop(ctx);
+                          await PlanAccess.I.showUpgradeDialog(
+                            context,
+                            weddingId: widget.weddingId,
+                            featureFa: 'قالب‌های اختصاصی دعوت‌نامه',
+                            featureEn: 'Exclusive invite templates',
+                          );
+                          return;
+                        }
+                        await FirebaseFirestore.instance
+                            .collection('weddings')
+                            .doc(widget.weddingId)
+                            .set({inviteTemplateField: tpl.id},
+                                SetOptions(merge: true));
+                        if (mounted) setState(() => _templateId = tpl.id);
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        width: 108,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [tpl.bgTop, tpl.bgBottom],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: selected
+                                ? tpl.accent
+                                : tpl.border,
+                            width: selected ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              tpl.decor,
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              tpl.name(AppLang.I.isFa),
+                              style: TextStyle(
+                                color: tpl.text,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (!allowed)
+                              Icon(
+                                Icons.lock_outline,
+                                size: 13,
+                                color: tpl.accent,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -778,6 +930,7 @@ class _InvitationScreenState extends State<InvitationScreen>
         _InvitationCard(
           model: m,
           portalUrl: portalUrl,
+          template: _template,
           formatDate: _formatDate,
           formatDateMockup: _formatDateMockup,
           fa: fa,
@@ -1203,6 +1356,8 @@ class _InvitationScreenState extends State<InvitationScreen>
           ),
         ),
         const SizedBox(height: 20),
+        _entertainmentSection(context),
+        const SizedBox(height: 20),
         _sectionTitle(
           context,
           _t('guest_portal_link', 'لینک پورتال مهمان', 'Guest portal link'),
@@ -1436,6 +1591,181 @@ class _InvitationScreenState extends State<InvitationScreen>
     );
   }
 
+  static const List<Map<String, Object>> _entModules = [
+    {
+      'key': 'timeline',
+      'icon': Icons.view_timeline_outlined,
+      'fa': 'برنامه روز',
+      'en': 'Schedule'
+    },
+    {
+      'key': 'camera',
+      'icon': Icons.photo_camera_outlined,
+      'fa': 'دوربین مهمان',
+      'en': 'Photo booth'
+    },
+    {
+      'key': 'wishes',
+      'icon': Icons.favorite_border,
+      'fa': 'آرزو و پیام',
+      'en': 'Wishes'
+    },
+    {
+      'key': 'seating',
+      'icon': Icons.event_seat_outlined,
+      'fa': 'میز و صندلی',
+      'en': 'Seating'
+    },
+    {
+      'key': 'gallery',
+      'icon': Icons.photo_library_outlined,
+      'fa': 'گالری',
+      'en': 'Gallery'
+    },
+    {
+      'key': 'gifts',
+      'icon': Icons.card_giftcard_outlined,
+      'fa': 'هدایا',
+      'en': 'Gifts'
+    },
+    {
+      'key': 'supports',
+      'icon': Icons.volunteer_activism_outlined,
+      'fa': 'حمایت‌ها',
+      'en': 'Supports'
+    },
+    {
+      'key': 'story',
+      'icon': Icons.auto_stories_outlined,
+      'fa': 'داستان عشق',
+      'en': 'Love story'
+    },
+  ];
+
+  /// پنل «سرگرمی مهمان‌ها» — زوج تعیین می‌کند مهمان‌ها چه ببینند
+  Widget _entertainmentSection(BuildContext context) {
+    final isFa = AppLang.I.isFa;
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle(
+          context,
+          isFa ? 'سرگرمی مهمان‌ها' : 'Entertainment for guests',
+        ),
+        const SizedBox(height: 6),
+        Text(
+          isFa
+              ? 'تعیین کن مهمان‌ها در پورتال خود چه بخش‌هایی را ببینند.'
+              : 'Choose which modules guests can see in their portal.',
+          style: TextStyle(color: textSoft, fontSize: 12, height: 1.6),
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<Map<String, bool>>(
+          stream: EntertainmentService.watch(widget.weddingId),
+          builder: (context, snap) {
+            final ent = snap.data ??
+                {for (final k in EntertainmentService.keys) k: true};
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                childAspectRatio: 0.74,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: _entModules.length,
+              itemBuilder: (context, i) {
+                final m = _entModules[i];
+                final key = m['key'] as String;
+                final on = ent[key] == true;
+                return Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTok.card(context),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: on
+                                ? AppTok.accent(context)
+                                    .withValues(alpha: 0.4)
+                                : AppTok.border(context),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 15,
+                              backgroundColor: AppTok.accent(context)
+                                  .withValues(alpha: on ? 0.16 : 0.08),
+                              child: Icon(
+                                m['icon'] as IconData,
+                                size: 15,
+                                color: on
+                                    ? AppTok.accent(context)
+                                    : textSoft,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            // برچسب با scaleDown هرگز سرریز نمی‌شود
+                            SizedBox(
+                              width: double.infinity,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  isFa ? m['fa'] as String : m['en'] as String,
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    color: text,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Transform.scale(
+                      scale: 0.8,
+                      child: Switch(
+                        value: on,
+                        onChanged: (v) => EntertainmentService.set(
+                          widget.weddingId,
+                          key,
+                          v,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      on
+                          ? (isFa ? 'فعال' : 'Active')
+                          : (isFa ? 'خاموش' : 'Off'),
+                      style: TextStyle(
+                        color: on ? AppTok.accent(context) : textSoft,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _sectionTitle(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -1484,10 +1814,11 @@ class _InvitationScreenState extends State<InvitationScreen>
   }
 }
 
-/// کارت پیش‌نمایش = light mockup عمدی + FloralDecor
+/// کارت پیش‌نمایش — اکنون کاملاً تابعِ قالبِ انتخابی (رنگ/طرح/ایموجی)
 class _InvitationCard extends StatelessWidget {
   final InvitationModel model;
   final String portalUrl;
+  final InviteTemplate template;
   final String Function(DateTime?) formatDate;
   final String Function(DateTime?) formatDateMockup;
   final String Function(String) fa;
@@ -1498,6 +1829,7 @@ class _InvitationCard extends StatelessWidget {
   const _InvitationCard({
     required this.model,
     required this.portalUrl,
+    required this.template,
     required this.formatDate,
     required this.formatDateMockup,
     required this.fa,
@@ -1505,16 +1837,6 @@ class _InvitationCard extends StatelessWidget {
     required this.weatherLoading,
     required this.onOpenMap,
   });
-
-  static const _brandGreen = AppPalette.brandGreen;
-  static const _brandBlush = AppPalette.brandBlush;
-  static const _ink = Color(0xFF3A342E);
-  static const _softInk = AppPalette.textSoft;
-  static const _deep = AppPalette.accentDeep;
-  static const _accent = AppPalette.accent;
-  static const _border = AppPalette.border;
-  static const _cream = Color(0xFFF7F1E6);
-  static const _inner = Color(0xFFFFFBF4);
 
   String _t(String key, String fallback) {
     final v = AppLang.tr(key);
@@ -1545,29 +1867,38 @@ class _InvitationCard extends StatelessWidget {
         model.venueAddress.trim().isNotEmpty ||
         model.googleMapsLink.isNotEmpty ||
         model.hasGeo;
-
-    // QR = فقط لینک پورتال مهمان
     final qrData = portalUrl.trim().isNotEmpty ? portalUrl : model.coupleTitle;
+
+    // رنگ‌های قالب — دیگر light mockup ثابت نیست
+    final bgTop = template.bgTop;
+    final bgBottom = template.bgBottom;
+    final card = template.card;
+    final accent = template.accent;
+    final text = template.text;
+    final textSoft = template.textSoft;
+    final border = template.border;
+    final decor = template.decor;
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: _cream,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: _brandGreen.withValues(alpha: 0.22),
-          width: 1.2,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [bgTop, bgBottom],
         ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: accent.withValues(alpha: 0.35), width: 1.4),
         boxShadow: [
           BoxShadow(
-            color: _brandGreen.withValues(alpha: 0.10),
+            color: accent.withValues(alpha: 0.18),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),
-          const BoxShadow(
-            color: AppPalette.shadow,
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
             blurRadius: 16,
-            offset: Offset(0, 6),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -1575,35 +1906,50 @@ class _InvitationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         child: Stack(
           children: [
-            const Positioned.fill(
-              child: FloralDecor(intensity: 1.2, frameMode: true),
+            // پترن گل ملایم (شدت کمتر برای قالب‌های تیره)
+            Positioned.fill(
+              child: Opacity(
+                opacity: template.id == 'classic' ? 0.9 : 0.35,
+                child: const FloralDecor(intensity: 1.05, frameMode: true),
+              ),
             ),
+            // کارت داخلی با رنگ قالب
             Positioned.fill(
               child: Container(
-                margin: const EdgeInsets.all(16),
+                margin: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: _inner.withValues(alpha: 0.84),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: _brandGreen.withValues(alpha: 0.16),
-                  ),
+                  color: card.withValues(alpha: 0.96),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: border, width: 1.1),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 26),
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
               child: Column(
                 children: [
+                  // ایموجی/دکور قالب — اکنون داخل کارت نمایش کامل دارد، نه فقط شناور
+                  Text(decor, style: const TextStyle(fontSize: 30)),
+                  const SizedBox(height: 6),
+                  Text(
+                    template.name(AppLang.I.isFa),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   Text(
                     _t(
                       'you_are_invited',
-                      AppLang.I.isFa
-                          ? 'شما دعوتید به'
-                          : 'YOU ARE INVITED TO',
+                      AppLang.I.isFa ? 'شما دعوتید به' : 'YOU ARE INVITED TO',
                     ).toUpperCase(),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _deep.withValues(alpha: 0.88),
+                      color: accent.withValues(alpha: 0.92),
                       fontSize: 10.5,
                       letterSpacing: 1.8,
                       fontWeight: FontWeight.w700,
@@ -1616,8 +1962,8 @@ class _InvitationCard extends StatelessWidget {
                       AppLang.I.isFa ? 'عروسی' : 'THE WEDDING OF',
                     ).toUpperCase(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: _softInk,
+                    style: TextStyle(
+                      color: textSoft,
                       fontSize: 10.5,
                       letterSpacing: 1.6,
                       fontWeight: FontWeight.w600,
@@ -1627,12 +1973,12 @@ class _InvitationCard extends StatelessWidget {
                   Text(
                     _groom,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'serif',
-                      color: _ink,
-                      fontSize: 36,
+                      color: text,
+                      fontSize: 34,
                       height: 1.05,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -1642,7 +1988,7 @@ class _InvitationCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'serif',
-                      color: _deep.withValues(alpha: 0.9),
+                      color: accent,
                       fontSize: 24,
                       fontStyle: FontStyle.italic,
                     ),
@@ -1651,36 +1997,32 @@ class _InvitationCard extends StatelessWidget {
                   Text(
                     _bride,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'serif',
-                      color: _ink,
-                      fontSize: 36,
+                      color: text,
+                      fontSize: 34,
                       height: 1.05,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(child: Container(height: 1, color: _border)),
+                      Expanded(child: Container(height: 1, color: border)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Icon(
-                          Icons.favorite,
-                          size: 12,
-                          color: _brandBlush.withValues(alpha: 0.95),
-                        ),
+                        child: Icon(Icons.favorite, size: 12, color: accent),
                       ),
-                      Expanded(child: Container(height: 1, color: _border)),
+                      Expanded(child: Container(height: 1, color: border)),
                     ],
                   ),
                   const SizedBox(height: 14),
                   Text(
                     formatDateMockup(model.weddingDate),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: _deep,
+                    style: TextStyle(
+                      color: text,
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 2.0,
@@ -1690,8 +2032,8 @@ class _InvitationCard extends StatelessWidget {
                   Text(
                     '${AppLang.tr('time_label')} ${fa(model.eventTime)}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: _softInk,
+                    style: TextStyle(
+                      color: textSoft,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1701,61 +2043,39 @@ class _InvitationCard extends StatelessWidget {
                     Text(
                       _place,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: _softInk,
-                        fontSize: 12.5,
-                      ),
+                      style: TextStyle(color: textSoft, fontSize: 12.5),
                     ),
                   ],
                   if (weatherLoading) ...[
                     const SizedBox(height: 14),
-                    const SizedBox(
+                    SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: _accent,
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: accent),
                     ),
                   ] else if (weather != null) ...[
                     const SizedBox(height: 14),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: AppPalette.cardSoft.withValues(alpha: 0.85),
+                        color: card,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: _accent.withValues(alpha: 0.22),
-                        ),
+                        border: Border.all(color: accent.withValues(alpha: 0.28)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.wb_sunny_outlined,
-                            color: _accent,
-                            size: 18,
-                          ),
+                          Icon(Icons.wb_sunny_outlined, color: accent, size: 18),
                           const SizedBox(width: 8),
                           Text(
                             '${fa(weather!.temperature.toStringAsFixed(0))}°',
-                            style: const TextStyle(
-                              color: _ink,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                            style: TextStyle(color: text, fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
                               WeatherService.label(weather!.weatherCode),
-                              style: const TextStyle(
-                                color: _softInk,
-                                fontSize: 12,
-                              ),
+                              style: TextStyle(color: textSoft, fontSize: 12),
                             ),
                           ),
                         ],
@@ -1766,28 +2086,22 @@ class _InvitationCard extends StatelessWidget {
                     Text(
                       AppLang.tr('weather_pick_city_hint'),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: _softInk,
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: textSoft, fontSize: 11),
                     ),
                   ],
                   const SizedBox(height: 18),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _border),
+                      border: Border.all(color: border),
                     ),
                     child: QrImageView(
                       data: qrData,
-                      size: 120,
+                      size: 118,
                       backgroundColor: Colors.white,
-                      eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: _deep,
-                      ),
+                      eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: accent),
                       dataModuleStyle: const QrDataModuleStyle(
                         dataModuleShape: QrDataModuleShape.square,
                         color: Color(0xFF2F2B28),
@@ -1798,43 +2112,26 @@ class _InvitationCard extends StatelessWidget {
                   Text(
                     _t(
                       'scan_to_rsvp',
-                      AppLang.I.isFa
-                          ? 'اسکن = ورود به پورتال مهمان'
-                          : 'Scan = open guest portal',
+                      AppLang.I.isFa ? 'اسکن = ورود به پورتال مهمان' : 'Scan = open guest portal',
                     ),
-                    style: const TextStyle(
-                      color: _softInk,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(color: textSoft, fontSize: 11.5, fontWeight: FontWeight.w600),
                   ),
                   if (model.venueAddress.trim().isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
                       model.venueAddress,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: _softInk,
-                        fontSize: 12,
-                        height: 1.45,
-                      ),
+                      style: TextStyle(color: textSoft, fontSize: 12, height: 1.45),
                     ),
                   ],
                   if (hasLocation) ...[
                     const SizedBox(height: 10),
                     TextButton.icon(
                       onPressed: onOpenMap,
-                      icon: const Icon(
-                        Icons.map_outlined,
-                        color: _accent,
-                        size: 18,
-                      ),
+                      icon: Icon(Icons.map_outlined, color: accent, size: 18),
                       label: Text(
                         AppLang.tr('view_on_google_maps'),
-                        style: const TextStyle(
-                          color: _deep,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(color: accent, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
