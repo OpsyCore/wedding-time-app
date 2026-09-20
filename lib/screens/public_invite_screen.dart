@@ -12,6 +12,7 @@ import '../core/app_effect_controller.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../core/invite_templates.dart';
 import '../core/map_launcher.dart';
 import '../models/invitation_model.dart';
 import '../services/guest_local_store.dart';
@@ -66,6 +67,10 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
   String _groomShortName = '';
   String _brideBio = '';
   String _groomBio = '';
+
+  /// قالب فعال دعوت‌نامه — از سند مراسم (inviteTemplateId)
+  String _templateId = 'classic';
+  InviteTemplate get _template => InviteTemplate.byId(_templateId);
 
   Timer? _timer;
   late final AnimationController _heartPulse;
@@ -175,6 +180,10 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
           final s = (c ?? '').toString().trim();
           if (s.isNotEmpty && message.isEmpty) message = s;
         }
+
+        // قالب اختصاصی دعوت‌نامه
+        final tpl = (wData[inviteTemplateField] ?? '').toString().trim();
+        if (tpl.isNotEmpty) _templateId = tpl;
       } catch (_) {}
 
       try {
@@ -469,20 +478,73 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
           child: EffectBackgroundStack(
             opacity: 0.95,
             enableBlur: false,
-            child: Scaffold(
-              backgroundColor: Colors.transparent,
-              extendBodyBehindAppBar: true,
-              appBar: _buildAppBar(),
-              body: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppPalette.accent,
+            child: _template.id == 'classic'
+                ? Scaffold(
+                    backgroundColor: Colors.transparent,
+                    extendBodyBehindAppBar: true,
+                    appBar: _buildAppBar(),
+                    body: _loading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: AppPalette.accent,
+                            ),
+                          )
+                        : _error != null
+                            ? _buildError()
+                            : _buildBody(),
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [_template.bgTop, _template.bgBottom],
                       ),
-                    )
-                  : _error != null
-                      ? _buildError()
-                      : _buildBody(),
-            ),
+                    ),
+                    child: Stack(
+                      children: [
+                        Scaffold(
+                          backgroundColor: Colors.transparent,
+                          extendBodyBehindAppBar: true,
+                          appBar: _buildAppBar(),
+                          body: _loading
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    color: AppPalette.accent,
+                                  ),
+                                )
+                              : _error != null
+                                  ? _buildError()
+                                  : _buildBody(),
+                        ),
+                        Positioned(
+                          top: MediaQuery.of(context).padding.top +
+                              kToolbarHeight +
+                              2,
+                          left: 0,
+                          right: 0,
+                          child: IgnorePointer(
+                            child: Column(
+                              children: [
+                                Text(
+                                  _template.decor,
+                                  style: const TextStyle(fontSize: 26),
+                                ),
+                                Text(
+                                  _template.name(AppLang.I.isFa),
+                                  style: TextStyle(
+                                    color: _template.accent,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         );
       },

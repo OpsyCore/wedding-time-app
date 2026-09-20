@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show pi;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -76,6 +77,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   CollectionReference<Map<String, dynamic>> get _eventsRef =>
       _weddingDoc.collection('calendarEvents');
+
+  // استریم‌ها فقط یک‌بار ساخته می‌شوند؛ اگر داخل build هر بار snapshots()
+  // صدا زده شود، هر rebuild (مثل تیک‌تاک ثانیه‌ای شمارش معکوس) باعث
+  // subscribe مجدد و خواندن دوبارهٔ همهٔ اسناد می‌شود و سهمیهٔ رایگان را می‌سوزاند.
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _checklistStream =
+      _checklistRef.snapshots();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _guestsStream =
+      _guestsRef.snapshots();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _budgetGroupsStream =
+      _budgetGroupsRef.snapshots();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _vendorsStream =
+      _vendorsRef.snapshots();
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _eventsStream =
+      _eventsRef.snapshots();
 
   bool get _dark => AppTok.isDark(context);
 
@@ -705,7 +720,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         _personAvatar(photoUrl: leftPhoto, name: leftName),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Column(
                             children: [
                               Container(
@@ -876,46 +891,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Column(
       children: [
-        Container(
-          width: 78,
-          height: 78,
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [
-                accent,
-                _brandBlush,
-                _brandGreenSoft,
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.18),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+        SizedBox(
+          width: 116,
+          height: 106,
+          child: Stack(
+            children: [
+              // حاشیهٔ گرادیانیِ قلب
+              Positioned.fill(
+                child: ClipPath(
+                  clipper: _HeartClipper(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          accent,
+                          _brandBlush,
+                          _brandGreenSoft,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // داخل قلب: عکس یا حرف اول نام
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.all(3.5),
+                  child: ClipPath(
+                    clipper: _HeartClipper(),
+                    child: Container(
+                      color: card,
+                      child: photoUrl != null && photoUrl.isNotEmpty
+                          ? Image.network(
+                              photoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _avatarFallback(initial),
+                            )
+                          : _avatarFallback(initial),
+                    ),
+                  ),
+                ),
               ),
             ],
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: card,
-              border: Border.all(color: card, width: 2),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: photoUrl != null && photoUrl.isNotEmpty
-                ? Image.network(
-                    photoUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _avatarFallback(initial),
-                  )
-                : _avatarFallback(initial),
           ),
         ),
         const SizedBox(height: 8),
         SizedBox(
-          width: 88,
+          width: 110,
           child: Text(
             name.split(' ').first,
             textAlign: TextAlign.center,
@@ -940,7 +963,7 @@ class _HomeScreenState extends State<HomeScreen> {
           initial,
           style: TextStyle(
             color: AppTok.accentDeep(context),
-            fontSize: 26,
+            fontSize: 34,
             fontWeight: FontWeight.bold,
             fontFamily: 'serif',
           ),
@@ -990,16 +1013,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final textSoft = AppTok.textSoft(context);
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _checklistRef.snapshots(),
+      stream: _checklistStream,
       builder: (context, checkSnap) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _guestsRef.snapshots(),
+          stream: _guestsStream,
           builder: (context, guestSnap) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: _vendorsRef.snapshots(),
+              stream: _vendorsStream,
               builder: (context, vendorSnap) {
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: _eventsRef.snapshots(),
+                  stream: _eventsStream,
                   builder: (context, eventSnap) {
                     final items = <_FocusItem>[];
                     final now = DateTime.now();
@@ -1458,19 +1481,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final border = AppTok.border(context);
     final accent = AppTok.accent(context);
     final ringTrack = AppTok.ringTrack(context);
-    final accentSoft = AppTok.accentSoft(context);
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _checklistRef.snapshots(),
+      stream: _checklistStream,
       builder: (context, checkSnap) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _guestsRef.snapshots(),
+          stream: _guestsStream,
           builder: (context, guestSnap) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: _budgetGroupsRef.snapshots(),
+              stream: _budgetGroupsStream,
               builder: (context, budgetSnap) {
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: _vendorsRef.snapshots(),
+                  stream: _vendorsStream,
                   builder: (context, vendorSnap) {
                     int checkTotal = 0;
                     int checkDone = 0;
@@ -1690,7 +1712,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: border.withValues(alpha: 0.7),
                               ),
                               const SizedBox(height: 14),
-                              Row(
+                              IntrinsicHeight(
+                                child: Row(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
                                 children: [
                                   Expanded(
                                     child: _statTile(
@@ -1707,23 +1732,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
-                                    child: _statTile(
-                                      icon: Icons.savings_outlined,
-                                      color: const Color(0xFFD1A36B),
-                                      title: AppLang.tr('stat_budget'),
-                                      value: estimated == 0
-                                          ? '—'
-                                          : '${_displayNum((budgetPercent * 100).round())}%',
-                                      subtitle: estimated == 0
-                                          ? AppLang.tr('not_recorded')
-                                          : '${_formatAmount(actual)}${AppLang.tr('toman_short')}',
-                                      onTap: () => _goTab(2),
+                                    child: _budgetCard(
+                                      estimated: estimated,
+                                      actual: actual,
+                                      percent: budgetPercent,
                                     ),
                                   ),
                                 ],
+                                ),
                               ),
                               const SizedBox(height: 10),
-                              Row(
+                              IntrinsicHeight(
+                                child: Row(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
                                 children: [
                                   Expanded(
                                     child: _statTile(
@@ -1740,18 +1762,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
-                                    child: _statTile(
-                                      icon: Icons.groups_outlined,
-                                      color: accentSoft,
-                                      title: AppLang.tr('stat_guest'),
-                                      value: _displayNum(guestTotal),
-                                      subtitle: guestTotal == 0
-                                          ? AppLang.tr('no_guests')
-                                          : '${_displayNum(guestConfirmed)}${AppLang.tr('confirmed_count')}',
-                                      onTap: () => _goTab(4),
+                                    child: _guestsCard(
+                                      total: guestTotal,
+                                      confirmed: guestConfirmed,
                                     ),
                                   ),
                                 ],
+                                ),
                               ),
                             ],
                           ),
@@ -1765,6 +1782,232 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         );
       },
+    );
+  }
+
+  /// کارت بودجه با گیج نیم‌دایره — مشابه طرح مرجع
+  Widget _budgetCard({
+    required int estimated,
+    required int actual,
+    required double percent,
+  }) {
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+    const color = Color(0xFFD1A36B);
+
+    return PageGlass(
+      opacity: 0.82,
+      blurSigma: 10,
+      borderRadius: 16,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      child: InkWell(
+        onTap: () => _goTab(2),
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(Icons.pie_chart_outline, color: color, size: 19),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    AppLang.tr('stat_budget'),
+                    style: TextStyle(
+                      color: text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: CustomPaint(
+                painter: _HalfGaugePainter(
+                  value: percent,
+                  track: AppTok.ringTrack(context),
+                  fill: color,
+                ),
+                child: SizedBox(
+                  width: 150,
+                  height: 76,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        _formatAmount(actual),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: text,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        AppLang.I.isFa
+                            ? 'از ${_formatAmount(estimated)}'
+                            : 'of ${_formatAmount(estimated)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: textSoft, fontSize: 10.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(),
+            const SizedBox(height: 8),
+            _goLink(
+              AppLang.I.isFa ? 'رفتن به بودجه' : 'Go to budget',
+              () => _goTab(2),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// کارت مهمان‌ها با آمار سه‌ستونه — مشابه طرح مرجع
+  Widget _guestsCard({
+    required int total,
+    required int confirmed,
+  }) {
+    final text = AppTok.text(context);
+    final border = AppTok.border(context);
+    final waiting = (total - confirmed).clamp(0, total);
+    const green = Color(0xFF3E9B4F);
+    const orange = Color(0xFFD07C1F);
+
+    return PageGlass(
+      opacity: 0.82,
+      blurSigma: 10,
+      borderRadius: 16,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      child: InkWell(
+        onTap: () => _goTab(4),
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: AppTok.accentSoft(context).withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(
+                    Icons.groups_outlined,
+                    color: AppTok.accent(context),
+                    size: 19,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    AppLang.tr('stat_guest'),
+                    style: TextStyle(
+                      color: text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                _gStat(_displayNum(total),
+                    AppLang.I.isFa ? 'دعوت‌شده' : 'invited', text),
+                Container(width: 1, height: 36, color: border),
+                _gStat(_displayNum(confirmed),
+                    AppLang.I.isFa ? 'بله' : 'yes', green),
+                Container(width: 1, height: 36, color: border),
+                _gStat(_displayNum(waiting),
+                    AppLang.I.isFa ? 'در انتظار' : 'waiting', orange),
+              ],
+            ),
+            const Spacer(),
+            const SizedBox(height: 8),
+            _goLink(
+              AppLang.I.isFa ? 'رفتن به مهمان‌ها' : 'Go to guests',
+              () => _goTab(4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _gStat(String value, String label, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: AppTok.textSoft(context),
+              fontSize: 10.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _goLink(String label, VoidCallback onTap) {
+    final text = AppTok.text(context);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: text,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              AppLang.I.isFa
+                  ? Icons.arrow_left_rounded
+                  : Icons.arrow_right_rounded,
+              size: 16,
+              color: text,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1866,4 +2109,82 @@ class _FocusItem {
     this.priority = 5,
     required this.onTap,
   });
+}
+
+/// کلیپر شکل قلب برای آواتارهای صفحهٔ خانه
+class _HeartClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final w = size.width;
+    final h = size.height;
+    final path = Path();
+    path.moveTo(w / 2, h * 0.999);
+    path.cubicTo(
+      -w * 0.28,
+      h * 0.60,
+      w * 0.02,
+      h * 0.02,
+      w / 2,
+      h * 0.30,
+    );
+    path.cubicTo(
+      w * 0.98,
+      h * 0.02,
+      w * 1.28,
+      h * 0.60,
+      w / 2,
+      h * 0.999,
+    );
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+/// گیج نیم‌دایره برای کارت بودجه
+class _HalfGaugePainter extends CustomPainter {
+  _HalfGaugePainter({
+    required this.value,
+    required this.track,
+    required this.fill,
+  });
+
+  final double value;
+  final Color track;
+  final Color fill;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const stroke = 8.0;
+    final rect = Rect.fromLTRB(
+      stroke / 2,
+      stroke / 2,
+      size.width - stroke / 2,
+      (size.height - stroke / 2) * 2,
+    );
+    final trackPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..color = track;
+    canvas.drawArc(rect, pi, pi, false, trackPaint);
+
+    final v = value.clamp(0.0, 1.0);
+    if (v > 0.001) {
+      final fillPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round
+        ..color = fill;
+      canvas.drawArc(rect, pi, pi * v, false, fillPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HalfGaugePainter oldDelegate) =>
+      oldDelegate.value != value ||
+      oldDelegate.track != track ||
+      oldDelegate.fill != fill;
 }
