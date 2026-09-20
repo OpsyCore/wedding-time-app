@@ -297,7 +297,7 @@ const Map<String, Map<String, String>> _tables = {
     'camera_manage': 'مدیریت دوربین و آلبوم',
     'guest_camera': 'دوربین مهمان',
     'invitation': 'دعوت‌نامه دیجیتال',
-    'rsvp_inbox': 'پاسخ‌های RSVP',
+    'rsvp_inbox': 'پاسخ‌های دعوت‌نامه (RSVP)',
     'vendors': 'تأمین‌کننده‌ها',
     'music_effects': 'موسیقی و جلوه‌ها',
     'feedback': 'ارسال بازخورد',
@@ -695,7 +695,7 @@ const Map<String, Map<String, String>> _tables = {
         'در تنظیمات دعوت‌نامه دیجیتال، شهر تالار را انتخاب و ذخیره کنید.',
     'open_public_link': 'باز کردن لینک عمومی',
     'share_and_qr': 'اشتراک و QR Code',
-    'view_rsvp_responses': 'مشاهده پاسخ‌های RSVP',
+    'view_rsvp_responses': 'مشاهده پاسخ‌های دعوت‌نامه (RSVP)',
     'card_texts': 'متن‌های کارت',
     'cover_title_label': 'عنوان روی کارت',
     'ceremony_time': 'زمان مراسم',
@@ -762,7 +762,7 @@ const Map<String, Map<String, String>> _tables = {
     'schedule_cake_cutting': 'برش کیک',
 
     // ── rsvp inbox ──
-    'rsvp_responses': 'پاسخ‌های RSVP',
+    'rsvp_responses': 'پاسخ‌های دعوت‌نامه (RSVP)',
     'attending': 'حضور',
     'not_attending': 'عدم حضور',
     'no_rsvp_yet': 'هنوز پاسخی ثبت نشده',
