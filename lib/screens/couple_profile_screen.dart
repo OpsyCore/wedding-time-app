@@ -3,8 +3,11 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../core/app_config.dart';
 import '../core/app_date_picker.dart';
 import '../core/app_effect_controller.dart';
 import '../core/app_lang.dart';
@@ -12,9 +15,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../services/ambient_music_service.dart';
 import '../services/media_upload_service.dart';
-import '../widgets/ambient_music_controls.dart';
 import '../widgets/effect_background.dart';
-import '../widgets/effect_picker.dart';
 import '../widgets/image_crop_screen.dart';
 import '../widgets/page_glass.dart';
 import '../widgets/wedding_progress_bar.dart';
@@ -35,6 +36,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
   final _groomFullCtrl = TextEditingController();
   final _groomShortCtrl = TextEditingController();
   final _groomBioCtrl = TextEditingController();
+  final _hashtagCtrl = TextEditingController();
 
   String? _couplePhotoUrl;
   String? _bridePhotoUrl;
@@ -88,6 +90,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     _groomFullCtrl.dispose();
     _groomShortCtrl.dispose();
     _groomBioCtrl.dispose();
+    _hashtagCtrl.dispose();
     super.dispose();
   }
 
@@ -153,6 +156,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       if (!const ['groom_first', 'bride_first'].contains(_nameOrder)) {
         _nameOrder = 'groom_first';
       }
+      _hashtagCtrl.text = (p['hashtag'] ?? '').toString();
 
       _completePercent = _calcProgress();
     } catch (e) {
@@ -302,6 +306,7 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         'weddingDate': _weddingDate != null ? Timestamp.fromDate(_weddingDate!) : null,
         'rsvpMode': _rsvpMode,
         'nameOrder': _nameOrder,
+        'hashtag': _hashtagCtrl.text.trim(),
         'completePercent': percent,
         'completePercentInt': (percent * 100).round(),
         'provider': 'imgbb',
@@ -558,13 +563,15 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                             const SizedBox(height: 14),
                             _sectionCard(
                               context,
-                              icon: Icons.auto_awesome_rounded,
-                              title: AppLang.tr('effect'),
+                              icon: Icons.badge_outlined,
+                              title: AppLang.I.isFa ? 'هویت مراسم' : 'Ceremony identity',
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    AppLang.tr('effect_hint'),
+                                    AppLang.I.isFa
+                                        ? 'هشتگ اختصاصی‌تان را بسازید و کارت زوج را یک‌ضرب برای خانواده بفرستید.'
+                                        : 'Create your own hashtag and share your couple card in one tap.',
                                     style: TextStyle(
                                       color: AppTok.textSoft(context),
                                       fontSize: 12,
@@ -572,28 +579,116 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  const EffectPicker(showLabel: false),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            _sectionCard(
-                              context,
-                              icon: Icons.music_note_rounded,
-                              title: AppLang.tr('ambient_music'),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    AppLang.tr('ambient_music_hint'),
-                                    style: TextStyle(
-                                      color: AppTok.textSoft(context),
-                                      fontSize: 12,
-                                      height: 1.4,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTok.cardSoft(context),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: AppTok.border(context)
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.tag_rounded,
+                                          color: AppTok.accent(context),
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _hashtagCtrl,
+                                            style: TextStyle(
+                                              color: AppTok.text(context),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            decoration: const InputDecoration(
+                                              border: InputBorder.none,
+                                              isDense: true,
+                                              contentPadding:
+                                                  EdgeInsets.symmetric(
+                                                      vertical: 10),
+                                            ),
+                                            hintText: AppLang.I.isFa
+                                                ? '#علی_و_سارا'
+                                                : '#Ali_And_Sara',
+                                            hintStyle: TextStyle(
+                                              color: AppTok.textSoft(context)
+                                                  .withValues(alpha: 0.6),
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: AppLang.I.isFa
+                                              ? 'پیشنهاد خودکار'
+                                              : 'Auto suggest',
+                                          onPressed: _suggestHashtag,
+                                          icon: Icon(
+                                            Icons.auto_fix_high_rounded,
+                                            color: AppTok.accent(context),
+                                            size: 19,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: AppLang.tr('copy'),
+                                          onPressed: () async {
+                                            final t =
+                                                _hashtagCtrl.text.trim();
+                                            if (t.isEmpty) return;
+                                            await Clipboard.setData(
+                                              ClipboardData(text: t),
+                                            );
+                                            if (!mounted) return;
+                                            _toast(AppLang.tr('copied'));
+                                          },
+                                          icon: Icon(
+                                            Icons.copy_rounded,
+                                            color: AppTok.textSoft(context),
+                                            size: 18,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  const AmbientMusicControls(showTitle: false),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(
+                                          color: AppTok.accent(context)
+                                              .withValues(alpha: 0.5),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
+                                      ),
+                                      onPressed: _shareCoupleCard,
+                                      icon: Icon(
+                                        Icons.share_rounded,
+                                        color: AppTok.accent(context),
+                                        size: 18,
+                                      ),
+                                      label: Text(
+                                        AppLang.I.isFa
+                                            ? 'اشتراک کارت زوج'
+                                            : 'Share couple card',
+                                        style: TextStyle(
+                                          color: AppTok.accent(context),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -666,6 +761,49 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         );
       },
     );
+  }
+
+  void _suggestHashtag() {
+    final b = _brideShortCtrl.text.trim().isNotEmpty
+        ? _brideShortCtrl.text.trim()
+        : _brideFullCtrl.text.trim();
+    final g = _groomShortCtrl.text.trim().isNotEmpty
+        ? _groomShortCtrl.text.trim()
+        : _groomFullCtrl.text.trim();
+    if (b.isEmpty || g.isEmpty) {
+      _toast(
+        AppLang.I.isFa
+            ? 'اول نام عروس و داماد را بنویس'
+            : 'Enter bride & groom names first',
+      );
+      return;
+    }
+    setState(() {
+      _hashtagCtrl.text = AppLang.I.isFa
+          ? '#${b}_و_$g'
+          : '#${b.replaceAll(' ', '')}And${g.replaceAll(' ', '')}';
+    });
+  }
+
+  Future<void> _shareCoupleCard() async {
+    final bride = _brideFullCtrl.text.trim();
+    final groom = _groomFullCtrl.text.trim();
+    final names =
+        _nameOrder == 'bride_first' ? '$bride & $groom' : '$groom & $bride';
+    String link = '';
+    try {
+      final w = await _weddingRef.get();
+      final slug = ((w.data()?['slug'] ?? w.data()?['inviteSlug'] ?? '')
+          .toString());
+      if (slug.isNotEmpty) link = AppConfig.inviteUrl(slug);
+    } catch (_) {}
+    final tag = _hashtagCtrl.text.trim();
+    final date = _weddingDate == null
+        ? ''
+        : '📅 ${_weddingDate!.year}/${_weddingDate!.month.toString().padLeft(2, '0')}/${_weddingDate!.day.toString().padLeft(2, '0')}\n';
+    final text =
+        '💍 $names\n$date${tag.isNotEmpty ? '$tag\n' : ''}${link.isNotEmpty ? '🔗 $link' : ''}';
+    await Share.share(text);
   }
 
   Widget _progressHeader(BuildContext context) {
