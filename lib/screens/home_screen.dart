@@ -1193,27 +1193,53 @@ class _HomeScreenState extends State<HomeScreen>
           Positioned(bottom: 44, left: 84, child: _sparkle(size: 26, color: sparkleLight, angle: 0.1)),
           Positioned(bottom: 32, left: 62, child: _sparkle(size: 12, color: sparkleLight, angle: -0.25)),
           Positioned(bottom: 36, right: 68, child: _sparkle(size: 10, color: sparkleLight, angle: 0.2)),
-          // متن داخل
+          // متن داخل — کاملاً وسط قلب + لاین مشکی مات (shadow) برای خوانایی
           Center(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
+              padding: const EdgeInsets.fromLTRB(24, 42, 24, 28),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(coupleLine,
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.3, height: 1.2)),
-                  const SizedBox(height: 8),
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3,
+                          height: 1.2,
+                          shadows: [
+                            Shadow(color: Colors.black.withValues(alpha: 0.55), blurRadius: 6, offset: const Offset(0, 1.2)),
+                            Shadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 12),
+                          ])),
+                  const SizedBox(height: 7),
                   Text(AppLang.I.isFa ? 'ما ازدواج می‌کنیم' : 'We are getting married',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: subColor, fontSize: 12.5, fontWeight: FontWeight.w500, height: 1.2)),
+                      style: TextStyle(
+                          color: subColor,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                          shadows: [
+                            Shadow(color: Colors.black.withValues(alpha: 0.50), blurRadius: 5, offset: const Offset(0, 1)),
+                            Shadow(color: Colors.black.withValues(alpha: 0.30), blurRadius: 10),
+                          ])),
                   if (dateStr.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 7),
                     Text(dateStr,
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: dateColor, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                        style: TextStyle(
+                            color: dateColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            shadows: [
+                              Shadow(color: Colors.black.withValues(alpha: 0.50), blurRadius: 5, offset: const Offset(0, 1)),
+                              Shadow(color: Colors.black.withValues(alpha: 0.30), blurRadius: 10),
+                            ])),
                   ],
                 ],
               ),
