@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math' show pi;
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -1718,24 +1716,43 @@ class _HomeScreenState extends State<HomeScreen> {
                                     CrossAxisAlignment.stretch,
                                 children: [
                                   Expanded(
-                                    child: _statTile(
+                                    child: _metricCard(
                                       icon: Icons.checklist_rtl_outlined,
                                       color: const Color(0xFF6F9B76),
                                       title: AppLang.tr('stat_checklist'),
                                       value:
                                           '${_displayNum(checkDone)}/${_displayNum(checkTotal)}',
-                                      subtitle: checkTotal == 0
+                                      percent: checkPercent,
+                                      caption: checkTotal == 0
                                           ? AppLang.tr('no_tasks')
-                                          : '${_displayNum((checkPercent * 100).round())}${AppLang.tr('percent_done')}',
+                                          : (AppLang.I.isFa
+                                              ? '${_displayNum(checkDone)} انجام‌شده از ${_displayNum(checkTotal)}'
+                                              : '$checkDone of $checkTotal done'),
+                                      goLabel: AppLang.I.isFa
+                                          ? 'رفتن به چک‌لیست'
+                                          : 'Go to checklist',
                                       onTap: () => _goTab(1),
                                     ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
-                                    child: _budgetCard(
-                                      estimated: estimated,
-                                      actual: actual,
+                                    child: _metricCard(
+                                      icon: Icons.pie_chart_outline,
+                                      color: const Color(0xFFD1A36B),
+                                      title: AppLang.tr('stat_budget'),
+                                      value: _formatAmount(actual),
                                       percent: budgetPercent,
+                                      caption: estimated == 0
+                                          ? (AppLang.I.isFa
+                                              ? 'بودجه‌ای ثبت نشده'
+                                              : 'No budget recorded')
+                                          : (AppLang.I.isFa
+                                              ? 'از ${_formatAmount(estimated)} تومان'
+                                              : 'of ${_formatAmount(estimated)} Toman'),
+                                      goLabel: AppLang.I.isFa
+                                          ? 'رفتن به بودجه'
+                                          : 'Go to budget',
+                                      onTap: () => _goTab(2),
                                     ),
                                   ),
                                 ],
@@ -1748,23 +1765,44 @@ class _HomeScreenState extends State<HomeScreen> {
                                     CrossAxisAlignment.stretch,
                                 children: [
                                   Expanded(
-                                    child: _statTile(
+                                    child: _metricCard(
                                       icon: Icons.storefront_outlined,
                                       color: const Color(0xFF6F9BB5),
                                       title: AppLang.tr('stat_vendor'),
                                       value:
                                           '${_displayNum(vendorDone)}/${_displayNum(vendorTotal)}',
-                                      subtitle: vendorTotal == 0
+                                      percent: vendorPercent,
+                                      caption: vendorTotal == 0
                                           ? AppLang.tr('not_recorded')
-                                          : '${_displayNum((vendorPercent * 100).round())}${AppLang.tr('percent_booked')}',
+                                          : (AppLang.I.isFa
+                                              ? '${_displayNum(vendorDone)} قرارداد از ${_displayNum(vendorTotal)}'
+                                              : '$vendorDone of $vendorTotal booked'),
+                                      goLabel: AppLang.I.isFa
+                                          ? 'رفتن به تأمین‌کننده‌ها'
+                                          : 'Go to vendors',
                                       onTap: _openVendors,
                                     ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
-                                    child: _guestsCard(
-                                      total: guestTotal,
-                                      confirmed: guestConfirmed,
+                                    child: _metricCard(
+                                      icon: Icons.groups_outlined,
+                                      color: AppTok.accent(context),
+                                      title: AppLang.tr('stat_guest'),
+                                      value:
+                                          '${_displayNum(guestConfirmed)}/${_displayNum(guestTotal)}',
+                                      percent: guestPercent,
+                                      caption: guestTotal == 0
+                                          ? (AppLang.I.isFa
+                                              ? 'مهمانی ثبت نشده'
+                                              : 'No guests yet')
+                                          : (AppLang.I.isFa
+                                              ? '${_displayNum((guestTotal - guestConfirmed).clamp(0, guestTotal))} در انتظار پاسخ · ${_displayNum(guestTotal)} دعوت‌شده'
+                                              : '${(guestTotal - guestConfirmed).clamp(0, guestTotal)} waiting · $guestTotal invited'),
+                                      goLabel: AppLang.I.isFa
+                                          ? 'رفتن به مهمان‌ها'
+                                          : 'Go to guests',
+                                      onTap: () => _goTab(4),
                                     ),
                                   ),
                                 ],
@@ -1785,15 +1823,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// کارت بودجه با گیج نیم‌دایره — مشابه طرح مرجع
-  Widget _budgetCard({
-    required int estimated,
-    required int actual,
+  /// کارت متریک یکپارچه — هر ۴ کارت پیشرفت (چک‌لیست، بودجه،
+  /// تأمین‌کننده، مهمان) با همین اسکلت مشترک تا یکدست به نظر برسند.
+  Widget _metricCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String value,
     required double percent,
+    required String caption,
+    required String goLabel,
+    required VoidCallback onTap,
   }) {
     final text = AppTok.text(context);
     final textSoft = AppTok.textSoft(context);
-    const color = Color(0xFFD1A36B);
+    final p = percent.clamp(0.0, 1.0);
+    final pctLabel =
+        '${_displayNum((p * 100).round())}${AppLang.tr('percent_unit')}';
 
     return PageGlass(
       opacity: 0.82,
@@ -1801,7 +1847,7 @@ class _HomeScreenState extends State<HomeScreen> {
       borderRadius: 16,
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       child: InkWell(
-        onTap: () => _goTab(2),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1815,15 +1861,33 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: color.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(11),
                   ),
-                  child: const Icon(Icons.pie_chart_outline, color: color, size: 19),
+                  child: Icon(icon, color: color, size: 19),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    AppLang.tr('stat_budget'),
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: text,
-                      fontSize: 14,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    pctLabel,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1831,157 +1895,62 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            Center(
-              child: CustomPaint(
-                painter: _HalfGaugePainter(
-                  value: percent,
-                  track: AppTok.ringTrack(context),
-                  fill: color,
-                ),
-                child: SizedBox(
-                  width: 150,
-                  height: 76,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        _formatAmount(actual),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: text,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        AppLang.I.isFa
-                            ? 'از ${_formatAmount(estimated)}'
-                            : 'of ${_formatAmount(estimated)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: textSoft, fontSize: 10.5),
-                      ),
-                    ],
-                  ),
-                ),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: text,
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
               ),
             ),
+            const SizedBox(height: 8),
+            _miniBar(p, color),
+            const SizedBox(height: 6),
+            Text(
+              caption,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: textSoft, fontSize: 10.5),
+            ),
             const Spacer(),
             const SizedBox(height: 8),
-            _goLink(
-              AppLang.I.isFa ? 'رفتن به بودجه' : 'Go to budget',
-              () => _goTab(2),
-            ),
+            _goLink(goLabel, onTap, color: color),
           ],
         ),
       ),
     );
   }
 
-  /// کارت مهمان‌ها با آمار سه‌ستونه — مشابه طرح مرجع
-  Widget _guestsCard({
-    required int total,
-    required int confirmed,
-  }) {
-    final text = AppTok.text(context);
-    final border = AppTok.border(context);
-    final waiting = (total - confirmed).clamp(0, total);
-    const green = Color(0xFF3E9B4F);
-    const orange = Color(0xFFD07C1F);
-
-    return PageGlass(
-      opacity: 0.82,
-      blurSigma: 10,
-      borderRadius: 16,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-      child: InkWell(
-        onTap: () => _goTab(4),
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: AppTok.accentSoft(context).withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: Icon(
-                    Icons.groups_outlined,
-                    color: AppTok.accent(context),
-                    size: 19,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    AppLang.tr('stat_guest'),
-                    style: TextStyle(
-                      color: text,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
+  /// نوار پیشرفت باریکِ رنگیِ مشترک همهٔ کارت‌های متریک
+  Widget _miniBar(double value, Color color) {
+    return Container(
+      height: 6,
+      decoration: BoxDecoration(
+        color: AppTok.ringTrack(context),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: FractionallySizedBox(
+          widthFactor: value.clamp(0.0, 1.0),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                color.withValues(alpha: 0.7),
+                color,
+              ]),
+              borderRadius: BorderRadius.circular(99),
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                _gStat(_displayNum(total),
-                    AppLang.I.isFa ? 'دعوت‌شده' : 'invited', text),
-                Container(width: 1, height: 36, color: border),
-                _gStat(_displayNum(confirmed),
-                    AppLang.I.isFa ? 'بله' : 'yes', green),
-                Container(width: 1, height: 36, color: border),
-                _gStat(_displayNum(waiting),
-                    AppLang.I.isFa ? 'در انتظار' : 'waiting', orange),
-              ],
-            ),
-            const Spacer(),
-            const SizedBox(height: 8),
-            _goLink(
-              AppLang.I.isFa ? 'رفتن به مهمان‌ها' : 'Go to guests',
-              () => _goTab(4),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _gStat(String value, String label, Color color) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: AppTok.textSoft(context),
-              fontSize: 10.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _goLink(String label, VoidCallback onTap) {
-    final text = AppTok.text(context);
+  Widget _goLink(String label, VoidCallback onTap, {Color? color}) {
+    final c = color ?? AppTok.text(context);
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -1992,8 +1961,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               label,
               style: TextStyle(
-                color: text,
-                fontSize: 12.5,
+                color: c,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -2003,88 +1972,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? Icons.arrow_left_rounded
                   : Icons.arrow_right_rounded,
               size: 16,
-              color: text,
+              color: c,
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _statTile({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String value,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    final text = AppTok.text(context);
-    final textSoft = AppTok.textSoft(context);
-
-    return PageGlass(
-      opacity: 0.82,
-      blurSigma: 10,
-      borderRadius: 16,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, color: color, size: 17),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    AppLang.I.isFa ? Icons.chevron_left : Icons.chevron_right,
-                    size: 16,
-                    color: textSoft.withValues(alpha: 0.8),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: TextStyle(
-                  color: textSoft,
-                  fontSize: 11,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: text,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: color.withValues(alpha: 0.95),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
     );
   }
 }
@@ -2141,50 +2033,4 @@ class _HeartClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-/// گیج نیم‌دایره برای کارت بودجه
-class _HalfGaugePainter extends CustomPainter {
-  _HalfGaugePainter({
-    required this.value,
-    required this.track,
-    required this.fill,
-  });
-
-  final double value;
-  final Color track;
-  final Color fill;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const stroke = 8.0;
-    final rect = Rect.fromLTRB(
-      stroke / 2,
-      stroke / 2,
-      size.width - stroke / 2,
-      (size.height - stroke / 2) * 2,
-    );
-    final trackPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round
-      ..color = track;
-    canvas.drawArc(rect, pi, pi, false, trackPaint);
-
-    final v = value.clamp(0.0, 1.0);
-    if (v > 0.001) {
-      final fillPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round
-        ..color = fill;
-      canvas.drawArc(rect, pi, pi * v, false, fillPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _HalfGaugePainter oldDelegate) =>
-      oldDelegate.value != value ||
-      oldDelegate.track != track ||
-      oldDelegate.fill != fill;
 }
