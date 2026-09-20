@@ -871,7 +871,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   /// قلب بزرگ تپنده — شبیه رفرنس: قرمز آجری یکدست + ستاره‌های سفید/تیره + متن سفید بولد
-  /// متن داخل: «سارا & علی / تبریک / ما ازدواج می‌کنیم / تاریخ»
+  /// متن داخل: «سارا & علی / ما ازدواج می‌کنیم / تاریخ» (بدون «تبریک»)
   Widget _buildBigPulsingHeart({
     required String groom,
     required String bride,
@@ -967,10 +967,10 @@ class _HomeScreenState extends State<HomeScreen>
               right: 68,
               child: _sparkle(size: 10, color: Colors.white, angle: 0.2),
             ),
-            // متن داخل قلب — سفید بولد ساده
+            // متن داخل قلب — سفید بولد ساده، کاملاً وسط قلب (نه بیرون‌زده)
             Center(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(22, 18, 22, 30),
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -981,31 +981,19 @@ class _HomeScreenState extends State<HomeScreen>
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.3,
                         height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'تبریک',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.3,
-                        height: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       AppLang.I.isFa ? 'ما ازدواج می‌کنیم' : 'We are getting married',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.96),
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                         height: 1.2,
                       ),
@@ -1016,10 +1004,10 @@ class _HomeScreenState extends State<HomeScreen>
                         dateStr,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          fontSize: 12.5,
+                          color: Colors.white.withValues(alpha: 0.93),
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ],
