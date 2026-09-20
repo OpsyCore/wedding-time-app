@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../core/app_config.dart';
 import '../core/app_date_picker.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
@@ -32,6 +33,18 @@ class _WeddingSetupScreenState extends State<WeddingSetupScreen> {
   String? _inviteCode;
   String? _currentWeddingId;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // لینک دعوت پارتنر (?join=CODE) → مستقیم مرحلهٔ پیوستن با کد پرشده
+    final pending = AppConfig.pendingJoinCode;
+    if (pending != null && pending.isNotEmpty) {
+      AppConfig.pendingJoinCode = null;
+      _joinCodeCtrl.text = pending;
+      _step = 3;
+    }
+  }
 
   @override
   void dispose() {
