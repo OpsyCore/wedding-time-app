@@ -102,7 +102,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _pulseScale = Tween<double>(begin: 1.0, end: 1.06).animate(
+    _pulseScale = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
     );
     _pulse.repeat(reverse: true);
