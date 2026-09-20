@@ -234,39 +234,141 @@ class _LoveStoryScreenState extends State<LoveStoryScreen> {
     }
   }
 
+  List<Map<String, String>> _suggestionList() => [
+        {
+          'title': AppLang.tr('suggestion_first_look_title'),
+          'dateText': AppLang.tr('suggestion_first_look_date'),
+          'content': AppLang.tr('suggestion_first_look_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_first_date_title'),
+          'dateText': AppLang.tr('suggestion_first_date_date'),
+          'content': AppLang.tr('suggestion_first_date_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_yes_title'),
+          'dateText': AppLang.tr('suggestion_yes_date'),
+          'content': AppLang.tr('suggestion_yes_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_family_meet_title'),
+          'dateText': AppLang.tr('suggestion_family_meet_date'),
+          'content': AppLang.tr('suggestion_family_meet_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_ring_title'),
+          'dateText': AppLang.tr('suggestion_ring_date'),
+          'content': AppLang.tr('suggestion_ring_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_first_trip_title'),
+          'dateText': AppLang.tr('suggestion_first_trip_date'),
+          'content': AppLang.tr('suggestion_first_trip_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_cooking_title'),
+          'dateText': AppLang.tr('suggestion_cooking_date'),
+          'content': AppLang.tr('suggestion_cooking_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_hard_day_title'),
+          'dateText': AppLang.tr('suggestion_hard_day_date'),
+          'content': AppLang.tr('suggestion_hard_day_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_news_title'),
+          'dateText': AppLang.tr('suggestion_news_date'),
+          'content': AppLang.tr('suggestion_news_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_home_title'),
+          'dateText': AppLang.tr('suggestion_home_date'),
+          'content': AppLang.tr('suggestion_home_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_letter_title'),
+          'dateText': AppLang.tr('suggestion_letter_date'),
+          'content': AppLang.tr('suggestion_letter_body'),
+        },
+        {
+          'title': AppLang.tr('suggestion_song_title'),
+          'dateText': AppLang.tr('suggestion_song_date'),
+          'content': AppLang.tr('suggestion_song_body'),
+        },
+      ];
+
   Future<void> _applySuggestion(String docId) async {
-    final suggestions = [
-      {
-        'title': AppLang.tr('suggestion_first_look_title'),
-        'dateText': AppLang.tr('suggestion_first_look_date'),
-        'content': AppLang.tr('suggestion_first_look_body'),
-      },
-      {
-        'title': AppLang.tr('suggestion_first_date_title'),
-        'dateText': AppLang.tr('suggestion_first_date_date'),
-        'content': AppLang.tr('suggestion_first_date_body'),
-      },
-      {
-        'title': AppLang.tr('suggestion_yes_title'),
-        'dateText': AppLang.tr('suggestion_yes_date'),
-        'content': AppLang.tr('suggestion_yes_body'),
-      },
-    ];
+    final suggestions = _suggestionList();
+    if (!mounted) return;
 
-    final index = DateTime.now().millisecond % suggestions.length;
-    final s = suggestions[index];
-
-    try {
-      await _ref.doc(docId).update({
-        'title': s['title'],
-        'dateText': s['dateText'],
-        'content': s['content'],
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      _toast(AppLang.tr('suggestion_applied'));
-    } catch (e) {
-      _toast('${AppLang.tr('error')}: $e', error: true);
-    }
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTok.card(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: AppLang.I.direction,
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(10, 14, 10, 20),
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  AppLang.I.isFa
+                      ? 'یک ایده برای این خاطره انتخاب کن'
+                      : 'Pick an idea for this memory',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTok.text(ctx),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              ...suggestions.map(
+                (s) => ListTile(
+                  leading: Icon(
+                    Icons.lightbulb_outline,
+                    color: AppTok.accent(ctx),
+                  ),
+                  title: Text(
+                    s['title']!,
+                    style: TextStyle(
+                      color: AppTok.text(ctx),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                  subtitle: Text(
+                    s['dateText']!,
+                    style: TextStyle(
+                      color: AppTok.textSoft(ctx),
+                      fontSize: 11,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    try {
+                      await _ref.doc(docId).update({
+                        'title': s['title'],
+                        'dateText': s['dateText'],
+                        'content': s['content'],
+                        'updatedAt': FieldValue.serverTimestamp(),
+                      });
+                      _toast(AppLang.tr('suggestion_applied'));
+                    } catch (e) {
+                      _toast('${AppLang.tr('error')}: $e', error: true);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _saveAndBack() async {

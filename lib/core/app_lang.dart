@@ -1046,6 +1046,42 @@ const Map<String, Map<String, String>> _tables = {
     'suggestion_yes_date': 'لحظه خواستگاری',
     'suggestion_yes_body':
         'با یک حلقه و کلی هیجان، رسمی شدیم. از آن روز، رویای عروسی‌مان شکل گرفت.',
+    'suggestion_family_meet_title': 'دیدار خانواده‌ها',
+    'suggestion_family_meet_date': 'شب خواستگاری',
+    'suggestion_family_meet_body':
+        'از تپش قلب پشت در تا چای‌های تعارفی؛ آن شب دو خانواده برای همیشه به هم گره خوردند.',
+    'suggestion_ring_title': 'انتخاب حلقه‌ها',
+    'suggestion_ring_date': 'روزی که حلقه‌هایمان را پسندیدیم',
+    'suggestion_ring_body':
+        'بین ویترین‌ها و هزار مدل، در نهایت دو حلقهٔ ساده بود که درست اندازهٔ قلب‌هایمان شد.',
+    'suggestion_first_trip_title': 'اولین سفر دونفره',
+    'suggestion_first_trip_date': 'شروع ماجراهای دونفره',
+    'suggestion_first_trip_body':
+        'یک مقصد تازه، یک نقشهٔ نیمه‌کاره و کلی خنده؛ فهمیدیم همسفر همیشگی هم هستیم.',
+    'suggestion_cooking_title': 'اولین شام دونفره',
+    'suggestion_cooking_date': 'اولین آشپزی مشترک',
+    'suggestion_cooking_body':
+        'آرد همه‌جا و بوی ملایم ته‌دیگ! ولی همان شامِ نامرتب، شیرین‌ترین سفرهٔ زندگی‌مان بود.',
+    'suggestion_hard_day_title': 'سخت‌ترین روز، کنار هم',
+    'suggestion_hard_day_date': 'روزی که با هم ساختیمش',
+    'suggestion_hard_day_body':
+        'آن روز سخت فهمیدیم تکیه‌گاه هم بودن یعنی چه؛ و عشق‌مان قوی‌تر از هر طوفانی است.',
+    'suggestion_news_title': 'خبر خوب به خانواده‌ها',
+    'suggestion_news_date': 'لحظهٔ اعلام رسمی',
+    'suggestion_news_body':
+        'لحظه‌ای که خبر را گفتیم و چشم‌هایشان از شوق برق زد؛ اولین جشن کوچک داستان ما همان‌جا بود.',
+    'suggestion_home_title': 'کلید خانهٔ مشترک',
+    'suggestion_home_date': 'اولین قدم در خانه‌مان',
+    'suggestion_home_body':
+        'یک کلید، یک در، و یک دنیا برنامه؛ خانه‌ای که با عشق ساخته می‌شود، قصر ماست.',
+    'suggestion_letter_title': 'نامه‌ای به آینده',
+    'suggestion_letter_date': 'برای سال‌های بعدِ ما',
+    'suggestion_letter_body':
+        'امروز برای ده سال بعدِ هم نامه نوشتیم؛ قول‌هایی که فراموش نمی‌شوند و عشقی که کهنه نمی‌شود.',
+    'suggestion_song_title': 'آهنگِ ما',
+    'suggestion_song_date': 'نغمه‌ای که مال ماست',
+    'suggestion_song_body':
+        'یک آهنگ هست که هر بار می‌آید یاد همان لحظه می‌افتیم؛ این خاطره را با همان ملودی بنویس.',
 
     // ── bridal party ──
     'bridal_party_title': 'ساقدوش‌های عروس و داماد',
@@ -2753,6 +2789,42 @@ const Map<String, Map<String, String>> _tables = {
     'suggestion_yes_date': 'The proposal',
     'suggestion_yes_body':
         'With a ring and so much excitement, it became official. From that day, our wedding dream began.',
+    'suggestion_family_meet_title': 'Meeting the families',
+    'suggestion_family_meet_date': 'Proposal night',
+    'suggestion_family_meet_body':
+        'From the heartbeat behind the door to the polite tea rituals; that night two families were tied together forever.',
+    'suggestion_ring_title': 'Choosing the rings',
+    'suggestion_ring_date': 'The day we picked our rings',
+    'suggestion_ring_body':
+        'Among countless displays, two simple rings turned out to be exactly the size of our hearts.',
+    'suggestion_first_trip_title': 'First trip together',
+    'suggestion_first_trip_date': 'Our first adventure as two',
+    'suggestion_first_trip_body':
+        'A new destination, a half-made plan and lots of laughter; we learned we are lifelong travel partners.',
+    'suggestion_cooking_title': 'First dinner we cooked',
+    'suggestion_cooking_date': 'Our first shared kitchen chaos',
+    'suggestion_cooking_body':
+        'Flour everywhere and a slightly burnt rice crust! Yet that messy dinner was the sweetest table of our life.',
+    'suggestion_hard_day_title': 'The hardest day, together',
+    'suggestion_hard_day_date': 'The day we got through together',
+    'suggestion_hard_day_body':
+        'That hard day taught us what being each other\'s support means; our love is stronger than any storm.',
+    'suggestion_news_title': 'Telling the families',
+    'suggestion_news_date': 'The official announcement',
+    'suggestion_news_body':
+        'The moment we shared the news and their eyes sparkled with joy; our first little celebration began right there.',
+    'suggestion_home_title': 'Keys to our home',
+    'suggestion_home_date': 'First step into our home',
+    'suggestion_home_body':
+        'One key, one door, and a world of plans; a home built with love is our palace.',
+    'suggestion_letter_title': 'A letter to the future',
+    'suggestion_letter_date': 'For our years ahead',
+    'suggestion_letter_body':
+        'Today we wrote letters to each other ten years from now; promises that won\'t be forgotten and love that won\'t fade.',
+    'suggestion_song_title': 'Our song',
+    'suggestion_song_date': 'The melody that is ours',
+    'suggestion_song_body':
+        'There is a song that always takes us back to that moment; write this memory with that melody.',
 
     // ── bridal party ──
     'bridal_party_title': 'Bridal party',
