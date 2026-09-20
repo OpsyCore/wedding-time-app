@@ -33,7 +33,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with TickerProviderStateMixin {
   DateTime? weddingDate;
   String? role;
   String? brideName;
@@ -43,6 +44,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String? coverPhoto;
   String _nameOrder = 'groom_first';
   double? _profileComplete;
+
+  late AnimationController _pulse;
+  late Animation<double> _pulseScale;
 
   String _effectStyleId = AppEffectStyle.noneId;
 
@@ -104,6 +108,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _pulseScale = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+    );
+    _pulse.repeat(reverse: true);
 
     _weddingSub = _weddingDoc.snapshots().listen((doc) {
       final data = doc.data() ?? {};
@@ -252,6 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _pulse.dispose();
     _tickTimer?.cancel();
     _weddingSub?.cancel();
     _profileSub?.cancel();
@@ -613,18 +626,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCoupleHero() {
-    final bride = (brideName ?? '').trim().isEmpty
-        ? AppLang.tr('bride')
-        : brideName!.trim();
-    final groom = (groomName ?? '').trim().isEmpty
-        ? AppLang.tr('groom')
-        : groomName!.trim();
-
-    final brideFirst = _nameOrder == 'bride_first';
-    final leftName = brideFirst ? bride : groom;
-    final rightName = brideFirst ? groom : bride;
-    final leftPhoto = brideFirst ? bridePhoto : groomPhoto;
-    final rightPhoto = brideFirst ? groomPhoto : bridePhoto;
+    final brideRaw = (brideName ?? '').trim();
+    final groomRaw = (groomName ?? '').trim();
+    final bride = brideRaw.isEmpty ? AppLang.tr('bride') : brideRaw;
+    final groom = groomRaw.isEmpty ? AppLang.tr('groom') : groomRaw;
 
     final days = remaining.inDays;
     final hours = remaining.inHours.remainder(24);
@@ -636,14 +641,39 @@ class _HomeScreenState extends State<HomeScreen> {
         weddingDate!.isBefore(DateTime.now()) &&
         !isWeddingDay;
 
-    final coupleLine = brideFirst ? '$bride  &  $groom' : '$groom  &  $bride';
+    // متن بالا: «تا روز جشن X با Y» — نام واقعی زوج
+    final String topText;
+    if (AppLang.I.isFa) {
+      if (groomRaw.isNotEmpty && brideRaw.isNotEmpty) {
+        topText = 'تا روز جشن $groom با $bride';
+      } else if (groomRaw.isNotEmpty || brideRaw.isNotEmpty) {
+        final title = '$groom & $bride'.trim();
+        topText = 'تا روز جشن $title';
+      } else {
+        topText = 'تا روز جشن';
+      }
+    } else {
+      if (groomRaw.isNotEmpty && brideRaw.isNotEmpty) {
+        topText = 'Until our special day — $groom & $bride';
+      } else {
+        topText = AppLang.tr('until_celebration');
+        if (groomRaw.isNotEmpty || brideRaw.isNotEmpty) {
+          topText = '$topText — $groom & $bride';
+        }
+      }
+    }
 
-    final text = AppTok.text(context);
-    final textSoft = AppTok.textSoft(context);
+    // عکس داخل قلب: اولویت عکس دو نفره، بعد عکس‌های تکی
+    final couplePhoto = (coverPhoto ?? '').trim().isNotEmpty
+        ? coverPhoto!.trim()
+        : ((bridePhoto ?? '').trim().isNotEmpty
+            ? bridePhoto!.trim()
+            : (groomPhoto ?? '').trim());
+
     final accent = AppTok.accent(context);
-    final accentDeep = AppTok.accentDeep(context);
-    final accentSoft = AppTok.accentSoft(context);
     final cardSoft = AppTok.cardSoft(context);
+    final textSoft = AppTok.textSoft(context);
+    final accentDeep = AppTok.accentDeep(context);
 
     return GestureDetector(
       onTap: _openCoupleProfile,
@@ -660,188 +690,93 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: Stack(
-            children: [
-              if (coverPhoto != null && coverPhoto!.isNotEmpty)
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: _dark ? 0.18 : 0.12,
-                    child: Image.network(
-                      coverPhoto!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 22, 16, 18),
+              child: Column(
+                children: [
+                  // بالا: «تا روز جشن X با Y»
+                  Text(
+                    isWeddingDay
+                        ? AppLang.tr('today_is_your_day')
+                        : isPast
+                            ? AppLang.tr('married_life_congrats')
+                            : topText,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: _dark
+                          ? Colors.white.withValues(alpha: 0.96)
+                          : AppTok.text(context),
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                      height: 1.35,
                     ),
                   ),
-                ),
-              Positioned(
-                top: -40,
-                left: -20,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _brandGreenSoft.withValues(alpha: 0.55),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -30,
-                right: -10,
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _brandBlushSoft.withValues(alpha: 0.65),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                child: Column(
-                  children: [
-                    Text(
-                      isWeddingDay
-                          ? AppLang.tr('today_is_your_day')
-                          : isPast
-                              ? AppLang.tr('married_life_congrats')
-                              : AppLang.tr('until_celebration'),
-                      style: TextStyle(
-                        color: accentDeep,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _personAvatar(photoUrl: leftPhoto, name: leftName),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _brandBlushSoft,
-                                  border: Border.all(
-                                    color: accentSoft.withValues(alpha: 0.7),
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.favorite,
-                                  color: accentSoft,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '&',
-                                style: TextStyle(
-                                  color: accent,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'serif',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _personAvatar(photoUrl: rightPhoto, name: rightName),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
+                  const SizedBox(height: 20),
+                  // وسط: یک قلب بزرگ تپنده — عکس زوج داخل قلب
+                  if (!isWeddingDay && !isPast && weddingDate != null)
+                    Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto))
+                  else if (isWeddingDay || isPast)
+                    Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto)),
+                  const SizedBox(height: 22),
+                  // پایین: فقط شمارش معکوس — تاریخ و نام‌های تکی حذف شد
+                  if (weddingDate == null)
+                    Container(
                       width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cardSoft,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       child: Text(
-                        coupleLine,
-                        textAlign: TextAlign.start,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        AppLang.tr('wedding_date_not_set'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: textSoft, fontSize: 12),
+                      ),
+                    )
+                  else if (isWeddingDay)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            _brandGreenSoft,
+                            _brandBlushSoft.withValues(alpha: 0.7),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        AppLang.tr('wedding_day_banner'),
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: text,
-                          fontSize: 17,
+                          color: accentDeep,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'serif',
-                          letterSpacing: 0.3,
+                          fontSize: 14,
                         ),
                       ),
-                    ),
-                    if (weddingDate != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        _formatDate(weddingDate!),
-                        style: TextStyle(
-                          color: textSoft,
-                          fontSize: 12,
-                        ),
+                    )
+                  else if (isPast)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cardSoft,
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                    ],
-                    const SizedBox(height: 16),
-                    if (weddingDate == null)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: cardSoft,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          AppLang.tr('wedding_date_not_set'),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: textSoft,
-                            fontSize: 12,
-                          ),
-                        ),
-                      )
-                    else if (isWeddingDay)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              _brandGreenSoft,
-                              _brandBlushSoft.withValues(alpha: 0.7),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          AppLang.tr('wedding_day_banner'),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: accentDeep,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      )
-                    else if (isPast)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: cardSoft,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          '${AppLang.tr('days_since_wedding_prefix')}${_displayNum((-weddingDate!.difference(DateTime.now()).inDays).abs())} ${AppLang.tr('days_since_wedding')}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: textSoft,
-                            fontSize: 12,
-                          ),
-                        ),
-                      )
-                    else
-                      Row(
+                      child: Text(
+                        '${AppLang.tr('days_since_wedding_prefix')}${_displayNum((-weddingDate!.difference(DateTime.now()).inDays).abs())} ${AppLang.tr('days_since_wedding')}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: textSoft, fontSize: 12),
+                      ),
+                    )
+                  else
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Row(
                         children: [
                           Expanded(
                             child: _timeBox(
@@ -872,14 +807,84 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
-    ));
+    );
+  }
+
+  /// قلب بزرگ تپنده — عکس زوج داخل قلب با نبض 900ms
+  Widget _buildBigPulsingHeart({String? coverPhoto}) {
+    final accent = AppTok.accent(context);
+    final card = AppTok.card(context);
+    final photo = (coverPhoto ?? '').trim();
+    return ScaleTransition(
+      scale: _pulseScale,
+      child: SizedBox(
+        width: 190,
+        height: 172,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 190,
+              height: 172,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.18),
+                    blurRadius: 28,
+                    spreadRadius: 6,
+                  ),
+                ],
+              ),
+            ),
+            Positioned.fill(
+              child: ClipPath(
+                clipper: _HeartClipper(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        accent.withValues(alpha: 0.95),
+                        const Color(0xFFE8B4B8),
+                        accent.withValues(alpha: 0.85),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(3.8),
+                child: ClipPath(
+                  clipper: _HeartClipper(),
+                  child: Container(
+                    color: card,
+                    child: photo.isNotEmpty
+                        ? Image.network(
+                            photo,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _avatarFallback('♥'),
+                          )
+                        : _avatarFallback('♥'),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _personAvatar({
