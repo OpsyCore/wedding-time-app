@@ -755,15 +755,23 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // وسط: یک قلب بزرگ تپنده — عکس داخل قلب (واضح) فرق دارد با پشت کم‌رنگ
-                      // قلب یکم بالاتر آورده شد (فاصله بالا ۱۰ به‌جای ۲۰)
+                      // وسط: یک قلب بزرگ تپنده — داخلش اسم زوج + تاریخ (بدون عکس)
+                      // قلب یکم بالاتر آورده شد (فاصله پایین 28)
                       if (!isWeddingDay && !isPast && weddingDate != null)
-                        Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto))
+                        Center(
+                            child: _buildBigPulsingHeart(
+                                groom: groom,
+                                bride: bride,
+                                date: weddingDate))
                       else if (isWeddingDay || isPast)
-                        Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto))
+                        Center(
+                            child: _buildBigPulsingHeart(
+                                groom: groom, bride: bride, date: weddingDate))
                       else
-                        Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto)),
-                      const SizedBox(height: 16),
+                        Center(
+                            child: _buildBigPulsingHeart(
+                                groom: groom, bride: bride, date: weddingDate)),
+                      const SizedBox(height: 28),
                       // پایین: فقط شمارش معکوس — تاریخ و نام‌های تکی حذف شد
                       if (weddingDate == null)
                         Container(
@@ -862,11 +870,18 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  /// قلب بزرگ تپنده — عکس زوج داخل قلب با نبض 900ms
-  Widget _buildBigPulsingHeart({String? coverPhoto}) {
+  /// قلب بزرگ تپنده — داخلش اسم زوج + تاریخ (بدون عکس) با نبض 900ms
+  Widget _buildBigPulsingHeart({
+    required String groom,
+    required String bride,
+    DateTime? date,
+  }) {
     final accent = AppTok.accent(context);
     final card = AppTok.card(context);
-    final photo = (coverPhoto ?? '').trim();
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+    final coupleLine = '$groom  &  $bride';
+    final dateStr = date != null ? _formatDate(date) : '';
     return ScaleTransition(
       scale: _pulseScale,
       child: SizedBox(
@@ -914,14 +929,48 @@ class _HomeScreenState extends State<HomeScreen>
                   clipper: _HeartClipper(),
                   child: Container(
                     color: card,
-                    child: photo.isNotEmpty
-                        ? Image.network(
-                            photo,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                _avatarFallback('♥'),
-                          )
-                        : _avatarFallback('♥'),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.favorite_rounded,
+                              color: accent.withValues(alpha: 0.90),
+                              size: 22,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              coupleLine,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: text,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                fontFamily: 'serif',
+                                height: 1.2,
+                              ),
+                            ),
+                            if (dateStr.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                dateStr,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: textSoft,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
