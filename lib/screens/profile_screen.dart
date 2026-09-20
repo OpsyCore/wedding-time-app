@@ -1,13 +1,18 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/app_effect_controller.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../services/ambient_music_service.dart';
+import '../services/media_upload_service.dart';
 import '../widgets/ambient_music_controls.dart';
+import '../widgets/image_crop_screen.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/effect_picker.dart';
 import '../widgets/invite_code_card.dart';
@@ -27,6 +32,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _email = '';
   String _role = '';
   String _photoUrl = '';
+  bool _uploadingPhoto = false;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -58,6 +65,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _changePhoto() async {
+    if (_uploadingPhoto) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 88,
+        maxWidth: 1200,
+      );
+      if (image == null) return;
+      if (!mounted) return;
+
+      final raw = await image.readAsBytes();
+      if (!mounted) return;
+      if (raw.isEmpty) return;
+
+      final cropped = await ImageCropScreen.crop(
+        context,
+        bytes: Uint8List.fromList(raw),
+        initialAspectRatio: 1.0,
+        title: AppLang.tr('crop_image'),
+      );
+      if (cropped == null || !mounted) return;
+
+      setState(() => _uploadingPhoto = true);
+
+      final result = await MediaUploadService.uploadImageBytes(
+        bytes: cropped,
+        fileName: 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      final url = result.url.trim();
+      if (url.isEmpty) throw Exception(AppLang.tr('photo_upload_failed'));
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+            'photoUrl': url,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+
+      if (!mounted) return;
+      setState(() {
+        _photoUrl = url;
+        _uploadingPhoto = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLang.tr('photo_saved_ok'))),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _uploadingPhoto = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${AppLang.tr('photo_upload_failed')}: $e')),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -169,19 +235,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.all(20),
                       children: [
                         Center(
-                          child: CircleAvatar(
-                            radius: 46,
-                            backgroundColor: accent.withValues(alpha: 0.2),
-                            backgroundImage: _photoUrl.isNotEmpty
-                                ? NetworkImage(_photoUrl)
-                                : null,
-                            child: _photoUrl.isEmpty
-                                ? Icon(
-                                    Icons.person,
-                                    color: accent,
-                                    size: 46,
-                                  )
-                                : null,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              CircleAvatar(
+                                radius: 46,
+                                backgroundColor: accent.withValues(alpha: 0.2),
+                                backgroundImage: _photoUrl.isNotEmpty
+                                    ? NetworkImage(_photoUrl)
+                                    : null,
+                                child: _photoUrl.isEmpty
+                                    ? Icon(
+                                        Icons.person,
+                                        color: accent,
+                                        size: 46,
+                                      )
+                                    : null,
+                              ),
+                              Positioned(
+                                bottom: -2,
+                                right: -2,
+                                child: InkWell(
+                                  onTap: _changePhoto,
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(7),
+                                    decoration: BoxDecoration(
+                                      color: accent,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: bg,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: _uploadingPhoto
+                                        ? const SizedBox(
+                                            width: 14,
+                                            height: 14,
+                                            child:
+                                                CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.camera_alt_outlined,
+                                            color: Colors.white,
+                                            size: 16,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 16),
