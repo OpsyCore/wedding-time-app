@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../core/app_effects.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
@@ -560,7 +561,11 @@ class _NotesScreenState extends State<NotesScreen> {
                       }, SetOptions(merge: true));
                     } catch (e) {
                       if (mounted) {
-                        _toast('${AppLang.tr('save_error')}: $e', error: true);
+                        showAppSnack(
+                          context,
+                          '${AppLang.tr('save_error')}: $e',
+                          error: true,
+                        );
                       }
                       return;
                     }
