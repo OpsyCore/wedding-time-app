@@ -45,11 +45,28 @@ class SupportService {
     });
   }
 
+  Stream<List<SupportContribution>> watchContributions([String? itemId]) {
+    Query<Map<String, dynamic>> query = _contrib.orderBy('createdAt', descending: true);
+    if (itemId != null && itemId.isNotEmpty) {
+      query = _contrib.where('itemId', isEqualTo: itemId);
+    }
+    return query.snapshots().map((snap) {
+      final list = snap.docs.map(SupportContribution.fromDoc).toList();
+      list.sort((a, b) {
+        final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return db.compareTo(da);
+      });
+      return list;
+    });
+  }
+
   Future<void> addItem({
     required String title,
     String note = '',
     String categoryId = 'general',
     String imageUrl = '',
+    String purchaseUrl = '',
     int targetToman = 0,
     double targetUsd = 0,
     bool allowPartial = true,
@@ -62,6 +79,7 @@ class SupportService {
       'note': note.trim(),
       'categoryId': categoryId,
       'imageUrl': imageUrl.trim(),
+      'purchaseUrl': purchaseUrl.trim(),
       'sortOrder': DateTime.now().millisecondsSinceEpoch,
       'status': SupportStatus.open.name,
       'targetToman': targetToman,
@@ -88,6 +106,7 @@ class SupportService {
       'note': item.note.trim(),
       'categoryId': item.categoryId,
       'imageUrl': item.imageUrl.trim(),
+      'purchaseUrl': item.purchaseUrl.trim(),
       'sortOrder': item.sortOrder,
       'status': item.status.name,
       'targetToman': item.targetToman,
