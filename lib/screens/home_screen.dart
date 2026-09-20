@@ -642,7 +642,7 @@ class _HomeScreenState extends State<HomeScreen>
         !isWeddingDay;
 
     // متن بالا: «تا روز جشن X با Y» — نام واقعی زوج
-    final String topText;
+    String topText;
     if (AppLang.I.isFa) {
       if (groomRaw.isNotEmpty && brideRaw.isNotEmpty) {
         topText = 'تا روز جشن $groom با $bride';
@@ -655,11 +655,11 @@ class _HomeScreenState extends State<HomeScreen>
     } else {
       if (groomRaw.isNotEmpty && brideRaw.isNotEmpty) {
         topText = 'Until our special day — $groom & $bride';
+      } else if (groomRaw.isNotEmpty || brideRaw.isNotEmpty) {
+        final base = AppLang.tr('until_celebration');
+        topText = '$base — $groom & $bride';
       } else {
         topText = AppLang.tr('until_celebration');
-        if (groomRaw.isNotEmpty || brideRaw.isNotEmpty) {
-          topText = '$topText — $groom & $bride';
-        }
       }
     }
 
