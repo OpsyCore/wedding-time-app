@@ -756,17 +756,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    Text(
-                      coupleLine,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: text,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'serif',
-                        letterSpacing: 0.3,
+                    SizedBox(
+                      width: double.infinity,
+                      child: Text(
+                        coupleLine,
+                        textAlign: TextAlign.start,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'serif',
+                          letterSpacing: 0.3,
+                        ),
                       ),
                     ),
                     if (weddingDate != null) ...[
@@ -1995,12 +1998,16 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: text,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: text,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             const SizedBox(width: 4),

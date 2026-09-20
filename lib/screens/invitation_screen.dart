@@ -1650,7 +1650,7 @@ class _InvitationScreenState extends State<InvitationScreen>
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4,
-                childAspectRatio: 0.62,
+                childAspectRatio: 0.74,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
@@ -1679,28 +1679,33 @@ class _InvitationScreenState extends State<InvitationScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             CircleAvatar(
-                              radius: 17,
+                              radius: 15,
                               backgroundColor: AppTok.accent(context)
                                   .withValues(alpha: on ? 0.16 : 0.08),
                               child: Icon(
                                 m['icon'] as IconData,
-                                size: 17,
+                                size: 15,
                                 color: on
                                     ? AppTok.accent(context)
                                     : textSoft,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              isFa ? m['fa'] as String : m['en'] as String,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: text,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                height: 1.3,
+                            const SizedBox(height: 5),
+                            // برچسب با scaleDown هرگز سرریز نمی‌شود
+                            SizedBox(
+                              width: double.infinity,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  isFa ? m['fa'] as String : m['en'] as String,
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    color: text,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.2,
+                                  ),
+                                ),
                               ),
                             ),
                           ],

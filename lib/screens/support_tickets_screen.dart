@@ -382,7 +382,8 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
           {
             'from': 'user',
             'text': bodyC.text.trim(),
-            'at': FieldValue.serverTimestamp(),
+            // FieldValue داخل آرایه توسط Firestore پشتیبانی نمی‌شود
+            'at': Timestamp.now(),
           },
         ],
         'createdAt': FieldValue.serverTimestamp(),
