@@ -11,6 +11,7 @@ import 'core/web_url_strategy_stub.dart'
 
 import 'core/app_config.dart';
 import 'core/app_effect_controller.dart';
+import 'core/app_font_controller.dart';
 import 'core/app_lang.dart';
 import 'core/guest_slug.dart';
 import 'core/app_theme.dart';
@@ -33,6 +34,7 @@ void main() async {
   await AppLang.I.load();
   await AppThemeController.I.load();
   await AppEffectController.I.load();
+  await AppFontController.I.load();
   try {
     await AmbientMusicService.I.init();
   } catch (_) {
@@ -138,13 +140,15 @@ class WeddingTimeApp extends StatelessWidget {
         AppLang.I,
         AppThemeController.I,
         AppEffectController.I,
+        AppFontController.I,
       ]),
       builder: (context, _) {
         final lang = AppLang.I;
 
+        final font = AppFontController.I.family;
         return MaterialApp(
           // کلید ثابت — کمتر stack را می‌پرد
-          key: const ValueKey('wedding_time_root'),
+          key: ValueKey('wedding_time_root_$font'),
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           locale: lang.locale,
@@ -154,8 +158,8 @@ class WeddingTimeApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
+          theme: AppTheme.light(font),
+          darkTheme: AppTheme.dark(font),
           themeMode: AppThemeController.I.themeMode,
           builder: (context, child) {
             return Directionality(
