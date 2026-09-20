@@ -7,7 +7,7 @@ const heroHeartVisibleField = 'heroHeartVisible';
 const heroBannerAnimatedField = 'heroBannerAnimated';
 
 const kDefaultHeroBannerId = 'none';
-const kDefaultHeroHeartId = 'crimson'; // قرمز آجری فعلی
+const kDefaultHeroHeartId = 'purpleBow'; // ۶ قلب جدید — پیش‌فرض بنفش پاپیونی
 
 /// ── بنرهای پشت هیرو — ۵ طرح + حالت «بدون بنر» ──
 class HeroBannerOption {
@@ -15,8 +15,8 @@ class HeroBannerOption {
   final String nameFa;
   final String nameEn;
   final List<Color> gradient; // top → bottom
-  final Color archTint; // رنگ قوس / هایلایت
-  final IconData icon; // آیکن کوچک برای پریویو
+  final Color archTint;
+  final IconData icon;
 
   const HeroBannerOption({
     required this.id,
@@ -89,54 +89,57 @@ class HeroBannerOption {
   }
 }
 
+/// ── ۶ قلب دقیقاً مثل عکس ارسالی ──
+// از چپ به راست عکس: purpleBow | pinkStars | blueWatercolor | goldVelvet | pinkRuffleBow | greenRuffle
 class HeroHearts {
   static const List<HeroHeartOption> all = [
     HeroHeartOption(
-      id: 'pinkDotted',
-      nameFa: 'صورتی خال‌دار',
-      nameEn: 'Pink Dotted',
-      base: Color(0xFFE8A0B2),
-      accent: Color(0xFF8E3A4A),
-      hasBow: false,
-      hasDots: true,
+      id: 'purpleBow',
+      nameFa: 'بنفش پاپیونی',
+      nameEn: 'Purple Bow',
+      base: Color(0xFF7A4DB8),
+      accent: Color(0xFFD6C6F5),
+      style: HeartStyle.purpleBow,
     ),
     HeroHeartOption(
-      id: 'bowLace',
-      nameFa: 'پاپیون توری',
-      nameEn: 'Bow Lace',
-      base: Color(0xFFF6D6DC),
-      accent: Color(0xFF5A2A35),
-      hasBow: true,
-      hasDots: false,
-      lace: true,
+      id: 'pinkStars',
+      nameFa: 'صورتی ستاره‌ای',
+      nameEn: 'Pink Stars',
+      base: Color(0xFFF0627B),
+      accent: Color(0xFFFFE066),
+      style: HeartStyle.pinkStars,
     ),
     HeroHeartOption(
-      id: 'mochaBow',
-      nameFa: 'موکا پاپیونی',
-      nameEn: 'Mocha Bow',
-      base: Color(0xFF9E8E8A),
-      accent: Color(0xFF3E2E2B),
-      hasBow: true,
-      hasDots: false,
+      id: 'blueWatercolor',
+      nameFa: 'آبی آبرنگی',
+      nameEn: 'Blue Watercolor',
+      base: Color(0xFF8ECFE0),
+      accent: Color(0xFF5AA9C8),
+      style: HeartStyle.blueWatercolor,
     ),
     HeroHeartOption(
-      id: 'watercolor',
-      nameFa: 'آبرنگی',
-      nameEn: 'Watercolor',
-      base: Color(0xFFFFEFF3),
-      accent: Color(0xFFE8A0B2),
-      hasBow: false,
-      hasDots: false,
-      watercolor: true,
+      id: 'goldVelvet',
+      nameFa: 'طلایی مخملی',
+      nameEn: 'Gold Velvet',
+      base: Color(0xFFE6B800),
+      accent: Color(0xFF8C6F00),
+      style: HeartStyle.goldVelvet,
     ),
     HeroHeartOption(
-      id: 'crimson',
-      nameFa: 'آجری کلاسیک',
-      nameEn: 'Crimson Classic',
-      base: Color(0xFFD75445),
-      accent: Color(0xFF4A2520),
-      hasBow: false,
-      hasDots: false,
+      id: 'pinkRuffleBow',
+      nameFa: 'صورتی چین‌دار',
+      nameEn: 'Pink Ruffle',
+      base: Color(0xFFFADADD),
+      accent: Color(0xFFE53935),
+      style: HeartStyle.pinkRuffleBow,
+    ),
+    HeroHeartOption(
+      id: 'greenRuffle',
+      nameFa: 'سبز چین‌دار',
+      nameEn: 'Green Ruffle',
+      base: Color(0xFF8BC34A),
+      accent: Color(0xFF547A26),
+      style: HeartStyle.greenRuffle,
     ),
   ];
 
@@ -145,21 +148,37 @@ class HeroHearts {
     for (final o in all) {
       if (o.id == v) return o;
     }
-    // default crimson
-    return all.last;
+    // سازگاری با قلب‌های قدیمی — نگاشت به معادل جدید
+    switch (v) {
+      case 'crimson':
+      case 'pinkDotted':
+        return all[1]; // pinkStars
+      case 'bowLace':
+        return all[4]; // pinkRuffleBow
+      case 'mochaBow':
+        return all[0]; // purpleBow
+      case 'watercolor':
+        return all[2]; // blueWatercolor
+      default:
+        return all.first; // purpleBow
+    }
   }
 }
+
+enum HeartStyle { purpleBow, pinkStars, blueWatercolor, goldVelvet, pinkRuffleBow, greenRuffle }
 
 class HeroHeartOption {
   final String id;
   final String nameFa;
   final String nameEn;
   final Color base;
-  final Color accent; // for sparkle/bow
-  final bool hasBow;
-  final bool hasDots;
-  final bool lace;
-  final bool watercolor;
+  final Color accent;
+  final HeartStyle style;
+  // برای سازگاری قدیمی
+  bool get hasBow => style == HeartStyle.purpleBow || style == HeartStyle.pinkRuffleBow;
+  bool get hasDots => false;
+  bool get lace => style == HeartStyle.pinkRuffleBow || style == HeartStyle.greenRuffle;
+  bool get watercolor => style == HeartStyle.blueWatercolor;
 
   const HeroHeartOption({
     required this.id,
@@ -167,10 +186,7 @@ class HeroHeartOption {
     required this.nameEn,
     required this.base,
     required this.accent,
-    this.hasBow = false,
-    this.hasDots = false,
-    this.lace = false,
-    this.watercolor = false,
+    required this.style,
   });
 
   String name(bool isFa) => isFa ? nameFa : nameEn;

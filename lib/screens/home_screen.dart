@@ -777,7 +777,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // ── وسط: قلب (قابل مخفی‌سازی) یا عکس دو نفره ──
+                      // ── وسط: قلب (قابل مخفی‌سازی) — وقتی مخفی فقط بک‌گراند دیده می‌شود ──
                       if (_heroHeartVisible)
                         Center(
                           child: _buildBigPulsingHeart(
@@ -789,7 +789,7 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         )
                       else
-                        _buildCouplePhotoOnly(bgPhoto),
+                        const SizedBox(height: 8),
                       const SizedBox(height: 28),
                       // پایین: شمارش معکوس
                       if (weddingDate == null)
@@ -1058,7 +1058,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  /// قلب بزرگ تپنده — نسخهٔ چندطرحه (crimson / pinkDotted / bowLace / mochaBow / watercolor)
+  /// قلب بزرگ تپنده — ۶ طرح دقیقاً مثل عکس ارسالی
   Widget _buildBigPulsingHeart({
     required String groom,
     required String bride,
@@ -1069,131 +1069,131 @@ class _HomeScreenState extends State<HomeScreen>
     final coupleLine = _nameOrder == 'bride_first' ? '$bride  &  $groom' : '$groom  &  $bride';
     final dateStr = date != null ? _formatDate(date) : '';
     final heart = HeroHearts.byId(heartId);
-    final base = heart.base;
-    final accent = heart.accent;
 
-    // متن داخل قلب بسته به رنگ پس‌زمینه تیره/روشن
-    final isDarkHeart = heart.id == 'crimson' || heart.id == 'mochaBow';
-    final textColor = isDarkHeart ? Colors.white : const Color(0xFF3A2A2E);
-    final subColor = isDarkHeart ? Colors.white.withValues(alpha: 0.96) : const Color(0xFF6B4A52);
-    final dateColor = isDarkHeart ? Colors.white.withValues(alpha: 0.93) : const Color(0xFF8A6B73);
-    final sparkleLight = isDarkHeart ? Colors.white : const Color(0xFF5A2A35);
-    final sparkleDark = heart.id == 'watercolor' ? const Color(0xFFE8A0B2) : accent;
+    // همه قلب‌ها متن سفید با هاله مشکی مات (خواسته کاربر)
+    const textColor = Colors.white;
+    const subColor = Colors.white;
+    const dateColor = Colors.white;
 
+    // سایه پشت هر قلب بر اساس همان رنگ پایه
     Widget heartStack = SizedBox(
       width: 210,
       height: 192,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // سایه
           Container(
             width: 210,
             height: 192,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: base.withValues(alpha: 0.28), blurRadius: 28, spreadRadius: 6)],
+              boxShadow: [BoxShadow(color: heart.base.withValues(alpha: 0.30), blurRadius: 28, spreadRadius: 6)],
             ),
           ),
-          // قلب پایه
+          // ── قلب پایه + بافت هر طرح ──
           Positioned.fill(
             child: ClipPath(
               clipper: _HeartClipper(),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: base,
-                  gradient: heart.watercolor
-                      ? LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [const Color(0xFFFFF5F7), const Color(0xFFF8DDE3), const Color(0xFFE8A0B2).withValues(alpha: 0.35)],
-                        )
-                      : heart.id == 'mochaBow'
-                          ? LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [const Color(0xFFB8A9A3), const Color(0xFF8D7E7A), const Color(0xFF6B5D59)],
-                            )
-                          : null,
-                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // رنگ پایه
+                  Container(color: heart.base),
+                  // بافت‌های اختصاصی
+                  if (heart.style == HeartStyle.blueWatercolor)
+                    // رگه‌های آبرنگی — چند لایه گرادیان + لکه
+                    CustomPaint(painter: _WatercolorPainter()),
+                  if (heart.style == HeartStyle.goldVelvet)
+                    // مخمل طلایی — گرادیان عمودی تیره/روشن + هایلایت چپ
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [Color(0xFFD4A000), Color(0xFFF5C518), Color(0xFFE6B800), Color(0xFFC89A00)],
+                          stops: [0.0, 0.35, 0.65, 1.0],
+                        ),
+                      ),
+                    ),
+                  if (heart.style == HeartStyle.goldVelvet)
+                    // درز عمودی وسط — مثل دو تکه پارچه دوخته شده
+                    Align(
+                      alignment: Alignment.center,
+                      child: Container(width: 1.2, color: const Color(0xFF8C6F00).withValues(alpha: 0.55)),
+                    ),
+                  if (heart.style == HeartStyle.purpleBow || heart.style == HeartStyle.greenRuffle || heart.style == HeartStyle.pinkRuffleBow)
+                    // بافت نمدی خیلی ملایم (نویز نقطه‌ای)
+                    Opacity(
+                      opacity: 0.12,
+                      child: CustomPaint(painter: _FeltNoisePainter(base: heart.base)),
+                    ),
+                ],
               ),
             ),
           ),
-          // حاشیه / لیس / خال‌خال
-          if (heart.lace)
+
+          // ── لایه تزئین قلب ──
+          // 1) بنفش پاپیونی — دوخت سفید دَش + پاپیون یاسی
+          if (heart.style == HeartStyle.purpleBow) ...[
             Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.all(2.2),
+                padding: const EdgeInsets.all(7),
                 child: ClipPath(
                   clipper: _HeartClipper(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: base,
-                      border: Border.all(color: const Color(0xFF3A2A2E).withValues(alpha: 0.85), width: 1.2),
-                    ),
-                    child: CustomPaint(painter: _LaceBorderPainter(color: const Color(0xFF3A2A2E).withValues(alpha: 0.22))),
-                  ),
-                ),
-              ),
-            )
-          else if (heart.hasDots)
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.all(2.2),
-                child: ClipPath(
-                  clipper: _HeartClipper(),
-                  child: Container(
-                    color: base,
-                    child: CustomPaint(painter: _DottedBorderPainter(dotColor: Colors.white.withValues(alpha: 0.55))),
-                  ),
-                ),
-              ),
-            )
-          else
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.all(2.2),
-                child: ClipPath(
-                  clipper: _HeartClipper(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white.withValues(alpha: isDarkHeart ? 0.14 : 0.0), width: 1),
-                      color: base,
-                    ),
-                  ),
+                  child: CustomPaint(painter: _DashedStitchPainter(color: Colors.white.withValues(alpha: 0.85), strokeWidth: 1.2, dash: 6, gap: 4)),
                 ),
               ),
             ),
-          // پاپیون بالای قلب
-          if (heart.hasBow)
             Positioned(
-              top: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8B4C4),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 4, offset: const Offset(0, 2))],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(width: 12, height: 10, decoration: BoxDecoration(color: const Color(0xFFE98AA8), borderRadius: BorderRadius.circular(4))),
-                    Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFFFD1DC), shape: BoxShape.circle)),
-                    Container(width: 12, height: 10, decoration: BoxDecoration(color: const Color(0xFFE98AA8), borderRadius: BorderRadius.circular(4))),
-                  ],
+              top: 10,
+              child: _buildBow(width: 36, height: 22, color: const Color(0xFFD8C6F0), knotColor: const Color(0xFFB89EE8), shadow: true),
+            ),
+          ],
+
+          // 2) صورتی ستاره‌ای — ستاره‌های رنگی پراکنده
+          if (heart.style == HeartStyle.pinkStars) ...[
+            for (final s in _pinkStarData)
+              Positioned(
+                left: s.dx * 210,
+                top: s.dy * 192,
+                child: Transform.rotate(
+                  angle: s.angle,
+                  child: Icon(Icons.star, size: s.size, color: s.color.withValues(alpha: 0.95)),
                 ),
               ),
+          ],
+
+          // 3) آبی آبرنگی — هیچ تزئین اضافه، فقط بافت آبرنگی بالا
+
+          // 5) صورتی چین‌دار — لبه چین‌دار (ruffled) + پاپیون قرمز کوچک
+          if (heart.style == HeartStyle.pinkRuffleBow) ...[
+            // لبه چین‌دار — دایره‌های کوچک صورتی تیره دور قلب
+            Positioned.fill(child: CustomPaint(painter: _RufflePainter(ruffleColor: const Color(0xFFF8BBD0), stitchColor: Colors.white.withValues(alpha: 0.55)))),
+            Positioned(
+              top: 8,
+              child: _buildBow(width: 22, height: 14, color: const Color(0xFFE53935), knotColor: const Color(0xFFB71C1C), shadow: true, small: true),
             ),
-          // ستاره‌ها
-          Positioned(top: 18, right: 24, child: _sparkle(size: 28, color: sparkleLight, angle: 0.15)),
-          Positioned(top: 34, right: 52, child: _sparkle(size: 14, color: sparkleDark, angle: -0.2)),
-          Positioned(top: 40, left: 28, child: _sparkle(size: 20, color: sparkleDark, angle: 0.25)),
-          Positioned(top: 58, left: 44, child: _sparkle(size: 10, color: sparkleDark, angle: -0.3)),
-          Positioned(bottom: 44, left: 84, child: _sparkle(size: 26, color: sparkleLight, angle: 0.1)),
-          Positioned(bottom: 32, left: 62, child: _sparkle(size: 12, color: sparkleLight, angle: -0.25)),
-          Positioned(bottom: 36, right: 68, child: _sparkle(size: 10, color: sparkleLight, angle: 0.2)),
-          // متن داخل — کاملاً وسط قلب + لاین مشکی مات (shadow) برای خوانایی
+          ],
+
+          // 6) سبز چین‌دار
+          if (heart.style == HeartStyle.greenRuffle) ...[
+            Positioned.fill(child: CustomPaint(painter: _RufflePainter(ruffleColor: const Color(0xFF7CB342), stitchColor: Colors.white.withValues(alpha: 0.70)))),
+          ],
+
+          // 4) طلایی و همه — ستاره‌های کوچک ظریف برای درخشش (اختیاری، خیلی کم)
+          if (heart.style == HeartStyle.goldVelvet)
+            Positioned(
+              top: 22,
+              right: 28,
+              child: Icon(Icons.auto_awesome, size: 18, color: Colors.white.withValues(alpha: 0.55)),
+            ),
+
+          // برای همه قلب‌ها — ستاره سفید ظریف بالا راست و پایین چپ (مثل رفرنس قبلی) فقط برای عمق
+          // ولی برای ۶ قلب جدید خیلی کم‌رنگ تا شبیه عکس بماند
+          if (heart.style == HeartStyle.purpleBow || heart.style == HeartStyle.pinkStars)
+            Positioned(top: 18, right: 22, child: Icon(Icons.auto_awesome, size: 14, color: Colors.white.withValues(alpha: 0.22))),
+
+          // ── متن داخل — کاملاً وسط + هاله مشکی مات ──
           Center(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 42, 24, 28),
@@ -1205,40 +1205,40 @@ class _HomeScreenState extends State<HomeScreen>
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: textColor,
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.3,
                           height: 1.2,
                           shadows: [
-                            Shadow(color: Colors.black.withValues(alpha: 0.55), blurRadius: 6, offset: const Offset(0, 1.2)),
-                            Shadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 12),
+                            Shadow(color: Color(0x8C000000), blurRadius: 6, offset: Offset(0, 1.2)),
+                            Shadow(color: Color(0x59000000), blurRadius: 12),
                           ])),
                   const SizedBox(height: 7),
                   Text(AppLang.I.isFa ? 'ما ازدواج می‌کنیم' : 'We are getting married',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: subColor,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           height: 1.2,
                           shadows: [
-                            Shadow(color: Colors.black.withValues(alpha: 0.50), blurRadius: 5, offset: const Offset(0, 1)),
-                            Shadow(color: Colors.black.withValues(alpha: 0.30), blurRadius: 10),
+                            Shadow(color: Color(0x80000000), blurRadius: 5, offset: Offset(0, 1)),
+                            Shadow(color: Color(0x4D000000), blurRadius: 10),
                           ])),
                   if (dateStr.isNotEmpty) ...[
                     const SizedBox(height: 7),
                     Text(dateStr,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                             color: dateColor,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
                             shadows: [
-                              Shadow(color: Colors.black.withValues(alpha: 0.50), blurRadius: 5, offset: const Offset(0, 1)),
-                              Shadow(color: Colors.black.withValues(alpha: 0.30), blurRadius: 10),
+                              Shadow(color: Color(0x80000000), blurRadius: 5, offset: Offset(0, 1)),
+                              Shadow(color: Color(0x4D000000), blurRadius: 10),
                             ])),
                   ],
                 ],
@@ -1251,6 +1251,31 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (!animated) return heartStack;
     return ScaleTransition(scale: _pulseScale, child: heartStack);
+  }
+
+  /// پاپیون کوچک — دو لوب + گره وسط
+  Widget _buildBow({required double width, required double height, required Color color, required Color knotColor, bool shadow = false, bool small = false}) {
+    final lobeW = width * 0.38;
+    final lobeH = height * 0.75;
+    return Container(
+      width: width,
+      height: height,
+      decoration: shadow ? BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 4, offset: const Offset(0, 2))]) : null,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(width: lobeW, height: lobeH, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(small ? 4 : 6))),
+              SizedBox(width: width * 0.12, height: height * 0.5),
+              Container(width: lobeW, height: lobeH, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(small ? 4 : 6))),
+            ],
+          ),
+          Container(width: width * 0.22, height: height * 0.62, decoration: BoxDecoration(color: knotColor, borderRadius: BorderRadius.circular(4))),
+        ],
+      ),
+    );
   }
 
   /// ستاره چهارپر کوچک — شبیه ستاره‌های رفرنس
@@ -2600,7 +2625,6 @@ class _LaceBorderPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final p = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 0.9;
     final path = _HeartClipper().getClip(size);
-    // inner lace scallop — small inward curves along top edge
     canvas.drawPath(path, p);
     final dot = Paint()..color = color..style = PaintingStyle.fill;
     for (double t = 0.08; t < 0.92; t += 0.08) {
@@ -2612,6 +2636,133 @@ class _LaceBorderPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+// ── بافت‌های ۶ قلب جدید ──
+class _WatercolorPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // لکه‌های آبرنگی آبی کم‌رنگ
+    final p1 = Paint()..color = const Color(0xFFB8E0F2).withValues(alpha: 0.55)..style = PaintingStyle.fill;
+    final p2 = Paint()..color = const Color(0xFF6FB8D8).withValues(alpha: 0.28)..style = PaintingStyle.fill;
+    final p3 = Paint()..color = Colors.white.withValues(alpha: 0.45)..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size.width * 0.35, size.height * 0.35), 42, p1);
+    canvas.drawCircle(Offset(size.width * 0.68, size.height * 0.48), 36, p2);
+    canvas.drawCircle(Offset(size.width * 0.50, size.height * 0.62), 28, p3);
+    canvas.drawCircle(Offset(size.width * 0.28, size.height * 0.58), 22, p2);
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _FeltNoisePainter extends CustomPainter {
+  final Color base;
+  const _FeltNoisePainter({required this.base});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = Colors.white.withValues(alpha: 0.22)..style = PaintingStyle.fill;
+    // نویز خیلی ریز نمدی
+    final rnd = [Offset(0.2, 0.25), Offset(0.7, 0.3), Offset(0.5, 0.7), Offset(0.8, 0.65), Offset(0.3, 0.55)];
+    for (final o in rnd) {
+      canvas.drawCircle(Offset(size.width * o.dx, size.height * o.dy), 1.0, p);
+    }
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DashedStitchPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dash;
+  final double gap;
+  const _DashedStitchPainter({required this.color, this.strokeWidth = 1.2, this.dash = 6, this.gap = 4});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = _HeartClipper().getClip(size);
+    final dashed = _dashPath(path, dashLength: dash, gapLength: gap);
+    final paint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = strokeWidth..strokeCap = StrokeCap.round..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(dashed, paint);
+  }
+  Path _dashPath(Path source, {required double dashLength, required double gapLength}) {
+    final dashed = Path();
+    for (final metric in source.computeMetrics()) {
+      double dist = 0;
+      while (dist < metric.length) {
+        final nextDash = (dist + dashLength).clamp(0.0, metric.length);
+        dashed.addPath(metric.extractPath(dist, nextDash), Offset.zero);
+        dist = nextDash + gapLength;
+      }
+    }
+    return dashed;
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _RufflePainter extends CustomPainter {
+  final Color ruffleColor;
+  final Color stitchColor;
+  const _RufflePainter({required this.ruffleColor, required this.stitchColor});
+  @override
+  void paint(Canvas canvas, Size size) {
+    // چین دور قلب — دایره‌های کوچک مماس بر لبه قلب
+    final rufflePaint = Paint()..color = ruffleColor..style = PaintingStyle.fill;
+    final stitchPaint = Paint()..color = stitchColor..style = PaintingStyle.stroke..strokeWidth = 0.9..strokeCap = StrokeCap.round;
+    // تعداد ruffle ها
+    final path = _HeartClipper().getClip(size);
+    // outer ruffle circles along path
+    final step = 10.0;
+    for (final metric in path.computeMetrics()) {
+      final len = metric.length;
+      for (double d = 0; d < len; d += step) {
+        final pos = metric.getTangentForOffset(d);
+        if (pos == null) continue;
+        canvas.drawCircle(pos.position, 4.2, rufflePaint);
+      }
+    }
+    // inner dashed stitch inside ruffle
+    final inner = Path();
+    // approximate inner by slightly scaled clip
+    final innerPath = _HeartClipper().getClip(Size(size.width - 10, size.height - 10));
+    // shift to center
+    inner.addPath(innerPath, const Offset(5, 5));
+    final dashed = _dashPath(inner, dashLength: 4, gapLength: 4);
+    canvas.drawPath(dashed, stitchPaint);
+  }
+  Path _dashPath(Path source, {required double dashLength, required double gapLength}) {
+    final dashed = Path();
+    for (final metric in source.computeMetrics()) {
+      double dist = 0;
+      while (dist < metric.length) {
+        final nextDash = (dist + dashLength).clamp(0.0, metric.length);
+        dashed.addPath(metric.extractPath(dist, nextDash), Offset.zero);
+        dist = nextDash + gapLength;
+      }
+    }
+    return dashed;
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PinkStar {
+  final double dx, dy, size, angle;
+  final Color color;
+  const _PinkStar(this.dx, this.dy, this.size, this.angle, this.color);
+}
+
+const _pinkStarData = [
+  _PinkStar(0.18, 0.22, 10, 0.2, Color(0xFFFFEB3B)),
+  _PinkStar(0.28, 0.38, 11, -0.15, Color(0xFF81D4FA)),
+  _PinkStar(0.42, 0.28, 8, 0.3, Color(0xFFFFB74D)),
+  _PinkStar(0.58, 0.32, 9, -0.2, Color(0xFFB39DDB)),
+  _PinkStar(0.72, 0.26, 8, 0.15, Color(0xFF80CBC4)),
+  _PinkStar(0.78, 0.45, 9, -0.25, Color(0xFFFFAB91)),
+  _PinkStar(0.35, 0.62, 10, 0.1, Color(0xFFFFEB3B)),
+  _PinkStar(0.52, 0.55, 7, -0.3, Color(0xFF81D4FA)),
+  _PinkStar(0.64, 0.68, 8, 0.2, Color(0xFFFFB74D)),
+  _PinkStar(0.22, 0.58, 7, -0.1, Color(0xFFB39DDB)),
+];
 
 /// گیج نیم‌دایره برای کارت بودجه
 class _HalfGaugePainter extends CustomPainter {

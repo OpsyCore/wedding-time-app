@@ -1149,40 +1149,73 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
   }
 
   Widget _miniHeartPreview(HeroHeartOption h) {
-    final base = h.base;
+    const double w = 56, hh = 50;
+    Widget heartFill = Container(color: h.base);
+    // بافت‌های کوچک
+    Widget? overlay;
+    switch (h.style) {
+      case HeartStyle.purpleBow:
+        overlay = Stack(children: [
+          Positioned.fill(child: Padding(padding: const EdgeInsets.all(3), child: ClipPath(clipper: _MiniHeartClipper(), child: CustomPaint(painter: _MiniStitchPainter())))),
+          Positioned(top: 2, left: 19, child: _miniBow(color: const Color(0xFFD8C6F0), knot: const Color(0xFFB89EE8))),
+        ]);
+        break;
+      case HeartStyle.pinkStars:
+        overlay = Stack(children: [
+          Positioned(left: 8, top: 8, child: Icon(Icons.star, size: 7, color: const Color(0xFFFFEB3B).withValues(alpha: 0.95))),
+          Positioned(left: 28, top: 7, child: Icon(Icons.star, size: 6, color: const Color(0xFF81D4FA).withValues(alpha: 0.95))),
+          Positioned(left: 38, top: 14, child: Icon(Icons.star, size: 6, color: const Color(0xFFFFB74D).withValues(alpha: 0.95))),
+          Positioned(left: 14, top: 20, child: Icon(Icons.star, size: 6, color: Colors.white.withValues(alpha: 0.85))),
+          Positioned(left: 32, top: 26, child: Icon(Icons.star, size: 5, color: const Color(0xFF80CBC4).withValues(alpha: 0.95))),
+        ]);
+        break;
+      case HeartStyle.blueWatercolor:
+        overlay = Opacity(opacity: 0.45, child: Center(child: Container(width: 18, height: 18, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle))));
+        break;
+      case HeartStyle.goldVelvet:
+        overlay = Stack(children: [
+          Align(alignment: Alignment.center, child: Container(width: 1, color: const Color(0xFF8C6F00).withValues(alpha: 0.55))),
+          Positioned(top: 6, right: 8, child: Icon(Icons.auto_awesome, size: 7, color: Colors.white.withValues(alpha: 0.6))),
+        ]);
+        break;
+      case HeartStyle.pinkRuffleBow:
+        overlay = Stack(children: [
+          Positioned.fill(child: CustomPaint(painter: _MiniRufflePainter(color: const Color(0xFFF8BBD0)))),
+          Positioned(top: 1, left: 21, child: _miniBow(color: const Color(0xFFE53935), knot: const Color(0xFFB71C1C), small: true)),
+        ]);
+        break;
+      case HeartStyle.greenRuffle:
+        overlay = Positioned.fill(child: CustomPaint(painter: _MiniRufflePainter(color: const Color(0xFF7CB342))));
+        break;
+    }
     return SizedBox(
-      width: 52,
-      height: 48,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // heart shape via icon for preview (fast, no clipper needed)
-          Icon(Icons.favorite, size: 48, color: base),
-          if (h.hasBow)
-            Positioned(
-              top: 2,
-              child: Container(
-                width: 18,
-                height: 8,
-                decoration: BoxDecoration(color: const Color(0xFFF8B4C4), borderRadius: BorderRadius.circular(4)),
-                child: Center(child: Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFFFD1DC), shape: BoxShape.circle))),
-              ),
-            ),
-          if (h.hasDots)
-            Positioned.fill(
-              child: CustomPaint(painter: _MiniDotPainter()),
-            ),
-          if (h.lace)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF3A2A2E).withValues(alpha: 0.35), width: 1),
-                ),
-              ),
-            ),
-        ],
-      ),
+      width: w,
+      height: hh,
+      child: Stack(alignment: Alignment.center, children: [
+        // سایه
+        Container(width: w, height: hh, decoration: BoxDecoration(boxShadow: [BoxShadow(color: h.base.withValues(alpha: 0.25), blurRadius: 6)])),
+        ClipPath(
+          clipper: _MiniHeartClipper(),
+          child: SizedBox(width: w, height: hh, child: Stack(fit: StackFit.expand, children: [heartFill, if (overlay != null) overlay])),
+        ),
+      ]),
+    );
+  }
+
+  Widget _miniBow({required Color color, required Color knot, bool small = false}) {
+    final lw = small ? 8.0 : 10.0;
+    final lh = small ? 6.0 : 7.0;
+    return SizedBox(
+      width: small ? 18 : 22,
+      height: small ? 9 : 11,
+      child: Stack(alignment: Alignment.center, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(width: lw, height: lh, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+          SizedBox(width: 2, height: lh),
+          Container(width: lw, height: lh, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+        ]),
+        Container(width: 5, height: 7, decoration: BoxDecoration(color: knot, borderRadius: BorderRadius.circular(2))),
+      ]),
     );
   }
 
@@ -1398,6 +1431,72 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       ],
     );
   }
+}
+
+class _MiniHeartClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final w = size.width, h = size.height;
+    final path = Path();
+    path.moveTo(w / 2, h * 0.97);
+    path.cubicTo(-w * 0.25, h * 0.60, w * 0.02, h * 0.02, w / 2, h * 0.30);
+    path.cubicTo(w * 0.98, h * 0.02, w * 1.25, h * 0.60, w / 2, h * 0.97);
+    path.close();
+    return path;
+  }
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _MiniStitchPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = _MiniHeartClipper().getClip(size);
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.stroke..strokeWidth = 0.9..strokeCap = StrokeCap.round;
+    final dashed = Path();
+    for (final m in path.computeMetrics()) {
+      double d = 0;
+      while (d < m.length) {
+        final e = (d + 3.5).clamp(0.0, m.length);
+        dashed.addPath(m.extractPath(d, e), Offset.zero);
+        d = e + 2.5;
+      }
+    }
+    canvas.drawPath(dashed, paint);
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MiniRufflePainter extends CustomPainter {
+  final Color color;
+  const _MiniRufflePainter({required this.color});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = _MiniHeartClipper().getClip(size);
+    final fill = Paint()..color = color..style = PaintingStyle.fill;
+    final stitch = Paint()..color = Colors.white.withValues(alpha: 0.55)..style = PaintingStyle.stroke..strokeWidth = 0.7..strokeCap = StrokeCap.round;
+    for (final m in path.computeMetrics()) {
+      final len = m.length;
+      for (double d = 0; d < len; d += 7) {
+        final t = m.getTangentForOffset(d);
+        if (t == null) continue;
+        canvas.drawCircle(t.position, 2.3, fill);
+      }
+      // inner stitch
+      final dashed = Path();
+      double dist = 0;
+      while (dist < len) {
+        final e = (dist + 2.5).clamp(0.0, len);
+        dashed.addPath(m.extractPath(dist, e), Offset.zero);
+        dist = e + 2.5;
+      }
+      canvas.drawPath(dashed, stitch);
+      break;
+    }
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _MiniDotPainter extends CustomPainter {
