@@ -8,6 +8,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/guest_media_model.dart';
 import '../services/disposable_camera_service.dart';
+import '../services/plan_access.dart';
 import 'guest_camera_screen.dart';
 
 /// مدیریت حرفه‌ای دوربین مهمان + تأیید عکس‌ها
@@ -85,8 +86,21 @@ class _CameraManageScreenState extends State<CameraManageScreen> {
 
   Future<void> _saveSettings() async {
     final parsed = int.tryParse(_maxShotsC.text.trim());
-    final maxShots =
+    var maxShots =
         (parsed == null || parsed < 1) ? 30 : (parsed > 200 ? 200 : parsed);
+
+    // محدودیت پلن: سقف شات هر مهمان (پرمیوم = نامحدود)
+    final limits = await PlanAccess.I.weddingLimits(widget.weddingId);
+    if (limits.maxShotsPerGuest >= 0 && maxShots > limits.maxShotsPerGuest) {
+      maxShots = limits.maxShotsPerGuest;
+      if (mounted) {
+        _toast(
+          AppLang.I.isFa
+              ? 'سقف شات هر مهمان در پلن شما: ${limits.maxShotsPerGuest}'
+              : 'Your plan caps shots per guest at ${limits.maxShotsPerGuest}',
+        );
+      }
+    }
 
     setState(() => _saving = true);
     try {

@@ -9,6 +9,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/web_url_strategy_stub.dart'
     if (dart.library.js_interop) 'core/web_url_strategy_web.dart';
 
+import 'core/app_config.dart';
 import 'core/app_effect_controller.dart';
 import 'core/app_lang.dart';
 import 'core/guest_slug.dart';
@@ -63,6 +64,18 @@ class WeddingTimeApp extends StatelessWidget {
   static void lockInitialGuestSlug() {
     if (_lockDone) return;
     _lockDone = true;
+
+    // لینک دعوت پارتنر: ?join=CODE → سشن مهمان قفل نشود؛
+    // کد برای مرحلهٔ پیوستن در WeddingSetupScreen نگه داشته می‌شود.
+    if (kIsWeb) {
+      final join = Uri.base.queryParameters['join']?.trim() ?? '';
+      if (join.isNotEmpty) {
+        AppConfig.pendingJoinCode = join;
+        _lockedGuestSlug = null;
+        return;
+      }
+    }
+
     _lockedGuestSlug = extractGuestSlug();
   }
 
