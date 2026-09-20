@@ -675,17 +675,21 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: panelMinHeight),
                   child: Theme(
-                    data: AppTheme.light(),
+                    data: _template.id == 'classic' ? AppTheme.light() : ThemeData.dark(),
                     child: _InviteGlass(
-                      opacity: 0.70,
+                      opacity: _template.id == 'classic' ? 0.70 : 0.88,
                       blurSigma: 16,
                       borderRadius: isMobile ? 18 : 28,
+                      baseColor: _template.id == 'classic' ? null : _template.card,
                       child: Stack(
                         children: [
-                          const Positioned.fill(
-                            child: FloralDecor(
-                              intensity: 0.85,
-                              frameMode: true,
+                          Positioned.fill(
+                            child: Opacity(
+                              opacity: _template.id == 'classic' ? 1 : 0.22,
+                              child: const FloralDecor(
+                                intensity: 0.85,
+                                frameMode: true,
+                              ),
                             ),
                           ),
                           Padding(
@@ -714,8 +718,8 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
                                   Text(
                                     tagline,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: AppPalette.textSoft,
+                                    style: TextStyle(
+                                      color: _template.id == 'classic' ? AppPalette.textSoft : _template.textSoft,
                                       fontSize: 13.5,
                                       height: 1.6,
                                       fontWeight: FontWeight.w400,
@@ -761,15 +765,16 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
   }
 
   Widget _buildCoupleNames(String groom, String bride) {
+    final c = _template.id == 'classic' ? AppPalette.text : _template.text;
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Text(
         '$groom${AppLang.tr('couple_name_joiner')}$bride',
         maxLines: 1,
         textAlign: TextAlign.center,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'serif',
-          color: AppPalette.text,
+          color: c,
           fontSize: 27,
           height: 1.15,
           fontWeight: FontWeight.w600,
@@ -993,14 +998,17 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
     final minutes = _remaining.inMinutes % 60;
     final seconds = _remaining.inSeconds % 60;
     final isPast = hasDate && _remaining == Duration.zero;
+    final accent = _template.accent;
+    final text = _template.id == 'classic' ? AppPalette.text : _template.text;
+    final textSoft = _template.id == 'classic' ? AppPalette.textSoft : _template.textSoft;
 
     return Column(
       children: [
         Text(
           AppLang.tr('invite_until_special_day'),
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppPalette.accent,
+          style: TextStyle(
+            color: accent,
             fontWeight: FontWeight.w800,
             fontSize: 13,
             letterSpacing: 0.4,
@@ -1028,8 +1036,8 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
                 ? AppLang.tr('guest_home_today')
                 : AppLang.tr('date_not_set'),
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppPalette.text,
+            style: TextStyle(
+              color: text,
               fontWeight: FontWeight.w700,
               fontSize: 14,
             ),
@@ -1041,8 +1049,8 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
             if (inv.eventTime.trim().isNotEmpty) inv.eventTime.trim(),
           ].join('  ·  '),
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppPalette.textSoft,
+          style: TextStyle(
+            color: textSoft,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -1052,28 +1060,32 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
   }
 
   Widget _countBox(String value, String unit) {
+    final isClassic = _template.id == 'classic';
+    final text = isClassic ? AppPalette.text : _template.text;
+    final textSoft = isClassic ? AppPalette.textSoft : _template.textSoft;
     return Expanded(
       child: _InviteGlass(
-        opacity: 0.78,
+        opacity: isClassic ? 0.78 : 0.92,
         blurSigma: 10,
         borderRadius: 14,
+        baseColor: isClassic ? null : _template.card,
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Column(
           children: [
             Text(
               value,
-              style: const TextStyle(
-                color: AppPalette.text,
+              style: TextStyle(
+                color: text,
                 fontWeight: FontWeight.w900,
                 fontSize: 18,
-                fontFeatures: [ui.FontFeature.tabularFigures()],
+                fontFeatures: const [ui.FontFeature.tabularFigures()],
               ),
             ),
             const SizedBox(height: 2),
             Text(
               unit,
-              style: const TextStyle(
-                color: AppPalette.textSoft,
+              style: TextStyle(
+                color: textSoft,
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
               ),
@@ -1091,13 +1103,14 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
     String city,
     String address,
   ) {
+    final tText = _template.id == 'classic' ? AppPalette.text : _template.text;
     return Column(
       children: [
         Text(
           AppLang.tr('location'),
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppPalette.text,
+          style: TextStyle(
+            color: tText,
             fontWeight: FontWeight.w800,
             fontSize: 14,
           ),
@@ -1253,17 +1266,19 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
   }
 
   Widget _infoLine(IconData icon, String value) {
+    final tAccent = _template.accent;
+    final tText = _template.id == 'classic' ? AppPalette.text : _template.text;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: AppPalette.accent),
+        Icon(icon, size: 18, color: tAccent),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.start,
-            style: const TextStyle(
-              color: AppPalette.text,
+            style: TextStyle(
+              color: tText,
               fontSize: 13,
               fontWeight: FontWeight.w600,
               height: 1.4,
@@ -1509,7 +1524,7 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
   }
 }
 
-/// Always-light cream/sage/blush glass so floral invite stays on-brand.
+/// شیشه دعوت — برای classic روشن، برای قالب‌های تیره از رنگ قالب استفاده می‌کند
 class _InviteGlass extends StatelessWidget {
   const _InviteGlass({
     required this.child,
@@ -1518,6 +1533,7 @@ class _InviteGlass extends StatelessWidget {
     this.blurSigma = 14,
     this.opacity = 0.72,
     this.tint,
+    this.baseColor,
   });
 
   final Widget child;
@@ -1526,6 +1542,7 @@ class _InviteGlass extends StatelessWidget {
   final double blurSigma;
   final double opacity;
   final Color? tint;
+  final Color? baseColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1534,13 +1551,22 @@ class _InviteGlass extends StatelessWidget {
       AppPalette.brandCream,
       0.28,
     )!;
-    final base = tint == null ? cream : Color.lerp(cream, tint, 0.22)!;
+    Color base;
+    if (baseColor != null) {
+      base = baseColor!;
+    } else if (tint != null) {
+      base = Color.lerp(cream, tint, 0.22)!;
+    } else {
+      base = cream;
+    }
     final fill = base.withValues(alpha: opacity.clamp(0.52, 0.86));
-    final border = Color.lerp(
-      AppPalette.brandGreenSoft,
-      AppPalette.legacyGold,
-      0.38,
-    )!.withValues(alpha: 0.72);
+    final border = baseColor != null
+        ? Color.lerp(baseColor!, Colors.white, 0.08)!.withValues(alpha: 0.22)
+        : Color.lerp(
+            AppPalette.brandGreenSoft,
+            AppPalette.legacyGold,
+            0.38,
+          )!.withValues(alpha: 0.72);
 
     Widget content = Container(
       padding: padding,
