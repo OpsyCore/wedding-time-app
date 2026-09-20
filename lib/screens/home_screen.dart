@@ -1811,7 +1811,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: color.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(11),
                   ),
-                  child: Icon(Icons.pie_chart_outline, color: color, size: 19),
+                  child: const Icon(Icons.pie_chart_outline, color: color, size: 19),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1882,7 +1882,6 @@ class _HomeScreenState extends State<HomeScreen> {
     required int confirmed,
   }) {
     final text = AppTok.text(context);
-    final textSoft = AppTok.textSoft(context);
     final border = AppTok.border(context);
     final waiting = (total - confirmed).clamp(0, total);
     const green = Color(0xFF3E9B4F);

@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -187,8 +185,7 @@ class _HoneymoonScreenState extends State<HoneymoonScreen> {
       .instance
       .collection('weddings')
       .doc(widget.weddingId)
-      .collection('honeymoon')
-      .collection('destinations');
+      .collection('honeymoonDestinations');
 
   DocumentReference<Map<String, dynamic>> get _prefsDoc => FirebaseFirestore
       .instance
@@ -267,10 +264,10 @@ class _HoneymoonScreenState extends State<HoneymoonScreen> {
     }).join();
   }
 
-  String _money(num v) => '${_faNum(v.toString().replaceAllMapped(
+  String _money(num v) => _faNum(v.toString().replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+$)'),
         (m) => '${m[1]},',
-      ))}';
+      ));
 
   bool _matches(Map<String, dynamic> d) {
     if (!_filterOn) return true;

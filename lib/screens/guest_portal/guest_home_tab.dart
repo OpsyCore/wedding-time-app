@@ -752,7 +752,8 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     );
 
     // 2) تایم‌لاین
-    if (ent['timeline'] == true) items.add(
+    if (ent['timeline'] == true) {
+      items.add(
       _actionTile(
         context,
         icon: Icons.view_timeline_outlined,
@@ -765,9 +766,11 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         onTap: () => _goTab(2),
       ),
     );
+    }
 
     // 3) میز من / صندلی
-    if (ent['seating'] == true) items.add(
+    if (ent['seating'] == true) {
+      items.add(
       _actionTile(
         context,
         icon: Icons.event_seat_outlined,
@@ -780,9 +783,11 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         onTap: () => _goTab(4),
       ),
     );
+    }
 
     // 4) دوربین یک‌بارمصرف
-    if (ent['camera'] == true) items.add(
+    if (ent['camera'] == true) {
+      items.add(
       _actionTile(
         context,
         icon: Icons.photo_camera_outlined,
@@ -800,9 +805,11 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         onTap: () => _goTab(3),
       ),
     );
+    }
 
     // 5) داستان عشق
-    if (ent['story'] == true) items.add(
+    if (ent['story'] == true) {
+      items.add(
       _actionTile(
         context,
         icon: Icons.auto_stories_outlined,
@@ -815,9 +822,11 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         onTap: () => _push(GuestLoveStoryTab(weddingId: widget.weddingId)),
       ),
     );
+    }
 
     // 6) ارسال آرزو
-    if (ent['wishes'] == true) items.add(
+    if (ent['wishes'] == true) {
+      items.add(
       _actionTile(
         context,
         icon: Icons.favorite_border,
@@ -830,9 +839,11 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         onTap: () => _push(GuestWishesTab(weddingId: widget.weddingId)),
       ),
     );
+    }
 
     // 7) گالری
-    if (ent['gallery'] == true) items.add(
+    if (ent['gallery'] == true) {
+      items.add(
       _actionTile(
         context,
         icon: Icons.photo_library_outlined,
@@ -859,9 +870,11 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         ),
       ),
     );
+    }
 
     // 8) هدایا
-    if (ent['gifts'] == true) items.add(
+    if (ent['gifts'] == true) {
+      items.add(
       _actionTile(
         context,
         icon: Icons.card_giftcard_outlined,
@@ -888,9 +901,11 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         ),
       ),
     );
+    }
 
     // 9) حمایت‌ها
-    if (ent['supports'] == true) items.add(
+    if (ent['supports'] == true) {
+      items.add(
       _actionTile(
         context,
         icon: Icons.volunteer_activism_outlined,
@@ -903,6 +918,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
         onTap: () => _push(SupportsGuestScreen(weddingId: widget.weddingId)),
       ),
     );
+    }
 
     final out = <Widget>[];
     for (var i = 0; i < items.length; i++) {
