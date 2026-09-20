@@ -9,6 +9,9 @@ import '../core/app_date_picker.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../core/invite_templates.dart';
+import '../services/entertainment_service.dart';
+import '../services/plan_access.dart';
 import '../core/map_launcher.dart';
 import '../models/invitation_model.dart';
 import '../services/invitation_service.dart';
@@ -755,6 +758,14 @@ class _InvitationScreenState extends State<InvitationScreen>
             ),
           ),
           IconButton(
+            tooltip: AppLang.I.isFa ? 'قالب دعوت‌نامه' : 'Invite template',
+            onPressed: () => _openTemplatePicker(context),
+            icon: Icon(
+              Icons.palette_outlined,
+              color: AppTok.accent(context),
+            ),
+          ),
+          IconButton(
             tooltip: _t(
               'share_guest_link',
               'اشتراک لینک مهمان',
@@ -764,6 +775,125 @@ class _InvitationScreenState extends State<InvitationScreen>
             icon: Icon(Icons.ios_share, color: AppTok.accent(context)),
           ),
         ],
+      ),
+    );
+  }
+
+  /// انتخاب قالب دعوت‌نامه — قالب‌های پرمیوم فقط برای پلن پرمیوم
+  Future<void> _openTemplatePicker(BuildContext context) async {
+    final w = await FirebaseFirestore.instance
+        .collection('weddings')
+        .doc(widget.weddingId)
+        .get();
+    final current =
+        (w.data()?[inviteTemplateField] ?? 'classic').toString();
+    final limits = await PlanAccess.I.weddingLimits(widget.weddingId);
+    if (!context.mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTok.card(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: AppLang.I.direction,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  AppLang.I.isFa
+                      ? 'قالب دعوت‌نامه'
+                      : 'Invite template',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTok.text(ctx),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children: InviteTemplate.all.map((tpl) {
+                    final allowed = limits.templates.contains(tpl.id);
+                    final selected = current == tpl.id;
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        if (!allowed) {
+                          Navigator.pop(ctx);
+                          await PlanAccess.I.showUpgradeDialog(
+                            context,
+                            weddingId: widget.weddingId,
+                            featureFa: 'قالب‌های اختصاصی دعوت‌نامه',
+                            featureEn: 'Exclusive invite templates',
+                          );
+                          return;
+                        }
+                        await FirebaseFirestore.instance
+                            .collection('weddings')
+                            .doc(widget.weddingId)
+                            .set({inviteTemplateField: tpl.id},
+                                SetOptions(merge: true));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        width: 108,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [tpl.bgTop, tpl.bgBottom],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: selected
+                                ? tpl.accent
+                                : tpl.border,
+                            width: selected ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              tpl.decor,
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              tpl.name(AppLang.I.isFa),
+                              style: TextStyle(
+                                color: tpl.text,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (!allowed)
+                              Icon(
+                                Icons.lock_outline,
+                                size: 13,
+                                color: tpl.accent,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1203,6 +1333,8 @@ class _InvitationScreenState extends State<InvitationScreen>
           ),
         ),
         const SizedBox(height: 20),
+        _entertainmentSection(context),
+        const SizedBox(height: 20),
         _sectionTitle(
           context,
           _t('guest_portal_link', 'لینک پورتال مهمان', 'Guest portal link'),
@@ -1431,6 +1563,176 @@ class _InvitationScreenState extends State<InvitationScreen>
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
           ),
+        ),
+      ],
+    );
+  }
+
+  static const List<Map<String, Object>> _entModules = [
+    {
+      'key': 'timeline',
+      'icon': Icons.view_timeline_outlined,
+      'fa': 'برنامه روز',
+      'en': 'Schedule'
+    },
+    {
+      'key': 'camera',
+      'icon': Icons.photo_camera_outlined,
+      'fa': 'دوربین مهمان',
+      'en': 'Photo booth'
+    },
+    {
+      'key': 'wishes',
+      'icon': Icons.favorite_border,
+      'fa': 'آرزو و پیام',
+      'en': 'Wishes'
+    },
+    {
+      'key': 'seating',
+      'icon': Icons.event_seat_outlined,
+      'fa': 'میز و صندلی',
+      'en': 'Seating'
+    },
+    {
+      'key': 'gallery',
+      'icon': Icons.photo_library_outlined,
+      'fa': 'گالری',
+      'en': 'Gallery'
+    },
+    {
+      'key': 'gifts',
+      'icon': Icons.card_giftcard_outlined,
+      'fa': 'هدایا',
+      'en': 'Gifts'
+    },
+    {
+      'key': 'supports',
+      'icon': Icons.volunteer_activism_outlined,
+      'fa': 'حمایت‌ها',
+      'en': 'Supports'
+    },
+    {
+      'key': 'story',
+      'icon': Icons.auto_stories_outlined,
+      'fa': 'داستان عشق',
+      'en': 'Love story'
+    },
+  ];
+
+  /// پنل «سرگرمی مهمان‌ها» — زوج تعیین می‌کند مهمان‌ها چه ببینند
+  Widget _entertainmentSection(BuildContext context) {
+    final isFa = AppLang.I.isFa;
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle(
+          context,
+          isFa ? 'سرگرمی مهمان‌ها' : 'Entertainment for guests',
+        ),
+        const SizedBox(height: 6),
+        Text(
+          isFa
+              ? 'تعیین کن مهمان‌ها در پورتال خود چه بخش‌هایی را ببینند.'
+              : 'Choose which modules guests can see in their portal.',
+          style: TextStyle(color: textSoft, fontSize: 12, height: 1.6),
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<Map<String, bool>>(
+          stream: EntertainmentService.watch(widget.weddingId),
+          builder: (context, snap) {
+            final ent = snap.data ??
+                {for (final k in EntertainmentService.keys) k: true};
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                childAspectRatio: 0.62,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: _entModules.length,
+              itemBuilder: (context, i) {
+                final m = _entModules[i];
+                final key = m['key'] as String;
+                final on = ent[key] == true;
+                return Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTok.card(context),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: on
+                                ? AppTok.accent(context)
+                                    .withValues(alpha: 0.4)
+                                : AppTok.border(context),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: AppTok.accent(context)
+                                  .withValues(alpha: on ? 0.16 : 0.08),
+                              child: Icon(
+                                m['icon'] as IconData,
+                                size: 17,
+                                color: on
+                                    ? AppTok.accent(context)
+                                    : textSoft,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              isFa ? m['fa'] as String : m['en'] as String,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: text,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Transform.scale(
+                      scale: 0.8,
+                      child: Switch(
+                        value: on,
+                        onChanged: (v) => EntertainmentService.set(
+                          widget.weddingId,
+                          key,
+                          v,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      on
+                          ? (isFa ? 'فعال' : 'Active')
+                          : (isFa ? 'خاموش' : 'Off'),
+                      style: TextStyle(
+                        color: on ? AppTok.accent(context) : textSoft,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
         ),
       ],
     );

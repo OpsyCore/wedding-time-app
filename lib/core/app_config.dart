@@ -43,6 +43,15 @@ class AppConfig {
     return '$base/invite/$clean';
   }
 
+  /// لینک دعوت پارتنر (همسر) — با باز شدن، مرحلهٔ پیوستن با کد باز می‌شود
+  /// مثال: .../invite/zaza-sara?join=WT-ABCD12
+  static String partnerJoinUrl(String slug, String code) {
+    return '${inviteUrl(slug)}?join=${Uri.encodeComponent(code.trim())}';
+  }
+
+  /// کد پیوستنی که از URL آمده (؟join=) و منتظر مصرف در صفحهٔ ستاپ است
+  static String? pendingJoinCode;
+
   /// ImgBB
   ///
   /// ⚠️ امنیت — کلید هرگز نباید داخل سورس/مخزن باشد.
