@@ -36,19 +36,24 @@ class AmbientMusicService extends ChangeNotifier {
       nameKey: 'music_track_calm_dreamscape',
     ),
     AmbientTrack(
-      id: 'golden_waltz',
-      assetPath: 'assets/audio/ambient/golden_waltz.mp3',
-      nameKey: 'music_track_golden_waltz',
+      id: 'arpmedia',
+      assetPath: 'assets/audio/ambient/arpmedia.mp3',
+      nameKey: 'music_track_arpmedia',
     ),
     AmbientTrack(
-      id: 'love_piano',
-      assetPath: 'assets/audio/ambient/love_piano.mp3',
-      nameKey: 'music_track_love_piano',
+      id: 'freesoundserver',
+      assetPath: 'assets/audio/ambient/freesoundserver.mp3',
+      nameKey: 'music_track_freesoundserver',
     ),
     AmbientTrack(
-      id: 'wedding_morning',
-      assetPath: 'assets/audio/ambient/wedding_morning.mp3',
-      nameKey: 'music_track_wedding_morning',
+      id: 'ikoliks',
+      assetPath: 'assets/audio/ambient/ikoliks.mp3',
+      nameKey: 'music_track_ikoliks',
+    ),
+    AmbientTrack(
+      id: 'mondamusic',
+      assetPath: 'assets/audio/ambient/mondamusic.mp3',
+      nameKey: 'music_track_mondamusic',
     ),
   ];
 
