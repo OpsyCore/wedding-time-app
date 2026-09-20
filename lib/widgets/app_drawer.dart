@@ -18,6 +18,7 @@ import '../screens/login_screen.dart';
 import '../screens/love_story_screen.dart';
 import '../screens/media_library_screen.dart';
 import '../screens/music_effects_screen.dart';
+import '../screens/notes_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/plans_screen.dart';
 import '../screens/profile_screen.dart';
@@ -343,6 +344,20 @@ class AppDrawer extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (_) =>
                                   BridalPartyScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.note_alt_outlined,
+                        AppLang.I.isFa ? 'نوت‌بوک' : 'Notebook',
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  NotesScreen(weddingId: weddingId),
                             ),
                           );
                         },

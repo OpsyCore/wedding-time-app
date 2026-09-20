@@ -342,6 +342,11 @@ service cloud.firestore {
         allow delete: if isWeddingMember(weddingId);
       }
 
+      // نوت‌بوک زوج — یادداشت‌های سریع و مهم مراسم
+      match /notes/{docId} {
+        allow read, write: if isWeddingMember(weddingId);
+      }
+
       match /notifications/{docId} {
         allow read: if isWeddingMember(weddingId);
         allow create: if isWeddingMember(weddingId) || isValidPublicRsvpNotification();
