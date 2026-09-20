@@ -15,7 +15,9 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../services/ambient_music_service.dart';
 import '../services/media_upload_service.dart';
+import '../widgets/ambient_music_controls.dart';
 import '../widgets/effect_background.dart';
+import '../widgets/effect_picker.dart';
 import '../widgets/image_crop_screen.dart';
 import '../widgets/page_glass.dart';
 import '../widgets/wedding_progress_bar.dart';
@@ -608,19 +610,19 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
                                             ),
-                                            decoration: const InputDecoration(
+                                            decoration: InputDecoration(
                                               border: InputBorder.none,
                                               isDense: true,
                                               contentPadding:
-                                                  EdgeInsets.symmetric(
+                                                  const EdgeInsets.symmetric(
                                                       vertical: 10),
-                                            ),
-                                            hintText: AppLang.I.isFa
-                                                ? '#علی_و_سارا'
-                                                : '#Ali_And_Sara',
-                                            hintStyle: TextStyle(
-                                              color: AppTok.textSoft(context)
-                                                  .withValues(alpha: 0.6),
+                                              hintText: AppLang.I.isFa
+                                                  ? '#علی_و_سارا'
+                                                  : '#Ali_And_Sara',
+                                              hintStyle: TextStyle(
+                                                color: AppTok.textSoft(context)
+                                                    .withValues(alpha: 0.6),
+                                              ),
                                             ),
                                           ),
                                         ),
