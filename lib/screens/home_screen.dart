@@ -1727,6 +1727,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       subtitle: checkTotal == 0
                                           ? AppLang.tr('no_tasks')
                                           : '${_displayNum((checkPercent * 100).round())}${AppLang.tr('percent_done')}',
+                                      goLabel: AppLang.I.isFa
+                                          ? 'رفتن به چک‌لیست'
+                                          : 'Go to checklist',
                                       onTap: () => _goTab(1),
                                     ),
                                   ),
@@ -1757,6 +1760,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       subtitle: vendorTotal == 0
                                           ? AppLang.tr('not_recorded')
                                           : '${_displayNum((vendorPercent * 100).round())}${AppLang.tr('percent_booked')}',
+                                      goLabel: AppLang.I.isFa
+                                          ? 'رفتن به تأمین‌کننده‌ها'
+                                          : 'Go to vendors',
                                       onTap: _openVendors,
                                     ),
                                   ),
@@ -2011,80 +2017,84 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// کاشی چک‌لیست / تأمین‌کننده — هم‌خانواده با کارت بودجه و مهمان:
+  /// سربرگ آیکن+عنوان، عدد بزرگ، زیرنویس رنگی، لینک پایین (بدون فضای خالی).
   Widget _statTile({
     required IconData icon,
     required Color color,
     required String title,
     required String value,
     required String subtitle,
+    required String goLabel,
     required VoidCallback onTap,
   }) {
     final text = AppTok.text(context);
-    final textSoft = AppTok.textSoft(context);
 
     return PageGlass(
       opacity: 0.82,
       blurSigma: 10,
       borderRadius: 16,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(icon, color: color, size: 19),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
                     ),
-                    child: Icon(icon, color: color, size: 17),
                   ),
-                  const Spacer(),
-                  Icon(
-                    AppLang.I.isFa ? Icons.chevron_left : Icons.chevron_right,
-                    size: 16,
-                    color: textSoft.withValues(alpha: 0.8),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: TextStyle(
-                  color: textSoft,
-                  fontSize: 11,
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: text,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: text,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color.withValues(alpha: 0.95),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: color.withValues(alpha: 0.95),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+            ),
+            const Spacer(),
+            const SizedBox(height: 8),
+            _goLink(goLabel, onTap),
+          ],
         ),
+      ),
     );
   }
 }
