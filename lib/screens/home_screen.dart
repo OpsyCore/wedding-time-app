@@ -1510,10 +1510,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     int guestTotal = 0;
                     int guestConfirmed = 0;
+                    int guestPending = 0;
+                    int guestDeclined = 0;
                     if (guestSnap.hasData) {
                       guestTotal = guestSnap.data!.docs.length;
                       guestConfirmed = guestSnap.data!.docs
                           .where((d) => d.data()['status'] == 'confirmed')
+                          .length;
+                      guestPending = guestSnap.data!.docs.where((d) {
+                        final s = (d.data()['status'] ?? '').toString();
+                        return s == 'pending' || s == 'invited';
+                      }).length;
+                      guestDeclined = guestSnap.data!.docs
+                          .where((d) => d.data()['status'] == 'declined')
                           .length;
                     }
                     final guestPercent =
@@ -1565,23 +1574,23 @@ class _HomeScreenState extends State<HomeScreen> {
                           opacity: isDark ? 0.88 : 0.92,
                           blurSigma: 16,
                           borderRadius: 22,
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
                           child: Column(
                             children: [
                               Row(
                                 children: [
                                   SizedBox(
-                                    width: 72,
-                                    height: 72,
+                                    width: 60,
+                                    height: 60,
                                     child: Stack(
                                       alignment: Alignment.center,
                                       children: [
                                         SizedBox(
-                                          width: 72,
-                                          height: 72,
+                                          width: 60,
+                                          height: 60,
                                           child: CircularProgressIndicator(
                                             value: 1,
-                                            strokeWidth: 6,
+                                            strokeWidth: 5,
                                             color: ringTrack,
                                           ),
                                         ),
@@ -1591,13 +1600,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                           duration:
                                               const Duration(milliseconds: 520),
                                           curve: Curves.easeOutCubic,
-                                          builder: (context, anim, _) =>
-                                              SizedBox(
-                                            width: 72,
-                                            height: 72,
+                                              builder: (context, anim, _) =>
+                                                  SizedBox(
+                                            width: 60,
+                                            height: 60,
                                             child: CircularProgressIndicator(
                                               value: anim,
-                                              strokeWidth: 6,
+                                              strokeWidth: 5,
                                               strokeCap: StrokeCap.round,
                                               color: accent,
                                               backgroundColor:
@@ -1622,15 +1631,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     : '${_displayNum(animPct.round())}${AppLang.tr('percent_unit')}',
                                                 style: TextStyle(
                                                   color: text,
-                                                  fontSize: 15,
+                                                  fontSize: 13,
                                                   fontWeight: FontWeight.w900,
                                                 ),
                                               ),
                                             ),
                                             const SizedBox(height: 1),
                                             Container(
-                                              width: 6,
-                                              height: 6,
+                                              width: 4,
+                                              height: 4,
                                               decoration: BoxDecoration(
                                                 color: accent.withValues(
                                                     alpha: 0.9),
@@ -1642,7 +1651,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 16),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -1656,7 +1665,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     'wedding_progress'),
                                                 style: TextStyle(
                                                   color: text,
-                                                  fontSize: 16,
+                                                  fontSize: 15,
                                                   fontWeight: FontWeight.w800,
                                                 ),
                                               ),
@@ -1697,7 +1706,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             height: 1.35,
                                           ),
                                         ),
-                                        const SizedBox(height: 10),
+                                        const SizedBox(height: 8),
                                         WeddingProgressBar(
                                           value: overall,
                                           size: WeddingProgressSize.thin,
@@ -1708,13 +1717,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                               Container(
                                 width: double.infinity,
                                 height: 1,
                                 color: border.withValues(alpha: 0.7),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 12),
                               IntrinsicHeight(
                                 child: Row(
                                 crossAxisAlignment:
@@ -1774,6 +1783,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: _guestsCard(
                                       total: guestTotal,
                                       confirmed: guestConfirmed,
+                                      pending: guestPending,
+                                      declined: guestDeclined,
                                     ),
                                   ),
                                 ],
@@ -1889,16 +1900,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// کارت مهمان‌ها با آمار سه‌ستونه — مشابه طرح مرجع
+  /// کارت مهمان‌ها با آمار چهارستونهٔ جمع‌وجور (کل / بله / انتظار / رد)
   Widget _guestsCard({
     required int total,
     required int confirmed,
+    required int pending,
+    required int declined,
   }) {
     final text = AppTok.text(context);
     final border = AppTok.border(context);
-    final waiting = (total - confirmed).clamp(0, total);
     const green = Color(0xFF3E9B4F);
     const orange = Color(0xFFD07C1F);
+    const red = Color(0xFFC4554D);
 
     return PageGlass(
       opacity: 0.82,
@@ -1939,17 +1952,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             Row(
               children: [
-                _gStat(_displayNum(total),
-                    AppLang.I.isFa ? 'دعوت‌شده' : 'invited', text),
-                Container(width: 1, height: 36, color: border),
+                _gStat(_displayNum(total), AppLang.I.isFa ? 'کل' : 'all', text),
+                Container(width: 1, height: 26, color: border),
                 _gStat(_displayNum(confirmed),
                     AppLang.I.isFa ? 'بله' : 'yes', green),
-                Container(width: 1, height: 36, color: border),
-                _gStat(_displayNum(waiting),
-                    AppLang.I.isFa ? 'در انتظار' : 'waiting', orange),
+                Container(width: 1, height: 26, color: border),
+                _gStat(_displayNum(pending),
+                    AppLang.I.isFa ? 'انتظار' : 'waiting', orange),
+                Container(width: 1, height: 26, color: border),
+                _gStat(_displayNum(declined), AppLang.I.isFa ? 'رد' : 'no', red),
               ],
             ),
             const Spacer(),
@@ -1972,16 +1986,18 @@ class _HomeScreenState extends State<HomeScreen> {
             value,
             style: TextStyle(
               color: color,
-              fontSize: 20,
+              fontSize: 15,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: AppTok.textSoft(context),
-              fontSize: 10.5,
+              fontSize: 9,
             ),
           ),
         ],
