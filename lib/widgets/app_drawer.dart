@@ -9,6 +9,7 @@ import '../main_navigation_screen.dart';
 import '../models/wedding_model.dart';
 import '../screens/bridal_party_screen.dart';
 import '../screens/camera_manage_screen.dart';
+import '../screens/catering_screen.dart';
 import '../screens/couple_profile_screen.dart';
 import '../screens/feedback_screen.dart';
 import '../screens/gift_manage_screen.dart';
@@ -373,6 +374,20 @@ class AppDrawer extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (_) =>
                                   HoneymoonScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.restaurant_outlined,
+                        AppLang.I.isFa ? 'شام و نوشیدنی' : 'Catering',
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  CateringScreen(weddingId: weddingId),
                             ),
                           );
                         },
