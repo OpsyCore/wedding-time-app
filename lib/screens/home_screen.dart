@@ -663,9 +663,10 @@ class _HomeScreenState extends State<HomeScreen>
       }
     }
 
-    // عکس داخل قلب: اولویت عکس دو نفره، بعد عکس‌های تکی
-    final couplePhoto = (coverPhoto ?? '').trim().isNotEmpty
-        ? coverPhoto!.trim()
+    // عکس دو نفره برای پشت کارت + عکس وسط قلب (فرق داشته باشد → پشت: cover، وسط: cover ولی اگر خالی بود bride/groom)
+    final bgPhoto = (coverPhoto ?? '').trim();
+    final couplePhoto = bgPhoto.isNotEmpty
+        ? bgPhoto
         : ((bridePhoto ?? '').trim().isNotEmpty
             ? bridePhoto!.trim()
             : (groomPhoto ?? '').trim());
@@ -690,126 +691,170 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 22, 16, 18),
-              child: Column(
-                children: [
-                  // بالا: «تا روز جشن X با Y»
-                  Text(
-                    isWeddingDay
-                        ? AppLang.tr('today_is_your_day')
-                        : isPast
-                            ? AppLang.tr('married_life_congrats')
-                            : topText,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: _dark
-                          ? Colors.white.withValues(alpha: 0.96)
-                          : AppTok.text(context),
-                      fontSize: 16.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                      height: 1.35,
+            child: Stack(
+              children: [
+                // عکس دو نفره پشت کارت مثل قبل — کم‌رنگ
+                if (bgPhoto.isNotEmpty)
+                  Positioned.fill(
+                    child: Opacity(
+                      opacity: _dark ? 0.18 : 0.12,
+                      child: Image.network(
+                        bgPhoto,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox(),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // وسط: یک قلب بزرگ تپنده — عکس زوج داخل قلب
-                  if (!isWeddingDay && !isPast && weddingDate != null)
-                    Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto))
-                  else if (isWeddingDay || isPast)
-                    Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto)),
-                  const SizedBox(height: 22),
-                  // پایین: فقط شمارش معکوس — تاریخ و نام‌های تکی حذف شد
-                  if (weddingDate == null)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: cardSoft,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        AppLang.tr('wedding_date_not_set'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: textSoft, fontSize: 12),
-                      ),
-                    )
-                  else if (isWeddingDay)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            _brandGreenSoft,
-                            _brandBlushSoft.withValues(alpha: 0.7),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        AppLang.tr('wedding_day_banner'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: accentDeep,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    )
-                  else if (isPast)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: cardSoft,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        '${AppLang.tr('days_since_wedding_prefix')}${_displayNum((-weddingDate!.difference(DateTime.now()).inDays).abs())} ${AppLang.tr('days_since_wedding')}',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: textSoft, fontSize: 12),
-                      ),
-                    )
-                  else
-                    Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _timeBox(
-                              _displayNum(days),
-                              AppLang.tr('day'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _timeBox(
-                              _displayNum(_two(hours)),
-                              AppLang.tr('hour'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _timeBox(
-                              _displayNum(_two(minutes)),
-                              AppLang.tr('minute'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _timeBox(
-                              _displayNum(_two(seconds)),
-                              AppLang.tr('second'),
-                            ),
-                          ),
-                        ],
-                      ),
+                // دکور دایره‌ای نرم مثل قبل
+                Positioned(
+                  top: -40,
+                  left: -20,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _brandGreenSoft.withValues(alpha: 0.55),
                     ),
-                ],
-              ),
+                  ),
+                ),
+                Positioned(
+                  bottom: -30,
+                  right: -10,
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _brandBlushSoft.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+                  child: Column(
+                    children: [
+                      // بالا: «تا روز جشن X با Y»
+                      Text(
+                        isWeddingDay
+                            ? AppLang.tr('today_is_your_day')
+                            : isPast
+                                ? AppLang.tr('married_life_congrats')
+                                : topText,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: _dark
+                              ? Colors.white.withValues(alpha: 0.96)
+                              : AppTok.text(context),
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // وسط: یک قلب بزرگ تپنده — عکس داخل قلب (واضح) فرق دارد با پشت کم‌رنگ
+                      // قلب یکم بالاتر آورده شد (فاصله بالا ۱۰ به‌جای ۲۰)
+                      if (!isWeddingDay && !isPast && weddingDate != null)
+                        Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto))
+                      else if (isWeddingDay || isPast)
+                        Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto))
+                      else
+                        Center(child: _buildBigPulsingHeart(coverPhoto: couplePhoto)),
+                      const SizedBox(height: 16),
+                      // پایین: فقط شمارش معکوس — تاریخ و نام‌های تکی حذف شد
+                      if (weddingDate == null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: cardSoft,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            AppLang.tr('wedding_date_not_set'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: textSoft, fontSize: 12),
+                          ),
+                        )
+                      else if (isWeddingDay)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                _brandGreenSoft,
+                                _brandBlushSoft.withValues(alpha: 0.7),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            AppLang.tr('wedding_day_banner'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: accentDeep,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        )
+                      else if (isPast)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: cardSoft,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            '${AppLang.tr('days_since_wedding_prefix')}${_displayNum((-weddingDate!.difference(DateTime.now()).inDays).abs())} ${AppLang.tr('days_since_wedding')}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: textSoft, fontSize: 12),
+                          ),
+                        )
+                      else
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _timeBox(
+                                  _displayNum(days),
+                                  AppLang.tr('day'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _timeBox(
+                                  _displayNum(_two(hours)),
+                                  AppLang.tr('hour'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _timeBox(
+                                  _displayNum(_two(minutes)),
+                                  AppLang.tr('minute'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _timeBox(
+                                  _displayNum(_two(seconds)),
+                                  AppLang.tr('second'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),

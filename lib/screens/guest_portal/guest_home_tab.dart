@@ -39,7 +39,7 @@ class GuestHomeTab extends StatefulWidget {
 }
 
 class _GuestHomeTabState extends State<GuestHomeTab>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   Timer? _ticker;
   DateTime _now = DateTime.now();
 
@@ -65,8 +65,6 @@ class _GuestHomeTabState extends State<GuestHomeTab>
   late final AnimationController _intro;
   late final Animation<double> _fadeIn;
   late final Animation<Offset> _slideUp;
-  late final AnimationController _pulse;
-  late final Animation<double> _pulseScale;
 
   static const _faDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
   static const _monthsEn = [
@@ -98,15 +96,6 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     ).animate(_fadeIn);
     _intro.forward();
 
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    _pulseScale = Tween<double>(begin: 1.0, end: 1.08).animate(
-      CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
-    );
-    _pulse.repeat(reverse: true);
-
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
@@ -135,7 +124,6 @@ class _GuestHomeTabState extends State<GuestHomeTab>
   void dispose() {
     _ticker?.cancel();
     _intro.dispose();
-    _pulse.dispose();
     super.dispose();
   }
 
@@ -296,7 +284,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     );
   }
 
-  // ───────────────────────── ۲) کارت Hero — طرح جدید: یک قلب تپنده بزرگ + شمارش ─────────────────────────
+  // ───────────────────────── ۲) کارت Hero اصلی (چیدمان ثابت و دقیق مطابق عکس) ─────────────────────────
 
   Widget _buildHero(BuildContext context) {
     final dark = AppTok.isDark(context);
@@ -336,11 +324,16 @@ class _GuestHomeTabState extends State<GuestHomeTab>
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 22, 16, 18),
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
           child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: _weddingStream,
             builder: (context, snap) {
               final d = snap.data?.data() ?? {};
+
+              // عکس دو نفرهٔ زوج دقیقاً همان عکس پروفایل عروس و داماد است:
+              // زوج آن را در «پروفایل عروس و داماد» آپلود می‌کند و در
+              // weddings/{id}/profile/main زیر کلید couplePhotoUrl ذخیره می‌شود.
+              // بنابراین ابتدا سند پروفایل را می‌خوانیم و آن را در اولویت قرار می‌دهیم.
               return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                 stream: _profileStream,
                 builder: (context, profileSnap) {
@@ -358,6 +351,8 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                           .toString()
                           .trim();
 
+                  // اسامی زوج با همان اولویت صفحهٔ خانهٔ زوج (home_screen):
+                  // ابتدا نام کامل پروفایل، سپس نام سند عروسی/دعوت‌نامه
                   final pfGroom = (p['groomFullName'] ?? '').toString().trim();
                   final pfBride = (p['brideFullName'] ?? '').toString().trim();
                   final groom = pfGroom.isNotEmpty
@@ -373,58 +368,97 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                           ? inv.coupleTitle
                           : 'علی & دارا');
 
-                  // متن بالا: «تا روز جشن X با Y»
-                  final String topText;
-                  if (AppLang.I.isFa) {
-                    if (groom.isNotEmpty && bride.isNotEmpty) {
-                      topText = 'تا روز جشن $groom با $bride';
-                    } else if (title.isNotEmpty) {
-                      topText = 'تا روز جشن $title';
-                    } else {
-                      topText = 'تا روز جشن';
-                    }
-                  } else {
-                    if (groom.isNotEmpty && bride.isNotEmpty) {
-                      topText = 'Until our special day — $groom & $bride';
-                    } else if (title.isNotEmpty) {
-                      topText = 'Until our special day — $title';
-                    } else {
-                      topText =
-                          _t('guest_home_until_celebration', 'تا روز جشن', 'Until the celebration');
-                    }
-                  }
+              final dateStr = inv.weddingDate != null
+                  ? _dateLine(inv.weddingDate!)
+                  : (AppLang.I.isFa ? '۲۰۲۶/۰۸/۰۱' : '2026/08/01');
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // بالا: تایتلِ «تا روز جشن X با Y»
-                      Text(
-                        topText,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.96),
-                          fontSize: 16.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.2,
-                          height: 1.35,
-                          shadows: [
-                            Shadow(
-                              color: accent.withValues(alpha: 0.35),
-                              blurRadius: 12,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── بخش بالایی: قاب قوسی حتماً در سمت چپ و متن‌ها حتماً در سمت راست ──
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: SizedBox(
+                      height: 205,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // ۱) قاب قوسی رمانتیک در سمت چپ
+                          _buildArchedWindow(context, couplePhoto),
+
+                          const SizedBox(width: 16),
+
+                          // ۲) اسامی زوج، تاریخ و برچسب «تا روز جشن» در سمت راست
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  title,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.98),
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    fontStyle: FontStyle.italic,
+                                    fontFamily: 'serif',
+                                    fontFamilyFallback: const [
+                                      'Nastaliq',
+                                      'IranNastaliq',
+                                      'Vazirmatn',
+                                      'serif',
+                                    ],
+                                    letterSpacing: 0.5,
+                                    shadows: [
+                                      Shadow(
+                                        color: accent.withValues(alpha: 0.45),
+                                        blurRadius: 14,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  dateStr,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppTok.textSoft(context).withValues(alpha: 0.92),
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _t(
+                                    'guest_home_until_celebration',
+                                    'تا روز جشن',
+                                    'Until the celebration',
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppTok.textSoft(context).withValues(alpha: 0.75),
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                      // وسط: یک قلب بزرگ تپنده — عکس زوج داخل قلب
-                      Center(child: _buildBigPulsingHeart(context, couplePhoto)),
-                      const SizedBox(height: 22),
-                      // پایین: فقط شمارش معکوس — تاریخ حذف شد
-                      _buildCountdownCards(context),
-                    ],
-                  );
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ── بخش پایینی: ۴ کارت شمارش معکوس شیشه‌ای مطابق دقیق عکس ──
+                  _buildCountdownCards(context),
+                ],
+              );
                 },
               );
             },
@@ -434,98 +468,70 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     );
   }
 
-  /// قلب بزرگ تپنده وسط — عکس زوج داخل قلب با افکت نبض
-  Widget _buildBigPulsingHeart(BuildContext context, String photoUrl) {
+  /// قاب قوسی رمانتیک در سمت چپ با عکس سینمایی و شاخه‌های طلایی اطراف
+  Widget _buildArchedWindow(BuildContext context, String photoUrl) {
     final accent = AppTok.accent(context);
-    return ScaleTransition(
-      scale: _pulseScale,
-      child: SizedBox(
-        width: 190,
-        height: 172,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // هالهٔ تپندهٔ ملایم پشت قلب
-            Container(
-              width: 190,
-              height: 172,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.18),
-                    blurRadius: 28,
-                    spreadRadius: 6,
-                  ),
-                ],
-              ),
+
+    return SizedBox(
+      width: 155,
+      height: 205,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          // پترن شاخه و گل طلایی اطراف قاب قوسی
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _FloralArchPainter(accentColor: accent),
             ),
-            // قلب با حاشیه گرادیانی
-            Positioned.fill(
-              child: ClipPath(
-                clipper: _HeartClipper(),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        accent.withValues(alpha: 0.95),
-                        const Color(0xFFE8B4B8),
-                        accent.withValues(alpha: 0.85),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
+          ),
+
+          // پنجره قوسی با کادر درخشان
+          Container(
+            width: 140,
+            height: 195,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(75),
+                bottom: Radius.circular(16),
+              ),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.55),
+                width: 1.6,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.30),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
                 ),
-              ),
+              ],
             ),
-            // داخل قلب — عکس
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.all(3.8),
-                child: ClipPath(
-                  clipper: _HeartClipper(),
-                  child: Container(
-                    color: AppTok.card(context),
-                    child: photoUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: photoUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (c, _) => Image.asset(
-                              'assets/images/couple_hero_default.jpg',
-                              fit: BoxFit.cover,
-                            ),
-                            errorWidget: (c, _, __) => Image.asset(
-                              'assets/images/couple_hero_default.jpg',
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Image.asset(
-                            'assets/images/couple_hero_default.jpg',
-                            fit: BoxFit.cover,
-                          ),
-                  ),
-                ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(74),
+                bottom: Radius.circular(15),
               ),
-            ),
-            // درخشش لبه
-            Positioned.fill(
-              child: IgnorePointer(
-                child: ClipPath(
-                  clipper: _HeartClipper(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        width: 1,
+              child: photoUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: photoUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (c, _) => Image.asset(
+                        'assets/images/couple_hero_default.jpg',
+                        fit: BoxFit.cover,
                       ),
+                      errorWidget: (c, _, __) => Image.asset(
+                        'assets/images/couple_hero_default.jpg',
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/images/couple_hero_default.jpg',
+                      fit: BoxFit.cover,
                     ),
-                  ),
-                ),
-              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1058,25 +1064,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
   }
 }
 
-// قلب کلیپر برای قلب بزرگ تپنده
-class _HeartClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final w = size.width;
-    final h = size.height;
-    final path = Path();
-    path.moveTo(w / 2, h * 0.97);
-    path.cubicTo(-w * 0.25, h * 0.58, w * 0.02, h * 0.02, w / 2, h * 0.30);
-    path.cubicTo(w * 0.98, h * 0.02, w * 1.25, h * 0.58, w / 2, h * 0.97);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-// ───────────────────────── شاخه‌های ظریف طلایی دور قوس (نگه داشته شد برای سازگاری) ─────────────────────────
+// ───────────────────────── شاخه‌های ظریف طلایی دور قوس ─────────────────────────
 
 class _FloralArchPainter extends CustomPainter {
   const _FloralArchPainter({required this.accentColor});
