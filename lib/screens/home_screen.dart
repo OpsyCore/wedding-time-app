@@ -10,6 +10,7 @@ import '../core/app_effects.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../core/hero_styles.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/floral_decor.dart';
@@ -49,6 +50,12 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _pulseScale;
 
   String _effectStyleId = AppEffectStyle.noneId;
+
+  // ── هیروی قابل‌شخصی‌سازی (بنر + قلب) ──
+  String _heroBannerId = kDefaultHeroBannerId; // none
+  String _heroHeartId = kDefaultHeroHeartId; // crimson
+  bool _heroHeartVisible = true;
+  bool _heroBannerAnimated = true;
 
   Duration remaining = Duration.zero;
 
@@ -166,6 +173,11 @@ class _HomeScreenState extends State<HomeScreen>
     _profileSub = _profileDoc.snapshots().listen((doc) {
       final p = doc.data();
       if (p == null) return;
+      final newBanner = (p[heroBannerField] ?? kDefaultHeroBannerId).toString();
+      final newHeart = (p[heroHeartField] ?? kDefaultHeroHeartId).toString();
+      final newVisible = p[heroHeartVisibleField] is bool ? p[heroHeartVisibleField] as bool : true;
+      final newAnimated = p[heroBannerAnimatedField] is bool ? p[heroBannerAnimatedField] as bool : true;
+      final changedAnimated = newAnimated != _heroBannerAnimated;
       setState(() {
         final bf = p['brideFullName']?.toString().trim();
         final gf = p['groomFullName']?.toString().trim();
@@ -193,7 +205,21 @@ class _HomeScreenState extends State<HomeScreen>
             _profileComplete = (pi.toDouble() / 100).clamp(0.0, 1.0);
           }
         }
+
+        _heroBannerId = newBanner.isEmpty ? kDefaultHeroBannerId : newBanner;
+        _heroHeartId = newHeart.isEmpty ? kDefaultHeroHeartId : newHeart;
+        _heroHeartVisible = newVisible;
+        _heroBannerAnimated = newAnimated;
       });
+      // کنترل انیمیشن قلب/بنر
+      if (changedAnimated) {
+        if (_heroBannerAnimated) {
+          if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
+        } else {
+          _pulse.stop();
+          _pulse.value = 0;
+        }
+      }
     });
 
     _musicSub = _musicSettingsDoc.snapshots().listen((doc) {
@@ -641,7 +667,6 @@ class _HomeScreenState extends State<HomeScreen>
         weddingDate!.isBefore(DateTime.now()) &&
         !isWeddingDay;
 
-    // متن بالا: «تا روز جشن X با Y» — نام واقعی زوج
     String topText;
     if (AppLang.I.isFa) {
       if (groomRaw.isNotEmpty && brideRaw.isNotEmpty) {
@@ -663,13 +688,7 @@ class _HomeScreenState extends State<HomeScreen>
       }
     }
 
-    // عکس دو نفره برای پشت کارت + عکس وسط قلب (فرق داشته باشد → پشت: cover، وسط: cover ولی اگر خالی بود bride/groom)
     final bgPhoto = (coverPhoto ?? '').trim();
-    final couplePhoto = bgPhoto.isNotEmpty
-        ? bgPhoto
-        : ((bridePhoto ?? '').trim().isNotEmpty
-            ? bridePhoto!.trim()
-            : (groomPhoto ?? '').trim());
 
     final accent = AppTok.accent(context);
     final cardSoft = AppTok.cardSoft(context);
@@ -693,8 +712,10 @@ class _HomeScreenState extends State<HomeScreen>
             borderRadius: BorderRadius.circular(24),
             child: Stack(
               children: [
-                // عکس دو نفره پشت کارت مثل قبل — کم‌رنگ
-                if (bgPhoto.isNotEmpty)
+                // ── بنر انتخابی یا عکس زوج به‌عنوان پس‌زمینه ──
+                if (_heroBannerId != 'none')
+                  Positioned.fill(child: _buildHeroBanner(_heroBannerId))
+                else if (bgPhoto.isNotEmpty)
                   Positioned.fill(
                     child: Opacity(
                       opacity: _dark ? 0.18 : 0.12,
@@ -705,36 +726,37 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                   ),
-                // دکور دایره‌ای نرم مثل قبل
-                Positioned(
-                  top: -40,
-                  left: -20,
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _brandGreenSoft.withValues(alpha: 0.55),
+                // دکور دایره‌ای نرم — فقط وقتی بنر نداریم
+                if (_heroBannerId == 'none') ...[
+                  Positioned(
+                    top: -40,
+                    left: -20,
+                    child: Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _brandGreenSoft.withValues(alpha: 0.55),
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  bottom: -30,
-                  right: -10,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _brandBlushSoft.withValues(alpha: 0.65),
+                  Positioned(
+                    bottom: -30,
+                    right: -10,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _brandBlushSoft.withValues(alpha: 0.65),
+                      ),
                     ),
                   ),
-                ),
+                ],
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
                   child: Column(
                     children: [
-                      // بالا: «تا روز جشن X با Y»
                       Text(
                         isWeddingDay
                             ? AppLang.tr('today_is_your_day')
@@ -755,24 +777,21 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // وسط: یک قلب بزرگ تپنده — داخلش اسم زوج + تاریخ (بدون عکس)
-                      // قلب یکم بالاتر آورده شد (فاصله پایین 28)
-                      if (!isWeddingDay && !isPast && weddingDate != null)
+                      // ── وسط: قلب (قابل مخفی‌سازی) یا عکس دو نفره ──
+                      if (_heroHeartVisible)
                         Center(
-                            child: _buildBigPulsingHeart(
-                                groom: groom,
-                                bride: bride,
-                                date: weddingDate))
-                      else if (isWeddingDay || isPast)
-                        Center(
-                            child: _buildBigPulsingHeart(
-                                groom: groom, bride: bride, date: weddingDate))
+                          child: _buildBigPulsingHeart(
+                            groom: groom,
+                            bride: bride,
+                            date: weddingDate,
+                            heartId: _heroHeartId,
+                            animated: _heroBannerAnimated,
+                          ),
+                        )
                       else
-                        Center(
-                            child: _buildBigPulsingHeart(
-                                groom: groom, bride: bride, date: weddingDate)),
+                        _buildCouplePhotoOnly(bgPhoto),
                       const SizedBox(height: 28),
-                      // پایین: فقط شمارش معکوس — تاریخ و نام‌های تکی حذف شد
+                      // پایین: شمارش معکوس
                       if (weddingDate == null)
                         Container(
                           width: double.infinity,
@@ -870,50 +889,238 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  /// قلب بزرگ تپنده — شبیه رفرنس: قرمز آجری یکدست + ستاره‌های سفید/تیره + متن سفید بولد
-  /// متن داخل: «سارا & علی / ما ازدواج می‌کنیم / تاریخ» (بدون «تبریک»)
+  /// ویجت بنر پشت هیرو — ۵ طرح گرادیانی شبیه اسکرین‌شات
+  Widget _buildHeroBanner(String id) {
+    final opt = HeroBannerOption.byId(id);
+    if (id == 'none') return const SizedBox();
+    // برای هر بنر یک گرادیان + یک قوس مرکزی ساده
+    Widget arch;
+    switch (id) {
+      case 'skyHeart':
+        arch = Center(
+          child: Container(
+            width: 170,
+            height: 170,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 2.5),
+            ),
+            child: Center(
+              child: Icon(Icons.favorite_border, size: 56, color: Colors.white.withValues(alpha: 0.45)),
+            ),
+          ),
+        );
+        break;
+      case 'royalBlue':
+        arch = Stack(
+          children: [
+            Positioned.fill(
+              child: Row(
+                children: [
+                  Expanded(child: Container(color: const Color(0xFF1A4A7A).withValues(alpha: 0.35))),
+                  Container(width: 1, color: Colors.white.withValues(alpha: 0.12)),
+                  Expanded(child: Container(color: const Color(0xFF0F2F56).withValues(alpha: 0.18))),
+                ],
+              ),
+            ),
+            Center(
+              child: Container(
+                width: 140,
+                height: 190,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(70)),
+                  border: Border.all(color: const Color(0xFF7EB8E8).withValues(alpha: 0.55), width: 1.4),
+                  color: Colors.white.withValues(alpha: 0.07),
+                ),
+              ),
+            ),
+          ],
+        );
+        break;
+      case 'iceGarden':
+        arch = Center(
+          child: Container(
+            width: 150,
+            height: 195,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(75)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 1.6),
+              boxShadow: [BoxShadow(color: const Color(0xFF6FA8D8).withValues(alpha: 0.25), blurRadius: 18)],
+            ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(74)),
+              child: Container(
+                color: const Color(0xFF9CC6E8).withValues(alpha: 0.22),
+                child: Center(child: Icon(Icons.ac_unit_rounded, size: 40, color: Colors.white.withValues(alpha: 0.55))),
+              ),
+            ),
+          ),
+        );
+        break;
+      case 'crimsonPetal':
+        arch = Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0.2, -0.3),
+                    radius: 1.1,
+                    colors: [Colors.white.withValues(alpha: 0.18), Colors.transparent],
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              width: 148,
+              height: 195,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(74)),
+                border: Border.all(color: const Color(0xFFFFD1DC).withValues(alpha: 0.7), width: 1.5),
+              ),
+              child: Center(child: Icon(Icons.local_florist_rounded, size: 44, color: const Color(0xFFFFD1DC).withValues(alpha: 0.85))),
+            ),
+          ],
+        );
+        break;
+      case 'classicIvory':
+        arch = Center(
+          child: Container(
+            width: 152,
+            height: 190,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+              border: Border.all(color: const Color(0xFFC2A981).withValues(alpha: 0.6), width: 1.2),
+              color: Colors.white.withValues(alpha: 0.55),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.account_balance_rounded, size: 34, color: const Color(0xFF9C8458).withValues(alpha: 0.9)),
+                const SizedBox(height: 6),
+                Container(width: 60, height: 1, color: const Color(0xFFC2A981).withValues(alpha: 0.5)),
+              ],
+            ),
+          ),
+        );
+        break;
+      default:
+        arch = const SizedBox();
+    }
+
+    Widget banner = Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: opt.gradient.length >= 2 ? opt.gradient : [opt.gradient.first, opt.gradient.first],
+        ),
+      ),
+      child: arch,
+    );
+
+    // انیمیشن ملایم بنر — وقتی فعال باشد کمی برق می‌زند
+    if (_heroBannerAnimated) {
+      return TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.92, end: 1.0),
+        duration: const Duration(milliseconds: 1600),
+        curve: Curves.easeInOut,
+        builder: (context, v, child) => Opacity(opacity: v, child: child),
+        child: banner,
+        // برای لوپ از AnimatedBuilder استفاده نمی‌کنیم تا سبک بماند؛
+        // همین فیدِ اولیه کافی است — پالسِ قلب جداست
+      );
+    }
+    return banner;
+  }
+
+  /// وقتی قلب مخفی است — فقط عکس دو نفره + کادر شیشه‌ای
+  Widget _buildCouplePhotoOnly(String bgPhoto) {
+    final hasPhoto = bgPhoto.isNotEmpty;
+    return Container(
+      width: 210,
+      height: 192,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: AppTok.card(context).withValues(alpha: 0.92),
+        border: Border.all(color: AppTok.border(context), width: 1),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
+        image: hasPhoto
+            ? DecorationImage(image: NetworkImage(bgPhoto), fit: BoxFit.cover, onError: (_, __) {})
+            : null,
+      ),
+      child: hasPhoto
+          ? null
+          : Center(
+              child: Icon(Icons.favorite_rounded, size: 64, color: AppTok.accent(context).withValues(alpha: 0.85)),
+            ),
+    );
+  }
+
+  /// قلب بزرگ تپنده — نسخهٔ چندطرحه (crimson / pinkDotted / bowLace / mochaBow / watercolor)
   Widget _buildBigPulsingHeart({
     required String groom,
     required String bride,
     DateTime? date,
+    String heartId = kDefaultHeroHeartId,
+    bool animated = true,
   }) {
-    final coupleLine = _nameOrder == 'bride_first'
-        ? '$bride  &  $groom'
-        : '$groom  &  $bride';
+    final coupleLine = _nameOrder == 'bride_first' ? '$bride  &  $groom' : '$groom  &  $bride';
     final dateStr = date != null ? _formatDate(date) : '';
-    return ScaleTransition(
-      scale: _pulseScale,
-      child: SizedBox(
-        width: 210,
-        height: 192,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // سایه نرم پشت قلب
-            Container(
-              width: 210,
-              height: 192,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFD75445).withValues(alpha: 0.28),
-                    blurRadius: 28,
-                    spreadRadius: 6,
-                  ),
-                ],
-              ),
+    final heart = HeroHearts.byId(heartId);
+    final base = heart.base;
+    final accent = heart.accent;
+
+    // متن داخل قلب بسته به رنگ پس‌زمینه تیره/روشن
+    final isDarkHeart = heart.id == 'crimson' || heart.id == 'mochaBow';
+    final textColor = isDarkHeart ? Colors.white : const Color(0xFF3A2A2E);
+    final subColor = isDarkHeart ? Colors.white.withValues(alpha: 0.96) : const Color(0xFF6B4A52);
+    final dateColor = isDarkHeart ? Colors.white.withValues(alpha: 0.93) : const Color(0xFF8A6B73);
+    final sparkleLight = isDarkHeart ? Colors.white : const Color(0xFF5A2A35);
+    final sparkleDark = heart.id == 'watercolor' ? const Color(0xFFE8A0B2) : accent;
+
+    Widget heartStack = SizedBox(
+      width: 210,
+      height: 192,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // سایه
+          Container(
+            width: 210,
+            height: 192,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: base.withValues(alpha: 0.28), blurRadius: 28, spreadRadius: 6)],
             ),
-            // قلب — رنگ یکدست آجری مثل رفرنس (بدون گرادیان چندرنگ)
-            Positioned.fill(
-              child: ClipPath(
-                clipper: _HeartClipper(),
-                child: Container(
-                  color: const Color(0xFFD75445),
+          ),
+          // قلب پایه
+          Positioned.fill(
+            child: ClipPath(
+              clipper: _HeartClipper(),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: base,
+                  gradient: heart.watercolor
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [const Color(0xFFFFF5F7), const Color(0xFFF8DDE3), const Color(0xFFE8A0B2).withValues(alpha: 0.35)],
+                        )
+                      : heart.id == 'mochaBow'
+                          ? LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [const Color(0xFFB8A9A3), const Color(0xFF8D7E7A), const Color(0xFF6B5D59)],
+                            )
+                          : null,
                 ),
               ),
             ),
-            // حاشیه نازک سفید داخل قلب
+          ),
+          // حاشیه / لیس / خال‌خال
+          if (heart.lace)
             Positioned.fill(
               child: Padding(
                 padding: const EdgeInsets.all(2.2),
@@ -921,104 +1128,103 @@ class _HomeScreenState extends State<HomeScreen>
                   clipper: _HeartClipper(),
                   child: Container(
                     decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        width: 1,
-                      ),
-                      color: const Color(0xFFD75445),
+                      color: base,
+                      border: Border.all(color: const Color(0xFF3A2A2E).withValues(alpha: 0.85), width: 1.2),
+                    ),
+                    child: CustomPaint(painter: _LaceBorderPainter(color: const Color(0xFF3A2A2E).withValues(alpha: 0.22))),
+                  ),
+                ),
+              ),
+            )
+          else if (heart.hasDots)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(2.2),
+                child: ClipPath(
+                  clipper: _HeartClipper(),
+                  child: Container(
+                    color: base,
+                    child: CustomPaint(painter: _DottedBorderPainter(dotColor: Colors.white.withValues(alpha: 0.55))),
+                  ),
+                ),
+              ),
+            )
+          else
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(2.2),
+                child: ClipPath(
+                  clipper: _HeartClipper(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white.withValues(alpha: isDarkHeart ? 0.14 : 0.0), width: 1),
+                      color: base,
                     ),
                   ),
                 ),
               ),
             ),
-            // ستاره‌ها — سفید و تیره مثل رفرنس
+          // پاپیون بالای قلب
+          if (heart.hasBow)
             Positioned(
-              top: 18,
-              right: 24,
-              child: _sparkle(size: 28, color: Colors.white, angle: 0.15),
-            ),
-            Positioned(
-              top: 34,
-              right: 52,
-              child: _sparkle(size: 14, color: const Color(0xFF4A2520), angle: -0.2),
-            ),
-            Positioned(
-              top: 40,
-              left: 28,
-              child: _sparkle(size: 20, color: const Color(0xFF4A2520), angle: 0.25),
-            ),
-            Positioned(
-              top: 58,
-              left: 44,
-              child: _sparkle(size: 10, color: const Color(0xFF4A2520), angle: -0.3),
-            ),
-            Positioned(
-              bottom: 44,
-              left: 84,
-              child: _sparkle(size: 26, color: Colors.white, angle: 0.1),
-            ),
-            Positioned(
-              bottom: 32,
-              left: 62,
-              child: _sparkle(size: 12, color: Colors.white, angle: -0.25),
-            ),
-            Positioned(
-              bottom: 36,
-              right: 68,
-              child: _sparkle(size: 10, color: Colors.white, angle: 0.2),
-            ),
-            // متن داخل قلب — سفید بولد ساده، کاملاً وسط قلب (نه بیرون‌زده)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
-                child: Column(
+              top: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8B4C4),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 4, offset: const Offset(0, 2))],
+                ),
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      coupleLine,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.3,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      AppLang.I.isFa ? 'ما ازدواج می‌کنیم' : 'We are getting married',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.96),
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                        height: 1.2,
-                      ),
-                    ),
-                    if (dateStr.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        dateStr,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.93),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
+                    Container(width: 12, height: 10, decoration: BoxDecoration(color: const Color(0xFFE98AA8), borderRadius: BorderRadius.circular(4))),
+                    Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFFFD1DC), shape: BoxShape.circle)),
+                    Container(width: 12, height: 10, decoration: BoxDecoration(color: const Color(0xFFE98AA8), borderRadius: BorderRadius.circular(4))),
                   ],
                 ),
               ),
             ),
-          ],
-        ),
+          // ستاره‌ها
+          Positioned(top: 18, right: 24, child: _sparkle(size: 28, color: sparkleLight, angle: 0.15)),
+          Positioned(top: 34, right: 52, child: _sparkle(size: 14, color: sparkleDark, angle: -0.2)),
+          Positioned(top: 40, left: 28, child: _sparkle(size: 20, color: sparkleDark, angle: 0.25)),
+          Positioned(top: 58, left: 44, child: _sparkle(size: 10, color: sparkleDark, angle: -0.3)),
+          Positioned(bottom: 44, left: 84, child: _sparkle(size: 26, color: sparkleLight, angle: 0.1)),
+          Positioned(bottom: 32, left: 62, child: _sparkle(size: 12, color: sparkleLight, angle: -0.25)),
+          Positioned(bottom: 36, right: 68, child: _sparkle(size: 10, color: sparkleLight, angle: 0.2)),
+          // متن داخل
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(coupleLine,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.3, height: 1.2)),
+                  const SizedBox(height: 8),
+                  Text(AppLang.I.isFa ? 'ما ازدواج می‌کنیم' : 'We are getting married',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: subColor, fontSize: 12.5, fontWeight: FontWeight.w500, height: 1.2)),
+                  if (dateStr.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(dateStr,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: dateColor, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
+
+    if (!animated) return heartStack;
+    return ScaleTransition(scale: _pulseScale, child: heartStack);
   }
 
   /// ستاره چهارپر کوچک — شبیه ستاره‌های رفرنس
@@ -2325,6 +2531,60 @@ class _HeartClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _DottedBorderPainter extends CustomPainter {
+  final Color dotColor;
+  const _DottedBorderPainter({required this.dotColor});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = dotColor..style = PaintingStyle.fill;
+    // dotted rim — 28 dots evenly spaced around perimeter (approx)
+    final pts = [
+      Offset(size.width * 0.12, size.height * 0.18),
+      Offset(size.width * 0.20, size.height * 0.09),
+      Offset(size.width * 0.33, size.height * 0.05),
+      Offset(size.width * 0.48, size.height * 0.11),
+      Offset(size.width * 0.62, size.height * 0.05),
+      Offset(size.width * 0.77, size.height * 0.08),
+      Offset(size.width * 0.88, size.height * 0.16),
+      Offset(size.width * 0.94, size.height * 0.28),
+      Offset(size.width * 0.91, size.height * 0.42),
+      Offset(size.width * 0.83, size.height * 0.56),
+      Offset(size.width * 0.71, size.height * 0.71),
+      Offset(size.width * 0.58, size.height * 0.84),
+      Offset(size.width * 0.41, size.height * 0.84),
+      Offset(size.width * 0.28, size.height * 0.71),
+      Offset(size.width * 0.16, size.height * 0.56),
+      Offset(size.width * 0.08, size.height * 0.42),
+      Offset(size.width * 0.06, size.height * 0.28),
+    ];
+    for (final p in pts) {
+      canvas.drawCircle(p, 2.4, paint);
+    }
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _LaceBorderPainter extends CustomPainter {
+  final Color color;
+  const _LaceBorderPainter({required this.color});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 0.9;
+    final path = _HeartClipper().getClip(size);
+    // inner lace scallop — small inward curves along top edge
+    canvas.drawPath(path, p);
+    final dot = Paint()..color = color..style = PaintingStyle.fill;
+    for (double t = 0.08; t < 0.92; t += 0.08) {
+      final x = size.width * t;
+      final y = size.height * (0.04 + 0.06 * (t < 0.5 ? t : 1 - t));
+      canvas.drawCircle(Offset(x, y), 1.2, dot);
+    }
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// گیج نیم‌دایره برای کارت بودجه

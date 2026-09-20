@@ -13,6 +13,7 @@ import '../core/app_effect_controller.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../core/hero_styles.dart';
 import '../services/ambient_music_service.dart';
 import '../services/media_upload_service.dart';
 import '../widgets/ambient_music_controls.dart';
@@ -50,6 +51,12 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
 
   String _rsvpMode = 'everyone';
   String _nameOrder = 'groom_first';
+
+  // ── ظاهر هیرو (بنر + قلب) ──
+  String _heroBannerId = kDefaultHeroBannerId;
+  String _heroHeartId = kDefaultHeroHeartId;
+  bool _heroHeartVisible = true;
+  bool _heroBannerAnimated = true;
 
   bool _loading = true;
   bool _saving = false;
@@ -160,6 +167,13 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       }
       _hashtagCtrl.text = (p['hashtag'] ?? '').toString();
 
+      _heroBannerId = (p[heroBannerField] ?? kDefaultHeroBannerId).toString();
+      if (_heroBannerId.trim().isEmpty) _heroBannerId = kDefaultHeroBannerId;
+      _heroHeartId = (p[heroHeartField] ?? kDefaultHeroHeartId).toString();
+      if (_heroHeartId.trim().isEmpty) _heroHeartId = kDefaultHeroHeartId;
+      _heroHeartVisible = p[heroHeartVisibleField] is bool ? p[heroHeartVisibleField] as bool : true;
+      _heroBannerAnimated = p[heroBannerAnimatedField] is bool ? p[heroBannerAnimatedField] as bool : true;
+
       _completePercent = _calcProgress();
     } catch (e) {
       _toast('${AppLang.tr('load_error')}: $e', error: true);
@@ -185,6 +199,14 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
 
   void _recalcProgress() {
     _completePercent = _calcProgress();
+  }
+
+  Future<void> _saveHeroField(Map<String, dynamic> patch) async {
+    try {
+      await _profileRef.set(patch, SetOptions(merge: true));
+    } catch (e) {
+      _toast('${AppLang.tr('save_error')}: $e', error: true);
+    }
   }
 
   String _pathFromUploadResult(dynamic result, String url) {
@@ -309,6 +331,10 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
         'rsvpMode': _rsvpMode,
         'nameOrder': _nameOrder,
         'hashtag': _hashtagCtrl.text.trim(),
+        heroBannerField: _heroBannerId,
+        heroHeartField: _heroHeartId,
+        heroHeartVisibleField: _heroHeartVisible,
+        heroBannerAnimatedField: _heroBannerAnimated,
         'completePercent': percent,
         'completePercentInt': (percent * 100).round(),
         'provider': 'imgbb',
@@ -404,6 +430,8 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                             _progressHeader(context),
                             const SizedBox(height: 14),
                             _couplePhotoCard(context),
+                            const SizedBox(height: 14),
+                            _heroAppearanceCard(context),
                             const SizedBox(height: 14),
                             _sectionCard(
                               context,
@@ -936,6 +964,228 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
     );
   }
 
+  // ── انتخاب بنر + قلب هیرو ──
+  Widget _heroAppearanceCard(BuildContext context) {
+    return PageGlass(
+      opacity: 0.84,
+      blurSigma: 12,
+      borderRadius: 22,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppTok.accent(context).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.auto_awesome_rounded, color: AppTok.accent(context), size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                AppLang.I.isFa ? 'ظاهر کارت خانه' : 'Home card style',
+                style: TextStyle(color: AppTok.text(context), fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            AppLang.I.isFa
+                ? 'بنر پشت کارت و آیکون قلب را انتخاب کن — یا قلب را کلا مخفی کن تا فقط عکس دو نفره و تایمر بماند.'
+                : 'Pick banner & heart icon — or hide heart to show only photo + timer.',
+            style: TextStyle(color: AppTok.textSoft(context), fontSize: 11.5, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          Text('Banner Image', style: TextStyle(color: AppTok.textSoft(context), fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 86,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: HeroBannerOption.all.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final opt = HeroBannerOption.all[i];
+                final selected = opt.id == _heroBannerId;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _heroBannerId = opt.id);
+                    _saveHeroField({heroBannerField: opt.id});
+                  },
+                  child: Container(
+                    width: 76,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: selected ? AppTok.accent(context) : AppTok.border(context).withValues(alpha: 0.6), width: selected ? 2.2 : 1),
+                      boxShadow: selected ? [BoxShadow(color: AppTok.accent(context).withValues(alpha: 0.22), blurRadius: 8)] : null,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: opt.id == 'none'
+                          ? Container(
+                              color: AppTok.cardSoft(context),
+                              child: Center(child: Icon(Icons.block_rounded, color: AppTok.textSoft(context), size: 28)),
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: opt.gradient,
+                                ),
+                              ),
+                              child: Center(child: Icon(opt.icon, size: 28, color: Colors.white.withValues(alpha: 0.9))),
+                            ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text('Heart Icon', style: TextStyle(color: AppTok.textSoft(context), fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 86,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: HeroHearts.all.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final h = HeroHearts.all[i];
+                final selected = h.id == _heroHeartId && _heroHeartVisible;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _heroHeartId = h.id;
+                      _heroHeartVisible = true;
+                    });
+                    _saveHeroField({heroHeartField: h.id, heroHeartVisibleField: true});
+                  },
+                  child: Container(
+                    width: 76,
+                    decoration: BoxDecoration(
+                      color: AppTok.cardSoft(context),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: selected ? AppTok.accent(context) : AppTok.border(context).withValues(alpha: 0.6), width: selected ? 2.2 : 1),
+                      boxShadow: selected ? [BoxShadow(color: AppTok.accent(context).withValues(alpha: 0.18), blurRadius: 8)] : null,
+                    ),
+                    child: Center(child: _miniHeartPreview(h)),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          // دکمه مخفی‌سازی قلب
+          InkWell(
+            onTap: () {
+              final next = !_heroHeartVisible;
+              setState(() => _heroHeartVisible = next);
+              _saveHeroField({heroHeartVisibleField: next});
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: _heroHeartVisible ? AppTok.cardSoft(context) : AppTok.accent(context).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _heroHeartVisible ? AppTok.border(context) : AppTok.accent(context).withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  Icon(_heroHeartVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      size: 18, color: _heroHeartVisible ? AppTok.textSoft(context) : AppTok.accent(context)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      AppLang.I.isFa
+                          ? (_heroHeartVisible ? 'قلب نمایش داده می‌شود — بزن برای مخفی کردن' : 'قلب مخفی است — فقط عکس و تایمر')
+                          : (_heroHeartVisible ? 'Heart visible — tap to hide' : 'Heart hidden — photo + timer only'),
+                      style: TextStyle(color: _heroHeartVisible ? AppTok.textSoft(context) : AppTok.accent(context), fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // سوییچ انیمیشن بنر
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTok.cardSoft(context),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTok.border(context).withValues(alpha: 0.6)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppLang.I.isFa ? 'فعال/غیرفعال کردن انیمیشن بنر' : 'Banner animation',
+                    style: TextStyle(color: AppTok.text(context), fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Switch(
+                  value: _heroBannerAnimated,
+                  activeTrackColor: AppTok.accent(context).withValues(alpha: 0.45),
+                  activeThumbColor: AppTok.accent(context),
+                  onChanged: (v) {
+                    setState(() => _heroBannerAnimated = v);
+                    _saveHeroField({heroBannerAnimatedField: v});
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniHeartPreview(HeroHeartOption h) {
+    final base = h.base;
+    return SizedBox(
+      width: 52,
+      height: 48,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // heart shape via icon for preview (fast, no clipper needed)
+          Icon(Icons.favorite, size: 48, color: base),
+          if (h.hasBow)
+            Positioned(
+              top: 2,
+              child: Container(
+                width: 18,
+                height: 8,
+                decoration: BoxDecoration(color: const Color(0xFFF8B4C4), borderRadius: BorderRadius.circular(4)),
+                child: Center(child: Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFFFD1DC), shape: BoxShape.circle))),
+              ),
+            ),
+          if (h.hasDots)
+            Positioned.fill(
+              child: CustomPaint(painter: _MiniDotPainter()),
+            ),
+          if (h.lace)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF3A2A2E).withValues(alpha: 0.35), width: 1),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _sectionCard(
     BuildContext context, {
     required IconData icon,
@@ -1148,4 +1398,21 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
       ],
     );
   }
+}
+
+class _MiniDotPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = Colors.white.withValues(alpha: 0.55)..style = PaintingStyle.fill;
+    final cx = size.width / 2, cy = size.height / 2;
+    const r = 1.6;
+    for (final a in [0.0, 0.9, 1.8, 2.7, 3.6, 4.5, 5.4]) {
+      canvas.drawCircle(Offset(cx + 18 * (a > 3 ? 1 : -1) * 0.5, cy), r, p);
+    }
+    canvas.drawCircle(Offset(cx, cy - 16), r, p);
+    canvas.drawCircle(Offset(cx - 12, cy - 10), r, p);
+    canvas.drawCircle(Offset(cx + 12, cy - 10), r, p);
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
