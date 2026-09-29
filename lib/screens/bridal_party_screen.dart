@@ -11,6 +11,7 @@ import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../services/media_upload_service.dart';
+import '../widgets/full_color_picker.dart';
 import '../widgets/image_crop_screen.dart';
 
 /// ساقدوش‌ها — دو ستون عروس/داماد در یک صفحه + جزئیات با ضربه
@@ -35,6 +36,12 @@ class _BridalPartyScreenState extends State<BridalPartyScreen> {
       .collection('weddings')
       .doc(widget.weddingId)
       .collection('bridalParty');
+
+  DocumentReference<Map<String, dynamic>> get _paletteDoc => FirebaseFirestore.instance
+      .collection('weddings')
+      .doc(widget.weddingId)
+      .collection('palette')
+      .doc('bridal');
 
   void _toast(String msg, {bool error = false}) =>
       showAppSnack(context, msg, error: error);
@@ -200,6 +207,24 @@ class _BridalPartyScreenState extends State<BridalPartyScreen> {
     }
   }
 
+  String _hexFromColor(Color c) => '#${(c.r*255).round().toRadixString(16).padLeft(2,'0')}${(c.g*255).round().toRadixString(16).padLeft(2,'0')}${(c.b*255).round().toRadixString(16).padLeft(2,'0')}'.toUpperCase();
+  Color _colorFromHex(String hex) {
+    var h = hex.trim().replaceAll('#','');
+    if (h.length==6) {
+      final v=int.tryParse(h,radix:16);
+      if(v!=null) return Color(0xFF000000|v);
+    }
+    return const Color(0xFFE8B4C8);
+  }
+  Future<Color?> _pickColor(Color initial) => showDialog<Color>(context: context, builder: (_)=> FullColorPickerDialog(initialColor: initial));
+  Future<void> _saveBridalPalette({List<String>? brideColors, List<String>? groomColors, bool? enabled}) async {
+    final data = <String,dynamic>{'updatedAt': FieldValue.serverTimestamp(), 'updatedBy': FirebaseAuth.instance.currentUser?.uid};
+    if (brideColors!=null) data['brideColors']=brideColors;
+    if (groomColors!=null) data['groomColors']=groomColors;
+    if (enabled!=null) data['enabled']=enabled;
+    await _paletteDoc.set(data, SetOptions(merge:true));
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -319,24 +344,43 @@ class _BridalPartyScreenState extends State<BridalPartyScreen> {
                           docs: grooms,
                         );
 
+                        final paletteSection = _buildBridalPaletteCard();
+
                         if (wide) {
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          return Column(
                             children: [
-                              Expanded(
-                                child: ListView(
-                                  padding: pad,
-                                  children: [brideCol],
+                              Padding(
+                                padding: EdgeInsets.fromLTRB(pad.left, pad.top, pad.right, 0),
+                                child: Column(
+                                  children: [
+                                    paletteSection,
+                                    const SizedBox(height: 12),
+                                    _heroBanner(context, brides.length, grooms.length),
+                                  ],
                                 ),
                               ),
-                              Container(
-                                width: 1,
-                                color: AppTok.border(context),
-                              ),
+                              const SizedBox(height: 12),
                               Expanded(
-                                child: ListView(
-                                  padding: pad,
-                                  children: [groomCol],
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: ListView(
+                                        padding: EdgeInsets.fromLTRB(pad.left, 0, 6, pad.bottom),
+                                        children: [brideCol],
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      color: AppTok.border(context),
+                                    ),
+                                    Expanded(
+                                      child: ListView(
+                                        padding: EdgeInsets.fromLTRB(6, 0, pad.right, pad.bottom),
+                                        children: [groomCol],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -349,6 +393,8 @@ class _BridalPartyScreenState extends State<BridalPartyScreen> {
                           child: Column(
                             children: [
                               _heroBanner(context, brides.length, grooms.length),
+                              const SizedBox(height: 12),
+                              paletteSection,
                               const SizedBox(height: 14),
                               IntrinsicHeight(
                                 child: Row(
@@ -477,6 +523,152 @@ class _BridalPartyScreenState extends State<BridalPartyScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBridalPaletteCard() {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _paletteDoc.snapshots(),
+      builder: (context, snap) {
+        final data = snap.data?.data() ?? {};
+        final brideColors = ((data['brideColors'] as List?)?.map((e)=>e.toString()).where((e)=>e.trim().isNotEmpty).toList() ?? <String>[]);
+        final groomColors = ((data['groomColors'] as List?)?.map((e)=>e.toString()).where((e)=>e.trim().isNotEmpty).toList() ?? <String>[]);
+        final enabled = data['enabled'] != false; // default true
+        final isFa = AppLang.I.isFa;
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppTok.card(context),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppTok.accent(context).withValues(alpha: 0.18)),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0,3))],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(width: 36, height: 36, decoration: BoxDecoration(color: AppTok.accent(context).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.palette_outlined, color: AppTok.accent(context), size: 20)),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(isFa ? 'رنگ لباس ساقدوش‌ها' : 'Bridal party dress colors', style: TextStyle(color: AppTok.text(context), fontWeight: FontWeight.w800, fontSize: 14)),
+                    Text(isFa ? 'تا ۷ رنگ برای هر طرف — از پالت فول انتخاب کن' : 'Up to 7 colors per side — pick from full palette', style: TextStyle(color: AppTok.textSoft(context), fontSize: 11.5)),
+                  ])),
+                  Switch(value: enabled, activeColor: AppTok.accent(context), onChanged: (v)=> _saveBridalPalette(enabled: v)),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // Bride side
+              _paletteSideRow(
+                label: isFa ? 'عروس' : 'Bride side',
+                colors: brideColors,
+                accent: const Color(0xFFE8B4C8),
+                onAdd: () async {
+                  if (brideColors.length >= 7) return;
+                  final picked = await _pickColor(const Color(0xFFE8B4C8));
+                  if (picked!=null) {
+                    final next = List<String>.from(brideColors)..add(_hexFromColor(picked));
+                    await _saveBridalPalette(brideColors: next);
+                  }
+                },
+                onEdit: (i) async {
+                  final picked = await _pickColor(_colorFromHex(brideColors[i]));
+                  if (picked!=null) {
+                    final next = List<String>.from(brideColors);
+                    next[i]=_hexFromColor(picked);
+                    await _saveBridalPalette(brideColors: next);
+                  }
+                },
+                onDelete: (i) async {
+                  final next = List<String>.from(brideColors)..removeAt(i);
+                  await _saveBridalPalette(brideColors: next);
+                },
+              ),
+              const SizedBox(height: 14),
+              _paletteSideRow(
+                label: isFa ? 'داماد' : 'Groom side',
+                colors: groomColors,
+                accent: const Color(0xFFB8C9E0),
+                onAdd: () async {
+                  if (groomColors.length >= 7) return;
+                  final picked = await _pickColor(const Color(0xFFB8C9E0));
+                  if (picked!=null) {
+                    final next = List<String>.from(groomColors)..add(_hexFromColor(picked));
+                    await _saveBridalPalette(groomColors: next);
+                  }
+                },
+                onEdit: (i) async {
+                  final picked = await _pickColor(_colorFromHex(groomColors[i]));
+                  if (picked!=null) {
+                    final next = List<String>.from(groomColors);
+                    next[i]=_hexFromColor(picked);
+                    await _saveBridalPalette(groomColors: next);
+                  }
+                },
+                onDelete: (i) async {
+                  final next = List<String>.from(groomColors)..removeAt(i);
+                  await _saveBridalPalette(groomColors: next);
+                },
+              ),
+              if (brideColors.isEmpty && groomColors.isEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: AppTok.cardSoft(context), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTok.border(context))),
+                  child: Text(isFa ? 'هنوز رنگی انتخاب نشده — دکمه + را بزن و از Grid / Spectrum / Sliders رنگ بردار' : 'No colors yet — tap + to pick from Grid / Spectrum / Sliders', style: TextStyle(color: AppTok.textSoft(context), fontSize: 11.5), textAlign: TextAlign.center),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _paletteSideRow({required String label, required List<String> colors, required Color accent, required VoidCallback onAdd, required Future<void> Function(int) onEdit, required Future<void> Function(int) onDelete}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: accent, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(color: AppTok.text(context), fontWeight: FontWeight.w700, fontSize: 12.5)),
+          const SizedBox(width: 8),
+          Text('${colors.length}/7', style: TextStyle(color: AppTok.textSoft(context), fontSize: 11)),
+          const Spacer(),
+          if (colors.isNotEmpty)
+            InkWell(onTap: () async { await _saveBridalPalette(brideColors: label.contains('عروس') || label.contains('Bride') ? [] : null, groomColors: label.contains('داماد') || label.contains('Groom') ? [] : null); }, child: Text(AppLang.I.isFa ? 'پاک کردن' : 'Clear', style: TextStyle(color: AppTok.danger(context), fontSize: 11, fontWeight: FontWeight.w600))),
+        ]),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (int i=0;i<colors.length;i++)
+              Stack(clipBehavior: Clip.none, children: [
+                InkWell(
+                  onTap: ()=> onEdit(i),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(color: _colorFromHex(colors[i]), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2), boxShadow: [BoxShadow(color: _colorFromHex(colors[i]).withValues(alpha: 0.35), blurRadius: 8)]),
+                    child: Center(child: Text(colors[i].replaceAll('#',''), style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w700, shadows: [Shadow(color: Colors.black54, blurRadius: 2)]))),
+                  ),
+                ),
+                Positioned(top: -4, right: -4, child: InkWell(onTap: ()=> onDelete(i), child: Container(width: 18, height: 18, decoration: BoxDecoration(color: const Color(0xFFE53935), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.2)), child: const Icon(Icons.close_rounded, size: 10, color: Colors.white)))),
+              ]),
+            if (colors.length < 7)
+              InkWell(
+                onTap: onAdd,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(width: 56, height: 56, decoration: BoxDecoration(color: accent.withValues(alpha: 0.14), shape: BoxShape.circle, border: Border.all(color: accent.withValues(alpha: 0.45), style: BorderStyle.solid)), child: Icon(Icons.add_rounded, color: accent)),
+              ),
+          ],
+        ),
+      ],
     );
   }
 
