@@ -71,7 +71,25 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
 
   /// قالب فعال دعوت‌نامه — از سند مراسم (inviteTemplateId)
   String _templateId = 'classic';
-  InviteTemplate get _template => InviteTemplate.byId(_templateId);
+  // پالت عروسی — اگر فعال باشد، دعوت خودکار با رنگ‌های پالت رندر می‌شود
+  bool _paletteEnabled = false;
+  List<Color> _paletteColors = [];
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _paletteSub;
+  InviteTemplate get _template {
+    if (_paletteEnabled && _paletteColors.isNotEmpty) {
+      return InviteTemplate.fromPalette(_paletteColors);
+    }
+    return InviteTemplate.byId(_templateId);
+  }
+
+  Color _hexToColor(String hex) {
+    var h = hex.trim().replaceAll('#', '');
+    if (h.length == 6) {
+      final v = int.tryParse(h, radix: 16);
+      if (v != null) return Color(0xFF000000 | v);
+    }
+    return const Color(0xFFE8C9A8);
+  }
 
   Timer? _timer;
   late final AnimationController _heartPulse;
@@ -95,12 +113,31 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
     _bootstrap();
+    // گوش دادن زنده به پالت — اگر زوج رنگ عوض کرد، دعوت همان لحظه عوض می‌شود
+    _paletteSub = FirebaseFirestore.instance
+        .collection('weddings')
+        .doc(widget.weddingId)
+        .collection('palette')
+        .doc('main')
+        .snapshots()
+        .listen((snap) {
+      final d = snap.data() ?? {};
+      final enabled = d['enabled'] == true;
+      final raw = (d['colors'] as List?)?.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList() ?? <String>[];
+      final cols = raw.map(_hexToColor).toList();
+      if (!mounted) return;
+      setState(() {
+        _paletteEnabled = enabled;
+        _paletteColors = cols;
+      });
+    });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _heartPulse.dispose();
+    _paletteSub?.cancel();
     _nameC.dispose();
     _phoneC.dispose();
     super.dispose();

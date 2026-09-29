@@ -111,6 +111,41 @@ class InviteTemplate {
     return classic;
   }
 
+  /// پالت‌داینامیک — از رنگ‌های زوج (تا ۷) یک تم دعوت می‌سازد
+  /// اولین رنگ accent، بقیه برای گرادیان پس‌زمینه
+  static InviteTemplate fromPalette(List<Color> rawColors) {
+    final colors = rawColors.where((c) => c.opacity > 0.01).toList();
+    if (colors.isEmpty) return classic;
+    final accent = colors[0];
+    // bgTop/Bottom از پالت — اگر تک‌رنگ بود تیره‌ترش می‌کنیم
+    final bgTop = colors.length >= 2 ? colors[0] : accent;
+    final bgBottom = colors.length >= 2
+        ? colors[1]
+        : Color.lerp(accent, Colors.black, 0.35) ?? accent;
+    final card = colors.length >= 3 ? colors[2] : const Color(0xFF221D2B);
+    // برای خوانایی: اگر card روشن بود متن تیره، وگرنه روشن
+    final isCardLight = card.computeLuminance() > 0.55;
+    final text = isCardLight ? const Color(0xFF1A1A1E) : const Color(0xFFF7EFDC);
+    final textSoft = isCardLight
+        ? const Color(0xFF6B6B74).withValues(alpha: 0.85)
+        : Colors.white.withValues(alpha: 0.72);
+    final border = accent.withValues(alpha: 0.45);
+    return InviteTemplate(
+      id: 'palette_custom',
+      nameFa: 'پالت عروسی',
+      nameEn: 'Wedding Palette',
+      premium: false,
+      bgTop: bgTop,
+      bgBottom: bgBottom,
+      card: card,
+      accent: accent,
+      text: text,
+      textSoft: textSoft,
+      border: border,
+      decor: '🎨',
+    );
+  }
+
   /// قالب‌های مجاز برای یک پلن
   static List<InviteTemplate> allowedFor(PlanLimits limits) {
     return all.where((t) => limits.templates.contains(t.id)).toList();
