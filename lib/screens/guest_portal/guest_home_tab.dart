@@ -13,6 +13,7 @@ import 'guest_gallery_tab.dart';
 import 'guest_gifts_tab.dart';
 import 'guest_love_story_tab.dart';
 import '../../services/entertainment_service.dart';
+import '../../widgets/palette_guest_card.dart';
 import '../supports_guest_screen.dart';
 import 'guest_wishes_tab.dart';
 
@@ -198,6 +199,8 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                           _buildGreeting(context),
                           const SizedBox(height: 14),
                           _buildHero(context),
+                          const SizedBox(height: 16),
+                          PaletteGuestCard(weddingId: widget.weddingId),
                           const SizedBox(height: 24),
                           _buildPlanHeader(context),
                           const SizedBox(height: 12),

@@ -10,6 +10,7 @@ import 'screens/checklist_screen.dart';
 import 'screens/guests_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/seating_screen.dart';
+import 'screens/wedding_palette_screen.dart';
 import 'widgets/effect_background.dart';
 import 'widgets/page_glass.dart';
 import 'widgets/plan_gate.dart';
@@ -65,6 +66,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       GuestsScreen(weddingId: widget.weddingId),
       CalendarScreen(weddingId: widget.weddingId),
+      WeddingPaletteScreen(weddingId: widget.weddingId),
     ];
   }
 
@@ -135,6 +137,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         'icon': Icons.calendar_today_outlined,
         'label': AppLang.tr('nav_calendar'),
       },
+      {'icon': Icons.palette_outlined, 'label': AppLang.I.isFa ? 'پالت' : 'Palette'},
     ];
 
     return GlassBottomBar(

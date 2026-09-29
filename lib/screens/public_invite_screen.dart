@@ -20,6 +20,7 @@ import '../services/invitation_service.dart';
 import '../services/weather_service.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/floral_decor.dart';
+import '../widgets/palette_guest_card.dart';
 import 'guest_portal/guest_portal_shell.dart';
 
 /// Public invite — one light floral glass card.
@@ -748,6 +749,8 @@ class _PublicInviteScreenState extends State<PublicInviteScreen>
                                   const SizedBox(height: 14),
                                   _buildVenueWeather(),
                                 ],
+                                const SizedBox(height: 14),
+                                PaletteGuestCard(weddingId: widget.weddingId),
                               ],
                             ),
                           ),

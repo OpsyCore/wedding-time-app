@@ -19,6 +19,7 @@ import '../screens/login_screen.dart';
 import '../screens/love_story_screen.dart';
 import '../screens/media_library_screen.dart';
 import '../screens/music_effects_screen.dart';
+import '../screens/wedding_palette_screen.dart';
 import '../screens/honeymoon_screen.dart';
 import '../screens/notes_screen.dart';
 import '../screens/notifications_screen.dart';
@@ -332,6 +333,19 @@ class AppDrawer extends StatelessWidget {
                           ),
                         );
                       }),
+                      _item(
+                        context,
+                        Icons.palette_outlined,
+                        AppLang.I.isFa ? 'پالت رنگی' : 'Color Palette',
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => WeddingPaletteScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
 
                       // ── برنامه‌ریزی (پراستفاده‌ترین‌ها اول) ──
                       _section(context, 'برنامه‌ریزی مراسم', 'Planning'),
