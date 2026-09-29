@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_font_controller.dart';
+
 /// Light mockup tokens — همیشه static const
 class AppPalette {
   AppPalette._();
@@ -149,17 +151,24 @@ class AppTok {
 class AppTheme {
   AppTheme._();
 
-  static ThemeData light() {
+  static String _effFont([String? f]) {
+    final ff = (f ?? AppFontController.I.family).trim();
+    if (AppFontController.supported.contains(ff)) return ff;
+    return AppPalette.fontFamily;
+  }
+
+  static ThemeData light([String? fontFamily]) {
+    final eff = _effFont(fontFamily);
     final base = ThemeData.light(useMaterial3: true);
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      fontFamily: AppPalette.fontFamily,
+      fontFamily: eff,
       scaffoldBackgroundColor: AppPalette.background,
       cardColor: AppPalette.card,
       dividerColor: AppPalette.border,
       textTheme: base.textTheme.apply(
-        fontFamily: AppPalette.fontFamily,
+        fontFamily: eff,
         bodyColor: AppPalette.text,
         displayColor: AppPalette.text,
       ),
@@ -215,17 +224,18 @@ class AppTheme {
     );
   }
 
-  static ThemeData dark() {
+  static ThemeData dark([String? fontFamily]) {
+    final eff = _effFont(fontFamily);
     final base = ThemeData.dark(useMaterial3: true);
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      fontFamily: AppPalette.fontFamily,
+      fontFamily: eff,
       scaffoldBackgroundColor: AppDarkPalette.background,
       cardColor: AppDarkPalette.card,
       dividerColor: AppDarkPalette.border,
       textTheme: base.textTheme.apply(
-        fontFamily: AppPalette.fontFamily,
+        fontFamily: eff,
         bodyColor: AppDarkPalette.text,
         displayColor: AppDarkPalette.text,
       ),
