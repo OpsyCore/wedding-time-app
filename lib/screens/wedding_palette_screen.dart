@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -78,10 +79,14 @@ class _WeddingPaletteScreenState extends State<WeddingPaletteScreen> {
                 opacity: 0.84,
                 blurSigma: 12,
                 title: Text(isFa ? 'پالت رنگی عروسی' : 'Wedding Palette', style: TextStyle(color: AppTok.text(context), fontWeight: FontWeight.w800, fontSize: 16)),
-                leading: IconButton(
-                  icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTok.accent(context), size: 20),
-                  onPressed: () => Navigator.pop(context),
-                ),
+                leading: Navigator.canPop(context)
+                    ? IconButton(
+                        icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTok.accent(context), size: 20),
+                        onPressed: () {
+                          if (Navigator.canPop(context)) Navigator.pop(context);
+                        },
+                      )
+                    : null,
               ),
               body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                 stream: _paletteDoc.snapshots(),
@@ -222,11 +227,25 @@ class _WeddingPaletteScreenState extends State<WeddingPaletteScreen> {
                             const SizedBox(height: 10),
                             SizedBox(
                               height: 78,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _presetPalettes.length,
-                                separatorBuilder: (_, __) => const SizedBox(width: 10),
-                                itemBuilder: (context, idx) {
+                              child: ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context).copyWith(
+                                  dragDevices: {
+                                    PointerDeviceKind.touch,
+                                    PointerDeviceKind.mouse,
+                                    PointerDeviceKind.trackpad,
+                                    PointerDeviceKind.stylus,
+                                  },
+                                ),
+                                child: Scrollbar(
+                                  thumbVisibility: false,
+                                  interactive: true,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    clipBehavior: Clip.none,
+                                    itemCount: _presetPalettes.length,
+                                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                                    itemBuilder: (context, idx) {
                                   final preset = _presetPalettes[idx];
                                   return InkWell(
                                     onTap: () async {
@@ -255,6 +274,8 @@ class _WeddingPaletteScreenState extends State<WeddingPaletteScreen> {
                                   );
                                 },
                               ),
+                            ),
+                          ),
                             ),
                           ],
                         ),
