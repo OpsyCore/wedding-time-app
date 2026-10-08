@@ -40,55 +40,55 @@ class HeroBannerOption {
       archTint: Colors.transparent,
       icon: Icons.block_rounded,
     ),
-    // ── Luxury Editorial (2) ──
+    // ── Luxury Editorial (2) — دقیقا React BANNERS ──
     HeroBannerOption(
       id: 'silkIvory',
       nameFa: 'ابریشم عاجی',
       nameEn: 'Silk Ivory',
-      gradient: [Color(0xFFFDFCF8), Color(0xFFF5F1E8), Color(0xFFEDE6D5)],
-      archTint: Color(0xFFC9A86A),
-      icon: Icons.auto_awesome_rounded, // gold sparkle
+      gradient: [Color(0xFFF5EADC), Color(0xFFC9A674)], // ['#f5eadc','#c9a674']
+      archTint: Color(0xFFB68A45), // ink '#b68a45' glow '#fff6e8'
+      icon: Icons.auto_awesome_rounded,
     ),
     HeroBannerOption(
       id: 'midnightGold',
       nameFa: 'شب طلاکوب',
       nameEn: 'Midnight Gold',
-      gradient: [Color(0xFF0B1E35), Color(0xFF1A365D), Color(0xFF2A4B7A)],
-      archTint: Color(0xFFD4AF37),
-      icon: Icons.diamond_outlined, // art-deco
+      gradient: [Color(0xFF0B1020), Color(0xFF1A2B53)], // ['#0b1020','#1a2b53']
+      archTint: Color(0xFFE2BD63), // ink '#e2bd63' glow '#4f5e83'
+      icon: Icons.diamond_outlined,
     ),
     // ── Soft Modern (2) ──
     HeroBannerOption(
       id: 'blushBloom',
       nameFa: 'شکوفه صورتی',
       nameEn: 'Blush Bloom',
-      gradient: [Color(0xFFFDF2F4), Color(0xFFF8D8E0), Color(0xFFE8B4C2)],
-      archTint: Color(0xFFE8B4C2),
+      gradient: [Color(0xFFF8DFE8), Color(0xFFE8B9CD)], // ['#f8dfe8','#e8b9cd']
+      archTint: Color(0xFFB97A92), // ink '#b97a92' glow '#fdeff5'
       icon: Icons.local_florist_outlined,
     ),
     HeroBannerOption(
       id: 'sageWhisper',
       nameFa: 'نجوای مریم‌گلی',
       nameEn: 'Sage Whisper',
-      gradient: [Color(0xFFF2F4F1), Color(0xFFE2EBE4), Color(0xFFC7D8CB)],
-      archTint: Color(0xFF9CAF88),
-      icon: Icons.spa_outlined, // eucalyptus
+      gradient: [Color(0xFFE1ECE4), Color(0xFFB8CDBD)], // ['#e1ece4','#b8cdbd']
+      archTint: Color(0xFF738B76), // ink '#738b76' glow '#f2fbf2'
+      icon: Icons.spa_outlined,
     ),
     // ── Boho Garden (2) ──
     HeroBannerOption(
       id: 'terracottaDune',
       nameFa: 'تپه سفالی',
       nameEn: 'Terracotta Dune',
-      gradient: [Color(0xFFF9E8D9), Color(0xFFE8C4A8), Color(0xFFD9A07A)],
-      archTint: Color(0xFFA07A52),
-      icon: Icons.grass_rounded, // pampas
+      gradient: [Color(0xFFC9805C), Color(0xFF985340)], // ['#c9805c','#985340']
+      archTint: Color(0xFFF1DDBE), // ink '#f1ddbe' glow '#f9d7bf'
+      icon: Icons.grass_rounded,
     ),
     HeroBannerOption(
       id: 'oliveLinen',
       nameFa: 'کتان زیتونی',
       nameEn: 'Olive Linen',
-      gradient: [Color(0xFFF5F3E8), Color(0xFFE8E2C8), Color(0xFFD0C5A0)],
-      archTint: Color(0xFF8B8A5A),
+      gradient: [Color(0xFF8A8F67), Color(0xFF5B6647)], // ['#8a8f67','#5b6647']
+      archTint: Color(0xFFF2E4C9), // ink '#f2e4c9' glow '#dce0bc'
       icon: Icons.eco_outlined,
     ),
     // ── Persian Classic (2) ──
@@ -96,16 +96,16 @@ class HeroBannerOption {
       id: 'persianCrimson',
       nameFa: 'زرشکی درباری',
       nameEn: 'Persian Crimson',
-      gradient: [Color(0xFF3D0E18), Color(0xFF7A1A2E), Color(0xFFBA4558)],
-      archTint: Color(0xFFE8C39E),
-      icon: Icons.stars_rounded, // eslimi hint
+      gradient: [Color(0xFF701227), Color(0xFF3F0714)], // ['#701227','#3f0714']
+      archTint: Color(0xFFD8AB4F), // ink '#d8ab4f' glow '#8f3450'
+      icon: Icons.stars_rounded,
     ),
     HeroBannerOption(
       id: 'turquoiseCourt',
       nameFa: 'فیروزه درباری',
       nameEn: 'Turquoise Court',
-      gradient: [Color(0xFF0F3A45), Color(0xFF1A6B7A), Color(0xFF3EB0B8)],
-      archTint: Color(0xFFF0D9B5),
+      gradient: [Color(0xFF1FA9BB), Color(0xFF0D6882)], // ['#1fa9bb','#0d6882']
+      archTint: Color(0xFFF5E8CD), // ink '#f5e8cd' glow '#84e2e8'
       icon: Icons.account_balance_outlined,
     ),
   ];
@@ -171,21 +171,21 @@ class HeroHeartOption {
 
 class HeroHearts {
   static const List<HeroHeartOption> all = [
-    // Luxury (2)
+    // Luxury (2) — React HEARTS
     HeroHeartOption(
       id: 'pearlSatin',
       nameFa: 'صدفی ساتن',
       nameEn: 'Pearl Satin',
-      base: Color(0xFFFDF8F0),
-      accent: Color(0xFFD4AF37),
+      base: Color(0xFFE6D8CA), // '#e6d8ca'
+      accent: Color(0xFFD7AB50), // '#d7ab50'
       style: HeartStyle.pearlSatin,
     ),
     HeroHeartOption(
       id: 'noirVelvet',
       nameFa: 'مخمل شب',
       nameEn: 'Noir Velvet',
-      base: Color(0xFF1A1C1E),
-      accent: Color(0xFFC9A86A),
+      base: Color(0xFF191D2A), // '#191d2a'
+      accent: Color(0xFFE0BC65), // '#e0bc65'
       style: HeartStyle.noirVelvet,
     ),
     // Soft Modern (2)
@@ -193,16 +193,16 @@ class HeroHearts {
       id: 'blushSuede',
       nameFa: 'صورتی مخملی',
       nameEn: 'Blush Suede',
-      base: Color(0xFFD8A8B8),
-      accent: Color(0xFFF0D6DE),
+      base: Color(0xFFE8B6C5), // '#e8b6c5'
+      accent: Color(0xFFBE7E97), // '#be7e97'
       style: HeartStyle.blushSuede,
     ),
     HeroHeartOption(
       id: 'skyWatercolor',
       nameFa: 'آبی آبرنگی',
       nameEn: 'Sky Watercolor',
-      base: Color(0xFFB8D8E8),
-      accent: Color(0xFF7AB3D1),
+      base: Color(0xFF89B4D8), // '#89b4d8'
+      accent: Color(0xFFDCEEF8), // approximated '#dceefb'
       style: HeartStyle.skyWatercolor,
     ),
     // Boho (2)
@@ -210,16 +210,16 @@ class HeroHearts {
       id: 'terracottaRuffle',
       nameFa: 'سفالی چین‌دار',
       nameEn: 'Terracotta Ruffle',
-      base: Color(0xFFD9A07A),
-      accent: Color(0xFFB87A52),
+      base: Color(0xFFC86F4F), // '#c86f4f'
+      accent: Color(0xFFF3DFBF), // '#f3dfbf'
       style: HeartStyle.terracottaRuffle,
     ),
     HeroHeartOption(
       id: 'sageLinen',
       nameFa: 'کتان زیتونی',
       nameEn: 'Sage Linen',
-      base: Color(0xFFA8BEA3),
-      accent: Color(0xFF7A9A76),
+      base: Color(0xFF75896A), // '#75896a'
+      accent: Color(0xFFE7DBBE), // '#e7dbbe'
       style: HeartStyle.sageLinen,
     ),
     // Persian (2)
@@ -227,16 +227,16 @@ class HeroHearts {
       id: 'persianTurquoise',
       nameFa: 'فیروزه اسلیمی',
       nameEn: 'Persian Turquoise',
-      base: Color(0xFF2A9B9B),
-      accent: Color(0xFFD4AF37),
+      base: Color(0xFF199BAD), // '#199bad'
+      accent: Color(0xFFE4C069), // '#e4c069'
       style: HeartStyle.persianTurquoise,
     ),
     HeroHeartOption(
       id: 'crimsonGold',
       nameFa: 'زرشکی طلاکوب',
       nameEn: 'Crimson Gold',
-      base: Color(0xFF7A1A2E),
-      accent: Color(0xFFE8C39E),
+      base: Color(0xFF6F162A), // '#6f162a'
+      accent: Color(0xFFE1B35E), // '#e1b35e'
       style: HeartStyle.crimsonGold,
     ),
   ];
