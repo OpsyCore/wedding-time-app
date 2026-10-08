@@ -13,6 +13,7 @@ import '../core/app_theme_controller.dart';
 import '../core/hero_styles.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/effect_background.dart';
+import '../widgets/hero_appearance_art.dart';
 import '../widgets/floral_decor.dart';
 import '../widgets/page_glass.dart';
 import '../widgets/wedding_progress_bar.dart';
@@ -900,339 +901,27 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  /// ویجت بنر پشت هیرو — ۸ طرح حرفه‌ای (هر استایل ۲ بنر)
+  /// ویجت بنر پشت هیرو — ۸ طرح حرفه‌ای (گرافیک ادیتوریال Claude)
   Widget _buildHeroBanner(String id) {
     final opt = HeroBannerOption.byId(id);
-    final resolvedId = opt.id;
-    if (resolvedId == 'none') return const SizedBox();
-    // هر بنر: گرادیان اشرافی + قوس/کادر ظریف مینیمال (نه آیکون کارتونی)
-    Widget arch;
-    switch (resolvedId) {
-      case 'silkIvory': // Luxury — ابریشم عاجی: قاب دوبل طلاکوب + نقطه طلایی ظریف بالا
-        arch = Stack(
-          alignment: Alignment.center,
-          children: [
-            // بافت کتان خیلی نرم — گرادیان شعاعی روشن مرکز
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.4),
-                    radius: 1.2,
-                    colors: [Colors.white.withValues(alpha: 0.65), Colors.transparent],
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              width: 156,
-              height: 190,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(78)),
-                border: Border.all(color: const Color(0xFFC9A86A).withValues(alpha: 0.95), width: 1.3),
-                color: Colors.white.withValues(alpha: 0.72),
-                boxShadow: [BoxShadow(color: const Color(0xFFC9A86A).withValues(alpha: 0.18), blurRadius: 18, offset: const Offset(0, 8))],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(7.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(71)),
-                    border: Border.all(color: const Color(0xFFC9A86A).withValues(alpha: 0.35), width: 0.9),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(width: 5, height: 5, decoration: BoxDecoration(color: const Color(0xFFC9A86A).withValues(alpha: 0.85), shape: BoxShape.circle)),
-                      const SizedBox(height: 10),
-                      Icon(Icons.spa_outlined, size: 22, color: const Color(0xFF9C8458).withValues(alpha: 0.55)),
-                      const SizedBox(height: 8),
-                      Container(width: 42, height: 0.9, color: const Color(0xFFC9A86A).withValues(alpha: 0.5)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-        break;
-      case 'midnightGold': // Luxury — شب طلاکوب: قوس سرمه‌ای با قاب طلایی دوخط + لوزی آرت‌دکو
-        arch = Stack(
-          alignment: Alignment.center,
-          children: [
-            // پرده مخمل نامحسوس — خط عمودی طلایی مرکز
-            Positioned.fill(child: Row(children: [ Expanded(child: Container(color: Colors.white.withValues(alpha: 0.02))), Container(width: 0.9, color: const Color(0xFFD4AF37).withValues(alpha: 0.22)), Expanded(child: Container(color: Colors.transparent)) ])),
-            Container(
-              width: 146,
-              height: 192,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(72)),
-                border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.85), width: 1.4),
-                color: Colors.white.withValues(alpha: 0.06),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 10))],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned(top: 18, child: Container(width: 10, height: 10, decoration: BoxDecoration(color: const Color(0xFFD4AF37).withValues(alpha: 0.9), shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 1)))),
-                  Positioned(top: 32, child: Container(width: 0.8, height: 28, color: const Color(0xFFD4AF37).withValues(alpha: 0.45))),
-                  Icon(Icons.diamond_outlined, size: 20, color: const Color(0xFFFFF8E0).withValues(alpha: 0.75)),
-                  Positioned(bottom: 22, child: Container(width: 28, height: 0.8, color: const Color(0xFFD4AF37).withValues(alpha: 0.5))),
-                ],
-              ),
-            ),
-          ],
-        );
-        break;
-      case 'blushBloom': // Soft Modern — شکوفه: واترکالر محو + قلب خیلی کمرنگ
-        arch = Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, 0.1),
-                    radius: 0.95,
-                    colors: [Colors.white.withValues(alpha: 0.55), Colors.transparent],
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              width: 150,
-              height: 190,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(75)),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.92), width: 1.2),
-                color: Colors.white.withValues(alpha: 0.38),
-                boxShadow: [BoxShadow(color: const Color(0xFFD8A8B8).withValues(alpha: 0.22), blurRadius: 20)],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // هاله واترکالر بیضی
-                  Positioned(top: 26, child: Container(width: 92, height: 62, decoration: BoxDecoration(color: const Color(0xFFF8C6D8).withValues(alpha: 0.45), borderRadius: BorderRadius.circular(40)))),
-                  Icon(Icons.local_florist_outlined, size: 26, color: const Color(0xFFB07A8A).withValues(alpha: 0.55)),
-                  Positioned(bottom: 28, child: Container(width: 36, height: 0.9, color: Colors.white.withValues(alpha: 0.75))),
-                ],
-              ),
-            ),
-          ],
-        );
-        break;
-      case 'sageWhisper': // Soft Modern — نجوای مریم‌گلی: قاب سبز کتان + حلقه اکالیپتوس ظریف
-        arch = Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 154,
-              height: 188,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(77)),
-                border: Border.all(color: const Color(0xFF9CAF88).withValues(alpha: 0.85), width: 1.2),
-                color: Colors.white.withValues(alpha: 0.68),
-                boxShadow: [BoxShadow(color: const Color(0xFF9CAF88).withValues(alpha: 0.18), blurRadius: 16)],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(69)),
-                    border: Border.all(color: const Color(0xFF9CAF88).withValues(alpha: 0.28), width: 0.9),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // حلقه برگ خیلی کمرنگ
-                      Container(width: 86, height: 86, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFF9CAF88).withValues(alpha: 0.18), width: 1))),
-                      Icon(Icons.spa_outlined, size: 18, color: const Color(0xFF7A9A76).withValues(alpha: 0.6)),
-                      Positioned(bottom: 26, child: Container(width: 30, height: 0.9, color: const Color(0xFF9CAF88).withValues(alpha: 0.4))),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-        break;
-      case 'terracottaDune': // Boho — تپه سفالی: بافت کتان افقی + پامپاس مینیمال
-        arch = Stack(
-          alignment: Alignment.center,
-          children: [
-            // بافت افقی کتان — 3 خط نازک
-            Positioned.fill(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(height: 0.7, color: const Color(0xFFD9A07A).withValues(alpha: 0.14)),
-                  const SizedBox(height: 18),
-                  Container(height: 0.7, color: const Color(0xFFD9A07A).withValues(alpha: 0.10)),
-                  const SizedBox(height: 18),
-                  Container(height: 0.7, color: const Color(0xFFD9A07A).withValues(alpha: 0.14)),
-                ],
-              ),
-            ),
-            Container(
-              width: 148,
-              height: 192,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(74)),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.88), width: 1.3),
-                color: Colors.white.withValues(alpha: 0.42),
-                boxShadow: [BoxShadow(color: const Color(0xFFD9A07A).withValues(alpha: 0.20), blurRadius: 18)],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned(top: 22, child: Icon(Icons.grass_rounded, size: 22, color: const Color(0xFFB87A52).withValues(alpha: 0.55))),
-                  Container(width: 1, height: 34, color: const Color(0xFFB87A52).withValues(alpha: 0.22)),
-                  Positioned(bottom: 26, child: Container(width: 32, height: 0.9, color: Colors.white.withValues(alpha: 0.75))),
-                ],
-              ),
-            ),
-          ],
-        );
-        break;
-      case 'oliveLinen': // Boho — کتان زیتونی: الیاف عمودی + شاخه زیتون ظریف
-        arch = Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned.fill(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(width: 0.7, color: const Color(0xFFB8A77A).withValues(alpha: 0.18)),
-                  const SizedBox(width: 22),
-                  Container(width: 0.7, color: const Color(0xFFB8A77A).withValues(alpha: 0.14)),
-                  const SizedBox(width: 22),
-                  Container(width: 0.7, color: const Color(0xFFB8A77A).withValues(alpha: 0.18)),
-                ],
-              ),
-            ),
-            Container(
-              width: 150,
-              height: 190,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(75)),
-                border: Border.all(color: const Color(0xFFB8A77A).withValues(alpha: 0.65), width: 1.1),
-                color: Colors.white.withValues(alpha: 0.62),
-                boxShadow: [BoxShadow(color: const Color(0xFFB8A77A).withValues(alpha: 0.18), blurRadius: 16)],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(Icons.eco_outlined, size: 20, color: const Color(0xFF8B8A5A).withValues(alpha: 0.6)),
-                  Positioned(bottom: 24, child: Container(width: 34, height: 0.8, color: const Color(0xFFB8A77A).withValues(alpha: 0.45))),
-                ],
-              ),
-            ),
-          ],
-        );
-        break;
-      case 'persianCrimson': // Persian — زرشکی درباری: قاب مخمل با گوشه‌های اسلیمی طلایی
-        arch = Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.2),
-                    radius: 1.0,
-                    colors: [const Color(0xFFE8C39E).withValues(alpha: 0.14), Colors.transparent],
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              width: 148,
-              height: 194,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                border: Border.all(color: const Color(0xFFE8C39E).withValues(alpha: 0.85), width: 1.4),
-                color: Colors.white.withValues(alpha: 0.08),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.30), blurRadius: 20)],
-              ),
-              child: Stack(
-                children: [
-                  // گوشه‌های طلایی ریز — 4 نقطه
-                  Positioned(top: 7, left: 7, child: Container(width: 7, height: 7, decoration: BoxDecoration(color: const Color(0xFFE8C39E).withValues(alpha: 0.9), shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 0.8)))),
-                  Positioned(top: 7, right: 7, child: Container(width: 7, height: 7, decoration: BoxDecoration(color: const Color(0xFFE8C39E).withValues(alpha: 0.9), shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 0.8)))),
-                  Positioned(bottom: 7, left: 7, child: Container(width: 5, height: 5, decoration: BoxDecoration(color: const Color(0xFFE8C39E).withValues(alpha: 0.7), shape: BoxShape.circle))),
-                  Positioned(bottom: 7, right: 7, child: Container(width: 5, height: 5, decoration: BoxDecoration(color: const Color(0xFFE8C39E).withValues(alpha: 0.7), shape: BoxShape.circle))),
-                  Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.stars_rounded, size: 22, color: const Color(0xFFFFE8C0).withValues(alpha: 0.88)), const SizedBox(height: 6), Container(width: 28, height: 0.9, color: const Color(0xFFE8C39E).withValues(alpha: 0.6))])),
-                ],
-              ),
-            ),
-          ],
-        );
-        break;
-      case 'turquoiseCourt': // Persian — فیروزه درباری: ایوان فیروزه‌ای با حاشیه عاجی
-        arch = Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 150,
-              height: 192,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(74)),
-                border: Border.all(color: const Color(0xFFF0D9B5).withValues(alpha: 0.9), width: 1.4),
-                color: Colors.white.withValues(alpha: 0.14),
-                boxShadow: [BoxShadow(color: const Color(0xFF0F3A45).withValues(alpha: 0.35), blurRadius: 20)],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // قوس داخلی فیروزه‌ای کمرنگ
-                  Padding(
-                    padding: const EdgeInsets.all(7),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(67)),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.45), width: 0.9),
-                        color: const Color(0xFF3EB0B8).withValues(alpha: 0.18),
-                      ),
-                    ),
-                  ),
-                  Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.account_balance_outlined, size: 20, color: const Color(0xFFFFF3E0).withValues(alpha: 0.85)), const SizedBox(height: 7), Container(width: 30, height: 0.9, color: const Color(0xFFF0D9B5).withValues(alpha: 0.7))]),
-                ],
-              ),
-            ),
-          ],
-        );
-        break;
-      default:
-        arch = const SizedBox();
-    }
-
-    Widget banner = Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: opt.gradient.length >= 2 ? opt.gradient : [opt.gradient.first, opt.gradient.first],
-        ),
-      ),
-      child: arch,
+    if (opt.id == 'none') return const SizedBox();
+    Widget art = CustomPaint(
+      size: Size.infinite,
+      painter: HeroBannerArtPainter(opt),
     );
-
-    // انیمیشن ملایم بنر — وقتی فعال باشد کمی برق می‌زند
     if (_heroBannerAnimated) {
       return TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.92, end: 1.0),
         duration: const Duration(milliseconds: 1600),
         curve: Curves.easeInOut,
         builder: (context, v, child) => Opacity(opacity: v, child: child),
-        child: banner,
-        // برای لوپ از AnimatedBuilder استفاده نمی‌کنیم تا سبک بماند؛
-        // همین فیدِ اولیه کافی است — پالسِ قلب جداست
+        child: art,
       );
     }
-    return banner;
+    return art;
   }
 
-  /// وقتی قلب مخفی است — فقط عکس دو نفره + کادر شیشه‌ای
+  /// وقتی قلب مخفی است  /// وقتی قلب مخفی است — فقط عکس دو نفره + کادر شیشه‌ای
   Widget _buildCouplePhotoOnly(String bgPhoto) {
     final hasPhoto = bgPhoto.isNotEmpty;
     return Container(

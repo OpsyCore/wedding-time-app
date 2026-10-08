@@ -14,6 +14,7 @@ import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../core/hero_styles.dart';
+import '../widgets/hero_appearance_art.dart';
 import '../services/ambient_music_service.dart';
 import '../services/media_upload_service.dart';
 import '../widgets/ambient_music_controls.dart';
@@ -1011,88 +1012,15 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
               itemBuilder: (context, i) {
                 final opt = HeroBannerOption.all[i];
                 final selected = opt.id == _heroBannerId;
-                return GestureDetector(
+                return HeroBannerThumb(
+                  option: opt,
+                  selected: selected,
+                  width: 76,
+                  height: 86,
                   onTap: () {
                     setState(() => _heroBannerId = opt.id);
                     _saveHeroField({heroBannerField: opt.id});
                   },
-                  child: Container(
-                    width: 76,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: selected ? AppTok.accent(context) : AppTok.border(context).withValues(alpha: 0.6), width: selected ? 2.2 : 1),
-                      boxShadow: selected ? [BoxShadow(color: AppTok.accent(context).withValues(alpha: 0.22), blurRadius: 8)] : null,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
-                      child: opt.id == 'none'
-                          ? Container(
-                              color: AppTok.cardSoft(context),
-                              child: Center(child: Icon(Icons.block_rounded, color: AppTok.textSoft(context), size: 28)),
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: opt.gradient,
-                                ),
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // هاله روشن مرکز برای عمق
-                                  Positioned.fill(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        gradient: RadialGradient(
-                                          center: const Alignment(0, -0.3),
-                                          radius: 0.9,
-                                          colors: [Colors.white.withValues(alpha: opt.id == 'silkIvory' || opt.id == 'blushBloom' || opt.id == 'sageWhisper' || opt.id == 'oliveLinen' ? 0.38 : 0.14), Colors.transparent],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  // مینی‌قوس ادیتوریال — نه آیکون خام
-                                  Container(
-                                    width: 38,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: opt.id == 'midnightGold' || opt.id == 'persianCrimson' ? 0.88 : 0.82),
-                                        width: 1.1,
-                                      ),
-                                      color: Colors.white.withValues(alpha: opt.id == 'silkIvory' || opt.id == 'sageWhisper' || opt.id == 'oliveLinen' ? 0.52 : 0.10),
-                                      boxShadow: opt.id == 'silkIvory' ? [BoxShadow(color: const Color(0xFFC9A86A).withValues(alpha: 0.18), blurRadius: 6)] : null,
-                                    ),
-                                    child: Center(
-                                      child: Icon(
-                                        opt.icon,
-                                        size: 14,
-                                        color: Colors.white.withValues(alpha: 0.92),
-                                      ),
-                                    ),
-                                  ),
-                                  // نقطه طلایی ظریف برای لوکس‌ها
-                                  if (opt.id == 'silkIvory' || opt.id == 'midnightGold' || opt.id == 'persianCrimson' || opt.id == 'turquoiseCourt')
-                                    Positioned(
-                                      top: 14,
-                                      child: Container(
-                                        width: 3,
-                                        height: 3,
-                                        decoration: BoxDecoration(
-                                          color: opt.archTint.withValues(alpha: 0.95),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 0.5),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                    ),
-                  ),
                 );
               },
             ),
@@ -1109,7 +1037,11 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
               itemBuilder: (context, i) {
                 final h = HeroHearts.all[i];
                 final selected = h.id == _heroHeartId && _heroHeartVisible;
-                return GestureDetector(
+                return HeroHeartThumb(
+                  option: h,
+                  selected: selected,
+                  width: 76,
+                  height: 86,
                   onTap: () {
                     setState(() {
                       _heroHeartId = h.id;
@@ -1117,16 +1049,6 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                     });
                     _saveHeroField({heroHeartField: h.id, heroHeartVisibleField: true});
                   },
-                  child: Container(
-                    width: 76,
-                    decoration: BoxDecoration(
-                      color: AppTok.cardSoft(context),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: selected ? AppTok.accent(context) : AppTok.border(context).withValues(alpha: 0.6), width: selected ? 2.2 : 1),
-                      boxShadow: selected ? [BoxShadow(color: AppTok.accent(context).withValues(alpha: 0.18), blurRadius: 8)] : null,
-                    ),
-                    child: Center(child: _miniHeartPreview(h)),
-                  ),
                 );
               },
             ),
