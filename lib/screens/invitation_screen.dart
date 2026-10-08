@@ -61,25 +61,7 @@ class _InvitationScreenState extends State<InvitationScreen>
   /// قالب فعال دعوت‌نامه — از سند مراسم (inviteTemplateId)، لایو آپدیت می‌شود
   String _templateId = 'classic';
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _templateSub;
-  // پالت عروسی — اگر فعال باشد دعوت خودکار با رنگ پالت می‌آید
-  bool _paletteEnabled = false;
-  List<Color> _paletteColors = [];
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _paletteSub;
-  InviteTemplate get _template {
-    if (_paletteEnabled && _paletteColors.isNotEmpty) {
-      return InviteTemplate.fromPalette(_paletteColors);
-    }
-    return InviteTemplate.byId(_templateId);
-  }
-
-  Color _hexToColor(String hex) {
-    var h = hex.trim().replaceAll('#', '');
-    if (h.length == 6) {
-      final v = int.tryParse(h, radix: 16);
-      if (v != null) return Color(0xFF000000 | v);
-    }
-    return const Color(0xFFE8C9A8);
-  }
+  InviteTemplate get _template => InviteTemplate.byId(_templateId);
 
   WeatherSnapshot? _weather;
   bool _weatherLoading = false;
@@ -201,30 +183,11 @@ class _InvitationScreenState extends State<InvitationScreen>
         setState(() => _templateId = id);
       }
     });
-    // پالت — لایو
-    _paletteSub = FirebaseFirestore.instance
-        .collection('weddings')
-        .doc(widget.weddingId)
-        .collection('palette')
-        .doc('main')
-        .snapshots()
-        .listen((snap) {
-      final d = snap.data() ?? {};
-      final enabled = d['enabled'] == true;
-      final raw = (d['colors'] as List?)?.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList() ?? <String>[];
-      final cols = raw.map(_hexToColor).toList();
-      if (!mounted) return;
-      setState(() {
-        _paletteEnabled = enabled;
-        _paletteColors = cols;
-      });
-    });
   }
 
   @override
   void dispose() {
     _templateSub?.cancel();
-    _paletteSub?.cancel();
     _tabController.dispose();
     _coverTitleC.dispose();
     _brideC.dispose();
@@ -874,33 +837,6 @@ class _InvitationScreenState extends State<InvitationScreen>
                     fontSize: 16,
                   ),
                 ),
-                if (_paletteEnabled && _paletteColors.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: InviteTemplate.fromPalette(_paletteColors).accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: InviteTemplate.fromPalette(_paletteColors).accent.withValues(alpha: 0.35)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(width: 32, height: 32, decoration: BoxDecoration(color: _paletteColors[0], shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2))),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(AppLang.I.isFa ? 'پالت عروسی فعال — دعوت با رنگ‌های پالت' : 'Wedding palette active — invite uses palette', style: TextStyle(color: AppTok.text(ctx), fontWeight: FontWeight.w700, fontSize: 12)),
-                              Text(AppLang.I.isFa ? 'خاموش کردن: پالت → سوییچ را خاموش کن' : 'To disable: Palette → turn off', style: TextStyle(color: AppTok.textSoft(ctx), fontSize: 11)),
-                            ],
-                          ),
-                        ),
-                        Icon(Icons.palette_rounded, color: _paletteColors[0]),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
@@ -1991,20 +1927,6 @@ class _InvitationCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
               child: Column(
                 children: [
-                  // ایموجی/دکور قالب — اکنون داخل کارت نمایش کامل دارد، نه فقط شناور
-                  Text(decor, style: const TextStyle(fontSize: 30)),
-                  const SizedBox(height: 6),
-                  Text(
-                    template.name(AppLang.I.isFa),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
                   Text(
                     _t(
                       'you_are_invited',

@@ -333,19 +333,6 @@ class AppDrawer extends StatelessWidget {
                           ),
                         );
                       }),
-                      _item(
-                        context,
-                        Icons.palette_outlined,
-                        AppLang.I.isFa ? 'پالت رنگی' : 'Color Palette',
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => WeddingPaletteScreen(weddingId: weddingId),
-                            ),
-                          );
-                        },
-                      ),
 
                       // ── برنامه‌ریزی (پراستفاده‌ترین‌ها اول) ──
                       _section(context, 'برنامه‌ریزی مراسم', 'Planning'),
@@ -396,6 +383,19 @@ class AppDrawer extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (_) =>
                                   BridalPartyScreen(weddingId: weddingId),
+                            ),
+                          );
+                        },
+                      ),
+                      _item(
+                        context,
+                        Icons.palette_outlined,
+                        AppLang.I.isFa ? 'پالت عروسی' : 'Wedding Palette',
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => WeddingPaletteScreen(weddingId: weddingId),
                             ),
                           );
                         },
