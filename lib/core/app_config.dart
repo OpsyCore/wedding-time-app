@@ -43,6 +43,19 @@ class AppConfig {
     return '$base/invite/$clean';
   }
 
+  /// لینک دعوت پارتنر (همسر) — مسیر کاملاً جدا از لینک مهمان:
+  /// مثال: https://.../join/WT-ABCD12  (لینک مهمان: .../invite/slug)
+  /// با باز شدن، مرحلهٔ پیوستن با کد باز می‌شود.
+  static String partnerJoinUrl(String code) {
+    final base = publicBaseUrl.endsWith('/')
+        ? publicBaseUrl.substring(0, publicBaseUrl.length - 1)
+        : publicBaseUrl;
+    return '$base/join/${Uri.encodeComponent(code.trim())}';
+  }
+
+  /// کد پیوستنی که از URL آمده (؟join=) و منتظر مصرف در صفحهٔ ستاپ است
+  static String? pendingJoinCode;
+
   /// ImgBB
   ///
   /// ⚠️ امنیت — کلید هرگز نباید داخل سورس/مخزن باشد.

@@ -121,8 +121,9 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
         : AppPalette.border.withValues(alpha: 0.7);
     final textColor = forceLight ? AppPalette.text : AppTok.text(context);
 
+    // Scaffold ارتفاع «اینست بالای صفحه + preferredSize» را می‌دهد؛
+    // نباید ارتفاع ثابت بگذاریم وگرنه نوار زیر استاتوس‌بار می‌رود.
     final bar = Container(
-      height: height,
       decoration: BoxDecoration(
         color: bg,
         border: Border(bottom: BorderSide(color: border, width: 1)),

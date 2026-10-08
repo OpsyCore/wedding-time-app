@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/app_config.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
@@ -84,6 +85,8 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
 
+      // زوجِ عضو که با لینک پارتنر باز کرده → مستقیم پنل خودش
+      AppConfig.pendingJoinCode = null;
       _replace(MainNavigationScreen(weddingId: weddingId));
     } catch (_) {
       if (!mounted || _left) return;
@@ -161,21 +164,6 @@ class _SplashScreenState extends State<SplashScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        AppLang.tr('app_name'),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 2,
-                          fontFamily: 'serif',
-                          shadows: [
-                            Shadow(color: Colors.black54, blurRadius: 8),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
                       SizedBox(
                         width: 28,
                         height: 28,

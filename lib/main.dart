@@ -9,7 +9,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/web_url_strategy_stub.dart'
     if (dart.library.js_interop) 'core/web_url_strategy_web.dart';
 
+import 'core/app_config.dart';
 import 'core/app_effect_controller.dart';
+import 'core/app_font_controller.dart';
 import 'core/app_lang.dart';
 import 'core/guest_slug.dart';
 import 'core/app_theme.dart';
@@ -32,6 +34,7 @@ void main() async {
   await AppLang.I.load();
   await AppThemeController.I.load();
   await AppEffectController.I.load();
+  await AppFontController.I.load();
   try {
     await AmbientMusicService.I.init();
   } catch (_) {
@@ -55,6 +58,9 @@ class WeddingTimeApp extends StatelessWidget {
   static String? _lockedGuestSlug;
   static bool _lockDone = false;
 
+  /// true = این تب با لینک پارتنر (?join=) باز شده — هرگز سشن مهمان نشود
+  static bool _joinMode = false;
+
   /// true = این سشن فقط مهمان است — Splash/Login/زوج ممنوع
   static bool get isGuestSession => _lockedGuestSlug != null;
 
@@ -63,10 +69,31 @@ class WeddingTimeApp extends StatelessWidget {
   static void lockInitialGuestSlug() {
     if (_lockDone) return;
     _lockDone = true;
+
+    // لینک دعوت پارتنر: /join/CODE یا ?join=CODE → سشن مهمان قفل نشود؛
+    // کد برای مرحلهٔ پیوستن در WeddingSetupScreen نگه داشته می‌شود.
+    if (kIsWeb) {
+      String join = Uri.base.queryParameters['join']?.trim() ?? '';
+      if (join.isEmpty) {
+        final segs = Uri.base.pathSegments;
+        if (segs.length >= 2 && segs[0] == 'join') {
+          join = Uri.decodeComponent(segs[1]).trim();
+        }
+      }
+      if (join.isNotEmpty) {
+        _joinMode = true;
+        AppConfig.pendingJoinCode = join;
+        _lockedGuestSlug = null;
+        return;
+      }
+    }
+
     _lockedGuestSlug = extractGuestSlug();
   }
 
   static String? extractGuestSlug([String? raw]) {
+    // حالت پیوستن پارتنر: هیچ مسیری نباید به پورتال مهمان برود
+    if (_joinMode) return null;
     final tried = <String>[
       if (raw != null) raw,
       if (kIsWeb) Uri.base.path,
@@ -113,13 +140,15 @@ class WeddingTimeApp extends StatelessWidget {
         AppLang.I,
         AppThemeController.I,
         AppEffectController.I,
+        AppFontController.I,
       ]),
       builder: (context, _) {
         final lang = AppLang.I;
 
+        final font = AppFontController.I.family;
         return MaterialApp(
           // کلید ثابت — کمتر stack را می‌پرد
-          key: const ValueKey('wedding_time_root'),
+          key: ValueKey('wedding_time_root_$font'),
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           locale: lang.locale,
@@ -129,8 +158,8 @@ class WeddingTimeApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
+          theme: AppTheme.light(font),
+          darkTheme: AppTheme.dark(font),
           themeMode: AppThemeController.I.themeMode,
           builder: (context, child) {
             return Directionality(

@@ -144,7 +144,7 @@ class _VendorPaymentsScreenState extends State<VendorPaymentsScreen> {
                   left: 20,
                   right: 20,
                   top: 18,
-                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 20,
                 ),
                 child: SingleChildScrollView(
                   child: Column(
