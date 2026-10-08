@@ -830,17 +830,28 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         )
                       else if (isPast)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: cardSoft,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Text(
-                            '${AppLang.tr('days_since_wedding_prefix')}${_displayNum((-weddingDate!.difference(DateTime.now()).inDays).abs())} ${AppLang.tr('days_since_wedding')}',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: textSoft, fontSize: 12),
+                        // قبلاً تک‌بار «۸ روز از عروسی» — حالا مثل اوایل ۴ باکس شمارش (elapsed)
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Builder(
+                            builder: (context) {
+                              final elapsed = DateTime.now().difference(weddingDate!);
+                              final ed = elapsed.inDays.abs();
+                              final eh = elapsed.inHours.remainder(24).abs();
+                              final em = elapsed.inMinutes.remainder(60).abs();
+                              final es = elapsed.inSeconds.remainder(60).abs();
+                              return Row(
+                                children: [
+                                  Expanded(child: _timeBox(_displayNum(ed), AppLang.tr('day'))),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: _timeBox(_displayNum(_two(eh)), AppLang.tr('hour'))),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: _timeBox(_displayNum(_two(em)), AppLang.tr('minute'))),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: _timeBox(_displayNum(_two(es)), AppLang.tr('second'))),
+                                ],
+                              );
+                            },
                           ),
                         )
                       else
