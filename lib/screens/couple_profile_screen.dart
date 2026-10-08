@@ -1038,7 +1038,58 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
                                   colors: opt.gradient,
                                 ),
                               ),
-                              child: Center(child: Icon(opt.icon, size: 28, color: Colors.white.withValues(alpha: 0.9))),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // هاله روشن مرکز برای عمق
+                                  Positioned.fill(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: RadialGradient(
+                                          center: const Alignment(0, -0.3),
+                                          radius: 0.9,
+                                          colors: [Colors.white.withValues(alpha: opt.id == 'silkIvory' || opt.id == 'blushBloom' || opt.id == 'sageWhisper' || opt.id == 'oliveLinen' ? 0.38 : 0.14), Colors.transparent],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // مینی‌قوس ادیتوریال — نه آیکون خام
+                                  Container(
+                                    width: 38,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: opt.id == 'midnightGold' || opt.id == 'persianCrimson' ? 0.88 : 0.82),
+                                        width: 1.1,
+                                      ),
+                                      color: Colors.white.withValues(alpha: opt.id == 'silkIvory' || opt.id == 'sageWhisper' || opt.id == 'oliveLinen' ? 0.52 : 0.10),
+                                      boxShadow: opt.id == 'silkIvory' ? [BoxShadow(color: const Color(0xFFC9A86A).withValues(alpha: 0.18), blurRadius: 6)] : null,
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        opt.icon,
+                                        size: 14,
+                                        color: Colors.white.withValues(alpha: 0.92),
+                                      ),
+                                    ),
+                                  ),
+                                  // نقطه طلایی ظریف برای لوکس‌ها
+                                  if (opt.id == 'silkIvory' || opt.id == 'midnightGold' || opt.id == 'persianCrimson' || opt.id == 'turquoiseCourt')
+                                    Positioned(
+                                      top: 14,
+                                      child: Container(
+                                        width: 3,
+                                        height: 3,
+                                        decoration: BoxDecoration(
+                                          color: opt.archTint.withValues(alpha: 0.95),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 0.5),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                     ),
                   ),
@@ -1150,42 +1201,83 @@ class _CoupleProfileScreenState extends State<CoupleProfileScreen> {
 
   Widget _miniHeartPreview(HeroHeartOption h) {
     const double w = 56, hh = 50;
-    Widget heartFill = Container(color: h.base);
-    // بافت‌های کوچک
+    // بافت پایه — گرادیان مخملی خیلی نرم برای عمق
+    Widget heartFill = Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [h.base, Color.lerp(h.base, Colors.black, 0.12) ?? h.base],
+        ),
+      ),
+    );
+    // هایلایت ابریشم بالا
+    Widget silkHighlight = Positioned.fill(
+      child: ClipPath(
+        clipper: _MiniHeartClipper(),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(-0.4, -0.5),
+              radius: 0.85,
+              colors: [Colors.white.withValues(alpha: h.style == HeartStyle.pearlSatin ? 0.35 : 0.16), Colors.transparent],
+            ),
+          ),
+        ),
+      ),
+    );
     Widget? overlay;
     switch (h.style) {
-      case HeartStyle.purpleBow:
+      case HeartStyle.pearlSatin:
         overlay = Stack(children: [
-          Positioned.fill(child: Padding(padding: const EdgeInsets.all(3), child: ClipPath(clipper: _MiniHeartClipper(), child: CustomPaint(painter: _MiniStitchPainter())))),
-          Positioned(top: 2, left: 19, child: _miniBow(color: const Color(0xFFD8C6F0), knot: const Color(0xFFB89EE8))),
+          silkHighlight,
+          Positioned.fill(child: Padding(padding: const EdgeInsets.all(2.5), child: ClipPath(clipper: _MiniHeartClipper(), child: CustomPaint(painter: _MiniStitchPainter(color: const Color(0xFFD4AF37).withValues(alpha: 0.75)))))),
+          Positioned(top: 2, left: 19, child: _miniBow(color: const Color(0xFFFFF8EC), knot: const Color(0xFFD4AF37))),
         ]);
         break;
-      case HeartStyle.pinkStars:
+      case HeartStyle.noirVelvet:
         overlay = Stack(children: [
-          Positioned(left: 8, top: 8, child: Icon(Icons.star, size: 7, color: const Color(0xFFFFEB3B).withValues(alpha: 0.95))),
-          Positioned(left: 28, top: 7, child: Icon(Icons.star, size: 6, color: const Color(0xFF81D4FA).withValues(alpha: 0.95))),
-          Positioned(left: 38, top: 14, child: Icon(Icons.star, size: 6, color: const Color(0xFFFFB74D).withValues(alpha: 0.95))),
-          Positioned(left: 14, top: 20, child: Icon(Icons.star, size: 6, color: Colors.white.withValues(alpha: 0.85))),
-          Positioned(left: 32, top: 26, child: Icon(Icons.star, size: 5, color: const Color(0xFF80CBC4).withValues(alpha: 0.95))),
+          Positioned.fill(child: Padding(padding: const EdgeInsets.all(2.5), child: ClipPath(clipper: _MiniHeartClipper(), child: CustomPaint(painter: _MiniStitchPainter(color: const Color(0xFFC9A86A).withValues(alpha: 0.60)))))),
+          Positioned(top: 5, right: 7, child: Icon(Icons.auto_awesome, size: 6, color: const Color(0xFFF0D9B5).withValues(alpha: 0.65))),
         ]);
         break;
-      case HeartStyle.blueWatercolor:
-        overlay = Opacity(opacity: 0.45, child: Center(child: Container(width: 18, height: 18, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle))));
-        break;
-      case HeartStyle.goldVelvet:
+      case HeartStyle.blushSuede:
         overlay = Stack(children: [
-          Align(alignment: Alignment.center, child: Container(width: 1, color: const Color(0xFF8C6F00).withValues(alpha: 0.55))),
-          Positioned(top: 6, right: 8, child: Icon(Icons.auto_awesome, size: 7, color: Colors.white.withValues(alpha: 0.6))),
+          silkHighlight,
+          Positioned(top: 6, right: 7, child: Icon(Icons.auto_awesome, size: 5, color: Colors.white.withValues(alpha: 0.35))),
         ]);
         break;
-      case HeartStyle.pinkRuffleBow:
+      case HeartStyle.skyWatercolor:
         overlay = Stack(children: [
-          Positioned.fill(child: CustomPaint(painter: _MiniRufflePainter(color: const Color(0xFFF8BBD0)))),
-          Positioned(top: 1, left: 21, child: _miniBow(color: const Color(0xFFE53935), knot: const Color(0xFFB71C1C), small: true)),
+          silkHighlight,
+          Opacity(opacity: 0.38, child: Center(child: Container(width: 16, height: 16, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.white.withValues(alpha: 0.35), blurRadius: 6)])))),
         ]);
         break;
-      case HeartStyle.greenRuffle:
-        overlay = Positioned.fill(child: CustomPaint(painter: _MiniRufflePainter(color: const Color(0xFF7CB342))));
+      case HeartStyle.terracottaRuffle:
+        overlay = Stack(children: [
+          Positioned.fill(child: CustomPaint(painter: _MiniRufflePainter(color: const Color(0xFFB87A52).withValues(alpha: 0.55)))),
+          Positioned(top: 1, left: 20, child: _miniBow(color: const Color(0xFFF5E1C8), knot: const Color(0xFFB87A52), small: true)),
+        ]);
+        break;
+      case HeartStyle.sageLinen:
+        overlay = Stack(children: [
+          Positioned.fill(child: Padding(padding: const EdgeInsets.all(2.5), child: ClipPath(clipper: _MiniHeartClipper(), child: CustomPaint(painter: _MiniStitchPainter(color: const Color(0xFFF5F3E8).withValues(alpha: 0.55)))))),
+          Positioned.fill(child: CustomPaint(painter: _MiniRufflePainter(color: const Color(0xFF7A9A76).withValues(alpha: 0.32)))),
+        ]);
+        break;
+      case HeartStyle.persianTurquoise:
+        overlay = Stack(children: [
+          Positioned.fill(child: Padding(padding: const EdgeInsets.all(2.5), child: ClipPath(clipper: _MiniHeartClipper(), child: CustomPaint(painter: _MiniStitchPainter(color: const Color(0xFFF0D9B5).withValues(alpha: 0.60)))))),
+          Positioned(top: 4, left: 8, child: Icon(Icons.stars_rounded, size: 6, color: const Color(0xFFF0D9B5).withValues(alpha: 0.75))),
+          Positioned(top: 4, right: 8, child: Icon(Icons.stars_rounded, size: 6, color: const Color(0xFFF0D9B5).withValues(alpha: 0.75))),
+        ]);
+        break;
+      case HeartStyle.crimsonGold:
+        overlay = Stack(children: [
+          silkHighlight,
+          Positioned.fill(child: Padding(padding: const EdgeInsets.all(2.5), child: ClipPath(clipper: _MiniHeartClipper(), child: CustomPaint(painter: _MiniStitchPainter(color: const Color(0xFFE8C39E).withValues(alpha: 0.80)))))),
+          Positioned(top: 2, left: 19, child: _miniBow(color: const Color(0xFFFFF3E0), knot: const Color(0xFFC9A86A))),
+        ]);
         break;
     }
     return SizedBox(
@@ -1449,10 +1541,12 @@ class _MiniHeartClipper extends CustomClipper<Path> {
 }
 
 class _MiniStitchPainter extends CustomPainter {
+  final Color color;
+  const _MiniStitchPainter({this.color = const Color(0xCCFFFFFF)});
   @override
   void paint(Canvas canvas, Size size) {
     final path = _MiniHeartClipper().getClip(size);
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.stroke..strokeWidth = 0.9..strokeCap = StrokeCap.round;
+    final paint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 0.9..strokeCap = StrokeCap.round;
     final dashed = Path();
     for (final m in path.computeMetrics()) {
       double d = 0;
