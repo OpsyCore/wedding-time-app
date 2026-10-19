@@ -1,7 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../core/app_config.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../services/plan_access.dart';
@@ -65,6 +68,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
             final tier = planSnap.data?.supportTier ?? 'normal';
             return Column(
               children: [
+                _supportEmailBanner(context),
                 _tierBanner(context, tier),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -131,6 +135,73 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _supportEmailBanner(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTok.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTok.border(context)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: AppTok.accent(context).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            child: Icon(Icons.email_outlined, color: AppTok.accent(context), size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _t('support_email_title', 'ایمیل پشتیبانی', 'Support email'),
+                  style: TextStyle(color: AppTok.textSoft(context), fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(AppConfig.supportEmail, style: TextStyle(color: AppTok.text(context), fontSize: 13, fontWeight: FontWeight.w800)),
+                Text(
+                  _t('support_email_hint', 'تیکت شما به این ایمیل هم ارسال می‌شود', 'Your ticket is also sent to this email'),
+                  style: TextStyle(color: AppTok.textSoft(context), fontSize: 10.5, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () async {
+              final uri = Uri.parse('mailto:${AppConfig.supportEmail}?subject=${Uri.encodeComponent(_t('support_tickets_title', 'پشتیبانی Wedding Time', 'Wedding Time Support'))}');
+              try {
+                if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } catch (_) {}
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(color: AppTok.accent(context), borderRadius: BorderRadius.circular(10)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.send_rounded, color: Colors.white, size: 14),
+                const SizedBox(width: 4),
+                Text(_t('email_us', 'ایمیل', 'Email'), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+              ]),
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: () async {
+              await Clipboard.setData(const ClipboardData(text: AppConfig.supportEmail));
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('copied', 'کپی شد', 'Copied'))));
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.copy_rounded, size: 18, color: AppTok.textSoft(context))),
+          ),
+        ],
       ),
     );
   }
@@ -378,6 +449,9 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
         'subject': subjectC.text.trim(),
         'status': 'open',
         'tier': limits.supportTier,
+        'supportEmail': AppConfig.supportEmail,
+        'notifyEmail': AppConfig.supportEmail,
+        'adminNotified': false,
         'messages': [
           {
             'from': 'user',
@@ -389,6 +463,19 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      // Mirror برای inbox ادمین (اختیاری — برای فیلتر سریع)
+      try {
+        await _db.collection('support_inbox').add({
+          'uid': _uid,
+          'email': FirebaseAuth.instance.currentUser?.email ?? '',
+          'supportEmail': AppConfig.supportEmail,
+          'weddingId': widget.weddingId ?? '',
+          'subject': subjectC.text.trim(),
+          'body': bodyC.text.trim(),
+          'tier': limits.supportTier,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } catch (_) {}
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_t('ticket_sent', 'تیکت ثبت شد', 'Ticket sent'))),

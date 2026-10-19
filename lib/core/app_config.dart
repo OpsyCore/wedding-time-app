@@ -84,7 +84,11 @@ class AppConfig {
   /// و با `firebase deploy --only firestore:rules` منتشر کنید.
   static const List<String> adminEmails = [
     'mishe.nemishetube4@gmail.com',
+    'abrt1369@gmail.com',
   ];
+
+  /// ایمیل مرکزی پشتیبانی — همه تیکت‌ها/فیدبک‌ها به اینجا هم mirror می‌شود
+  static const String supportEmail = 'abrt1369@gmail.com';
 
   static bool isAdminEmail(String? email) {
     if (email == null) return false;

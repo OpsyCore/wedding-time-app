@@ -1,7 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../core/app_config.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
@@ -37,7 +40,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       final user = FirebaseAuth.instance.currentUser;
 
       // ذخیره در:
-      // weddings/{weddingId}/feedback/{id}
+      // weddings/{weddingId}/feedback/{id} + mirror به پشتیبانی مرکزی
       await FirebaseFirestore.instance
           .collection('weddings')
           .doc(widget.weddingId)
@@ -46,11 +49,25 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         'weddingId': widget.weddingId,
         'uid': user?.uid,
         'email': user?.email,
+        'supportEmail': AppConfig.supportEmail,
         'type': _type, // feedback یا bug
         'message': text,
         'status': 'new',
         'createdAt': FieldValue.serverTimestamp(),
       });
+      // Mirror به inbox پشتیبانی (abrt1369@gmail.com)
+      try {
+        await FirebaseFirestore.instance.collection('support_inbox').add({
+          'uid': user?.uid ?? '',
+          'email': user?.email ?? '',
+          'supportEmail': AppConfig.supportEmail,
+          'weddingId': widget.weddingId,
+          'type': _type,
+          'message': text,
+          'source': 'feedback',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } catch (_) {}
 
       _ctrl.clear();
       if (!mounted) return;
@@ -98,6 +115,53 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   style: TextStyle(
                     color: AppTok.textSoft(context),
                     height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTok.card(context),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTok.border(context)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: AppTok.accent(context).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                        child: Icon(Icons.email_outlined, color: AppTok.accent(context), size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(AppLang.I.isFa ? 'ایمیل پشتیبانی' : 'Support email', style: TextStyle(color: AppTok.textSoft(context), fontSize: 11)),
+                            Text(AppConfig.supportEmail, style: TextStyle(color: AppTok.text(context), fontSize: 13, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () async {
+                          final uri = Uri.parse('mailto:${AppConfig.supportEmail}?subject=Feedback');
+                          try { if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication); } catch (_) {}
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(color: AppTok.accent(context), borderRadius: BorderRadius.circular(10)),
+                          child: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () async {
+                          await Clipboard.setData(const ClipboardData(text: AppConfig.supportEmail));
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLang.I.isFa ? 'کپی شد' : 'Copied')));
+                        },
+                        child: Icon(Icons.copy_rounded, color: AppTok.textSoft(context), size: 18),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
