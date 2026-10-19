@@ -258,7 +258,7 @@ class _TimelineScreenState extends State<TimelineScreen>
                   left: 20,
                   right: 20,
                   top: 18,
-                  bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 20,
+                  bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + MediaQuery.of(sheetCtx).padding.bottom + 20,
                 ),
                 child: SingleChildScrollView(
                   child: Column(

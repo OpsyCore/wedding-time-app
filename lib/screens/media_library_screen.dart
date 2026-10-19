@@ -8,7 +8,9 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/media_item_model.dart';
 import '../services/media_library_service.dart';
+import '../services/plan_access.dart';
 import '../widgets/floral_decor.dart';
+import '../widgets/image_crop_screen.dart';
 
 class MediaLibraryScreen extends StatefulWidget {
   const MediaLibraryScreen({
@@ -43,15 +45,38 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
   Future<void> _upload() async {
     if (_uploading) return;
 
+    // محدودیت پلن: سهمیه کتابخانه رسانه
+    final limits = await PlanAccess.I.weddingLimits(widget.weddingId);
+    if (!limits.unlimitedMedia) {
+      final count = await _service.count();
+      if (count >= limits.maxMedia) {
+        if (!mounted) return;
+        await PlanAccess.I.showUpgradeDialog(
+          context,
+          weddingId: widget.weddingId,
+          featureFa: 'رسانهٔ بیشتر',
+          featureEn: 'More media items',
+        );
+        return;
+      }
+    }
+
     final x = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 88,
-      maxWidth: 2000,
+      imageQuality: 90,
+      maxWidth: 2400,
     );
     if (x == null) return;
 
     final bytes = await x.readAsBytes();
-    if (bytes.isEmpty) return;
+    if (!mounted || bytes.isEmpty) return;
+
+    final croppedBytes = await ImageCropScreen.crop(
+      context,
+      bytes: Uint8List.fromList(bytes),
+      title: AppLang.tr('crop_image'),
+    );
+    if (croppedBytes == null || !mounted) return;
 
     final kind = await _askKindAndTitle();
     if (kind == null || !mounted) return;
@@ -59,7 +84,7 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
     setState(() => _uploading = true);
     try {
       await _service.uploadImage(
-        bytes: bytes,
+        bytes: croppedBytes,
         fileName: x.name.isNotEmpty ? x.name : 'photo.jpg',
         title: kind.$2,
         kind: kind.$1,

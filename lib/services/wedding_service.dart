@@ -53,12 +53,16 @@ class WeddingService {
     // کد فقط در سند خصوصی کاربر و در invite_codes نگه داشته می‌شود.
     final batch = _firestore.batch();
 
+    final trialEnds = Timestamp.fromDate(DateTime.now().add(const Duration(days: 30)));
     batch.set(weddingRef, {
       'brideName': brideName.trim(),
       'groomName': groomName.trim(),
       'weddingDate': Timestamp.fromDate(weddingDate),
       if (role == 'bride') 'brideUid': uid,
       if (role == 'groom') 'groomUid': uid,
+      'planId': 'trial',
+      'trialStartedAt': FieldValue.serverTimestamp(),
+      'trialEndsAt': trialEnds,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -69,7 +73,10 @@ class WeddingService {
         if (email != null && email.isNotEmpty) 'email': email,
         'weddingId': weddingId,
         'role': role,
-        'plan': 'free',
+        'plan': 'trial',
+        'planId': 'trial',
+        'trialStartedAt': FieldValue.serverTimestamp(),
+        'trialEndsAt': trialEnds,
         'language': AppLang.I.code,
         'inviteCode': inviteCode,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -146,7 +153,11 @@ class WeddingService {
       );
     }
 
-    // 3) اتمیک: user + نقش روی wedding
+    // 3) اتمیک: user + نقش روی wedding — تریال: هر عضو جدید ۳۰ روز فول (اگر مراسم هنوز در تریال است همان trialEnds مشترک)
+    final weddingPlan = (data['planId'] ?? 'trial').toString();
+    final existingTrialEnds = data['trialEndsAt'];
+    final trialEndsForJoin = existingTrialEnds is Timestamp ? existingTrialEnds : Timestamp.fromDate(DateTime.now().add(const Duration(days: 30)));
+    final effectivePlan = weddingPlan == 'trial' ? 'trial' : weddingPlan;
     final batch = _firestore.batch();
 
     batch.set(
@@ -155,7 +166,10 @@ class WeddingService {
         if (email != null && email.isNotEmpty) 'email': email,
         'weddingId': weddingId,
         'role': role,
-        'plan': 'free',
+        'plan': effectivePlan,
+        'planId': effectivePlan,
+        if (effectivePlan == 'trial') 'trialEndsAt': trialEndsForJoin,
+        if (effectivePlan == 'trial') 'trialStartedAt': FieldValue.serverTimestamp(),
         'language': AppLang.I.code,
         // FIX-02: کد پیوستن برای نمایش در پروفایل هر دو طرف
         'inviteCode': normalized,
@@ -183,6 +197,44 @@ class WeddingService {
     }
 
     return weddingId;
+  }
+
+  /// همهٔ مراسم‌هایی که کاربر عضو زوج آن‌هاست (برای سوییچر چند مراسم)
+  static Future<List<WeddingModel>> myWeddings(String uid) async {
+    final results = await Future.wait([
+      _firestore
+          .collection('weddings')
+          .where('brideUid', isEqualTo: uid)
+          .get(),
+      _firestore
+          .collection('weddings')
+          .where('groomUid', isEqualTo: uid)
+          .get(),
+    ]);
+    final map = <String, WeddingModel>{};
+    for (final snap in results) {
+      for (final d in snap.docs) {
+        map[d.id] = WeddingModel.fromDoc(d);
+      }
+    }
+    return map.values.toList();
+  }
+
+  /// سوییچ مراسم فعال کاربر + mirror پلن روی سند مراسم جدید
+  static Future<void> switchActiveWedding({
+    required String uid,
+    required String weddingId,
+    required String role,
+    String planId = 'free',
+  }) async {
+    await _firestore.collection('users').doc(uid).set({
+      'weddingId': weddingId,
+      'role': role,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    await _firestore.collection('weddings').doc(weddingId).set({
+      'planId': planId,
+    }, SetOptions(merge: true));
   }
 
   static Future<String?> getUserWeddingId(String uid) async {

@@ -7,10 +7,12 @@ import '../../core/app_lang.dart';
 import '../../core/app_theme.dart';
 import '../../core/app_theme_controller.dart';
 import '../../models/invitation_model.dart';
+import '../../services/entertainment_service.dart';
 import '../../widgets/ambient_music_controls.dart';
 import '../../widgets/effect_background.dart';
 import '../../widgets/effect_picker.dart';
 import '../../widgets/page_glass.dart';
+import '../../widgets/plan_gate.dart';
 import '../guest_camera_screen.dart';
 import '../public_invite_screen.dart';
 import 'guest_home_tab.dart';
@@ -117,28 +119,85 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
         AppEffectController.I,
       ]),
       builder: (context, _) {
-        final pages = <Widget>[
-          GuestHomeTab(
-            weddingId: widget.weddingId,
-            invitation: widget.invitation,
-            onOpenTab: (i) => setState(() => _index = i),
-          ),
-          PublicInviteScreen(
-            weddingId: widget.weddingId,
-            invitation: widget.invitation,
-            previewMode: false,
-            showGuestPanelButton: false,
-            allowPop: false,
-          ),
-          GuestTimelineTab(
-            weddingId: widget.weddingId,
-            invitation: widget.invitation,
-          ),
-          GuestCameraScreen(weddingId: widget.weddingId),
-          GuestSeatingTab(weddingId: widget.weddingId),
-        ];
+        return StreamBuilder<Map<String, bool>>(
+          stream: EntertainmentService.watch(widget.weddingId),
+          builder: (context, entSnap) {
+            final ent = entSnap.data ??
+                {for (final k in EntertainmentService.keys) k: true};
 
-        return Directionality(
+            final pages = <Widget>[
+              GuestHomeTab(
+                weddingId: widget.weddingId,
+                invitation: widget.invitation,
+                onOpenTab: (i) => setState(() => _index = i),
+              ),
+              PublicInviteScreen(
+                weddingId: widget.weddingId,
+                invitation: widget.invitation,
+                previewMode: false,
+                showGuestPanelButton: false,
+                allowPop: false,
+              ),
+            ];
+            final dests = <NavigationDestination>[
+              NavigationDestination(
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon:
+                    Icon(Icons.home, color: AppTok.accent(context)),
+                label: _t('guest_tab_home', 'خانه', 'Home'),
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.mail_outline),
+                selectedIcon:
+                    Icon(Icons.mail, color: AppTok.accent(context)),
+                label: _t('guest_tab_invite', 'دعوت‌نامه', 'Invite'),
+              ),
+            ];
+            if (ent['timeline'] == true) {
+              pages.add(GuestTimelineTab(
+                weddingId: widget.weddingId,
+                invitation: widget.invitation,
+              ));
+              dests.add(NavigationDestination(
+                icon: const Icon(Icons.view_timeline_outlined),
+                selectedIcon: Icon(Icons.view_timeline,
+                    color: AppTok.accent(context)),
+                label: _t('guest_tab_timeline', 'تایم‌لاین', 'Timeline'),
+              ));
+            }
+            if (ent['camera'] == true) {
+              pages.add(PlanGate(
+                weddingId: widget.weddingId,
+                allow: (l) => l.camera,
+                featureFa: 'دوربین یک‌بارمصرف مهمان',
+                featureEn: 'Disposable guest camera',
+                child: GuestCameraScreen(weddingId: widget.weddingId),
+              ));
+              dests.add(NavigationDestination(
+                icon: const Icon(Icons.photo_camera_outlined),
+                selectedIcon: Icon(Icons.photo_camera,
+                    color: AppTok.accent(context)),
+                label: _t('guest_tab_camera', 'دوربین', 'Camera'),
+              ));
+            }
+            if (ent['seating'] == true) {
+              pages.add(PlanGate(
+                weddingId: widget.weddingId,
+                allow: (l) => l.seating,
+                featureFa: 'چیدمان نشیمن',
+                featureEn: 'Seating chart',
+                child: GuestSeatingTab(weddingId: widget.weddingId),
+              ));
+              dests.add(NavigationDestination(
+                icon: const Icon(Icons.event_seat_outlined),
+                selectedIcon: Icon(Icons.event_seat,
+                    color: AppTok.accent(context)),
+                label: _t('guest_tab_seating', 'صندلی', 'Seats'),
+              ));
+            }
+            final idx = _index.clamp(0, pages.length - 1);
+
+            return Directionality(
           textDirection: AppLang.I.direction,
           child: EffectBackgroundStack(
             opacity: 0.9,
@@ -193,7 +252,7 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
               body: Stack(
                 children: [
                   Positioned.fill(
-                    child: IndexedStack(index: _index, children: pages),
+                    child: IndexedStack(index: idx, children: pages),
                   ),
                   if (AppEffectController.I.isNone &&
                       _legacyEffectId != AppEffectStyle.noneId)
@@ -214,47 +273,18 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
                 opacity: 0.84,
                 blurSigma: 12,
                 child: NavigationBar(
-                  selectedIndex: _index,
+                  selectedIndex: idx,
                   onDestinationSelected: (i) => setState(() => _index = i),
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                   indicatorColor: AppTok.accent(context).withValues(alpha: 0.18),
-                  destinations: [
-                    NavigationDestination(
-                      icon: const Icon(Icons.home_outlined),
-                      selectedIcon:
-                          Icon(Icons.home, color: AppTok.accent(context)),
-                      label: _t('guest_tab_home', 'خانه', 'Home'),
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.mail_outline),
-                      selectedIcon:
-                          Icon(Icons.mail, color: AppTok.accent(context)),
-                      label: _t('guest_tab_invite', 'دعوت‌نامه', 'Invite'),
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.view_timeline_outlined),
-                      selectedIcon: Icon(Icons.view_timeline,
-                          color: AppTok.accent(context)),
-                      label: _t('guest_tab_timeline', 'تایم‌لاین', 'Timeline'),
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.photo_camera_outlined),
-                      selectedIcon: Icon(Icons.photo_camera,
-                          color: AppTok.accent(context)),
-                      label: _t('guest_tab_camera', 'دوربین', 'Camera'),
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.event_seat_outlined),
-                      selectedIcon: Icon(Icons.event_seat,
-                          color: AppTok.accent(context)),
-                      label: _t('guest_tab_seating', 'صندلی', 'Seats'),
-                    ),
-                  ],
+                  destinations: dests,
                 ),
               ),
             ),
           ),
+            );
+          },
         );
       },
     );

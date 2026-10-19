@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -5,6 +6,7 @@ import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/subscription_plan.dart';
+import '../services/plan_access.dart';
 import '../services/plans_service.dart';
 import 'plans_admin_screen.dart';
 
@@ -282,7 +284,11 @@ class _PlansScreenState extends State<PlansScreen> {
 
   Future<void> _onSelect(SubscriptionPlan plan) async {
     const t = AppLang.tr;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     if (plan.isFree) {
+      if (uid != null) {
+        await PlanAccess.I.activatePlan(targetUid: uid, planId: plan.id);
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(t('plans_free_activated'))),
@@ -294,6 +300,18 @@ class _PlansScreenState extends State<PlansScreen> {
       final uri = Uri.tryParse(url);
       if (uri != null) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
+        // ثبت درخواست ارتقا — پس از تأیید ادمین فعال می‌شود
+        await PlanAccess.I.requestPlan(plan.id);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLang.I.isFa
+                  ? 'درخواست شما ثبت شد؛ پس از تأیید پرداخت، پلن فعال می‌شود.'
+                  : 'Request recorded. Your plan activates after payment approval.',
+            ),
+          ),
+        );
         return;
       }
     }

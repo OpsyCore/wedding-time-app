@@ -213,7 +213,7 @@ class _GuestSeatingTabState extends State<GuestSeatingTab> {
         return Directionality(
           textDirection: AppLang.I.direction,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 28 + MediaQuery.of(ctx).padding.bottom),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

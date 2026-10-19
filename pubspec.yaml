@@ -34,11 +34,30 @@ dependencies:
   path: ^1.9.0
   just_audio: ^0.9.40
   audio_session: ^0.1.21
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.3
+
+# یک عکس در assets/icon/app_icon.png بگذار و بزن:
+#   dart run flutter_launcher_icons
+# خودش همهٔ سایزهای اندروید/iOS/وب را می‌سازد.
+flutter_launcher_icons:
+  android: true # همان ic_launcher فعلی
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#0D0C1A"
+    theme_color: "#0D0C1A"
 
 flutter:
   uses-material-design: true
@@ -59,4 +78,60 @@ flutter:
         - asset: assets/fonts/Estedad-SemiBold.ttf
           weight: 600
         - asset: assets/fonts/Estedad-Bold.ttf
+          weight: 700
+    - family: Vazirmatn
+      fonts:
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/fonts/ttf/Vazirmatn-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/fonts/ttf/Vazirmatn-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/fonts/ttf/Vazirmatn-Light.ttf
+          weight: 300
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/fonts/ttf/Vazirmatn-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/fonts/ttf/Vazirmatn-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/fonts/ttf/Vazirmatn-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/fonts/ttf/Vazirmatn-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/fonts/ttf/Vazirmatn-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/fonts/ttf/Vazirmatn-Black.ttf
+          weight: 900
+    - family: VazirmatnFD
+      fonts:
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/misc/Farsi-Digits/fonts/ttf/Vazirmatn-FD-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/misc/Farsi-Digits/fonts/ttf/Vazirmatn-FD-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/misc/Farsi-Digits/fonts/ttf/Vazirmatn-FD-Light.ttf
+          weight: 300
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/misc/Farsi-Digits/fonts/ttf/Vazirmatn-FD-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/misc/Farsi-Digits/fonts/ttf/Vazirmatn-FD-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/misc/Farsi-Digits/fonts/ttf/Vazirmatn-FD-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/misc/Farsi-Digits/fonts/ttf/Vazirmatn-FD-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/misc/Farsi-Digits/fonts/ttf/Vazirmatn-FD-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/vazirmatn_extracted/vazirmatn-master/misc/Farsi-Digits/fonts/ttf/Vazirmatn-FD-Black.ttf
+          weight: 900
+    - family: Samim
+      fonts:
+        - asset: assets/fonts/Farsi-Digits/Samim-FD.ttf
+          weight: 400
+        - asset: assets/fonts/Farsi-Digits/Samim-Bold-FD.ttf
+          weight: 700
+    - family: Gandom
+      fonts:
+        - asset: assets/fonts/Farsi-Digits/Gandom-FD.ttf
+          weight: 400
+    - family: MjParand
+      fonts:
+        - asset: assets/fonts/Mj_Parand-Fontjo.com/Mj_Parand.TTF
+          weight: 400
+        - asset: assets/fonts/Mj_Parand-Fontjo.com/Mj_Parand.TTF
           weight: 700

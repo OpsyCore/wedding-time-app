@@ -1,11 +1,11 @@
 {
-    "name": "wedding_time",
-    "short_name": "wedding_time",
+    "name": "Wedding Time — برنامه‌ریزی عروسی",
+    "short_name": "Wedding Time",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0D0C1A",
+    "theme_color": "#0D0C1A",
+    "description": "برنامه‌ریزی کامل عروسی: چک‌لیست، بودجه، مهمان‌ها، تأمین‌کننده‌ها و کارت دعوت",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

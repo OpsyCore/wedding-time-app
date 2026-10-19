@@ -3,26 +3,50 @@ import 'package:flutter/material.dart';
 import '../models/subscription_plan.dart';
 
 /// پیش‌فرض پلن‌ها — ادمین از Firestore override می‌کند.
-/// ترتیب نمایش کارت‌ها (چپ→راست): free | pro | premium
+/// ترتیب نمایش کارت‌ها: free | pro_monthly | pro | premium
+/// + پلن مخفی trial: هر نصب جدید ۱ ماه فول رایگان (everythingOpen)، بعد از ۳۰ روز اتومات به free برمی‌گردد
 class AppPlans {
   AppPlans._();
 
+  static const trialId = 'trial';
   static const freeId = 'free';
+  static const proMonthlyId = 'pro_monthly';
   static const proId = 'pro';
   static const premiumId = 'premium';
 
-  /// ترتیب ثابت چپ / وسط / راست
-  static const displayOrder = [freeId, proId, premiumId];
+  /// ترتیب ثابت نمایش (trial مخفی — فقط سیستم)
+  static const displayOrder = [freeId, proMonthlyId, proId, premiumId];
 
   static List<SubscriptionPlan> get defaults => [
+        // ── TRIAL مخفی — ۱ ماه فول رایگان Auto (everythingOpen) — نمایش داده نمی‌شود ──
+        SubscriptionPlan(
+          id: trialId,
+          nameFa: '۱ ماه فول رایگان',
+          nameEn: '1 Month Full — Trial',
+          subtitleFa: '۳۰ روز دسترسی کامل به همه امکانات — بدون پرداخت',
+          subtitleEn: '30 days full access — no payment',
+          ctaFa: 'شروع تریال',
+          ctaEn: 'Start trial',
+          iconCode: Icons.all_inclusive_rounded.codePoint,
+          priceToman: 0,
+          priceUsd: 0,
+          periodFa: '۳۰ روز رایگان',
+          periodEn: '30 days free',
+          sortOrder: -1,
+          enabled: true,
+          features: const [
+            PlanFeature(id: 'trial_all', labelFa: 'همه امکانات پرمیوم به مدت ۳۰ روز', labelEn: 'Everything in Premium for 30 days', included: true),
+            PlanFeature(id: 'trial_expire', labelFa: 'پس از ۳۰ روز → اتومات هدیه محدود', labelEn: 'After 30 days → free limited', included: true),
+          ],
+        ),
         SubscriptionPlan(
           id: freeId,
-          nameFa: 'هدیه ما به شما',
-          nameEn: 'Our gift to you',
-          subtitleFa: 'شروع ساده برای برنامه‌ریزی مراسم',
-          subtitleEn: 'A simple start for wedding planning',
-          ctaFa: 'انتخاب هدیه ما',
-          ctaEn: 'Choose free gift',
+          nameFa: 'هدیه محدود',
+          nameEn: 'Free — Limited',
+          subtitleFa: 'برای آشنایی — بعد از تریال',
+          subtitleEn: 'For starters — after trial',
+          ctaFa: 'ادامه با هدیه',
+          ctaEn: 'Continue free',
           iconCode: Icons.card_giftcard_rounded.codePoint,
           priceToman: 0,
           priceUsd: 0,
@@ -31,29 +55,37 @@ class AppPlans {
           sortOrder: 0,
           features: const [
             PlanFeature(
-              id: 'checklist',
-              labelFa: 'چک‌لیست مراسم',
-              labelEn: 'Wedding checklist',
+              id: 'invite',
+              labelFa: 'دعوت‌نامه دیجیتال + پورتال مهمان',
+              labelEn: 'Digital invite + guest portal',
               included: true,
             ),
             PlanFeature(
               id: 'guests',
-              labelFa: 'مهمان‌ها',
-              labelEn: 'Guests',
+              labelFa: 'مهمان‌ها + RSVP',
+              labelEn: 'Guests + RSVP',
               included: true,
-              valueFa: '۵۰',
-              valueEn: '50',
+              valueFa: 'تا ۴۰ نفر',
+              valueEn: 'Up to 40',
             ),
             PlanFeature(
-              id: 'calendar',
-              labelFa: 'تقویم',
-              labelEn: 'Calendar',
+              id: 'checklist',
+              labelFa: 'چک‌لیست + تقویم',
+              labelEn: 'Checklist + calendar',
               included: true,
             ),
             PlanFeature(
-              id: 'invite',
-              labelFa: 'دعوت‌نامه دیجیتال پایه',
-              labelEn: 'Basic digital invite',
+              id: 'story',
+              labelFa: 'داستان عشق',
+              labelEn: 'Love story',
+              included: true,
+              valueFa: '۱ فصل',
+              valueEn: '1 chapter',
+            ),
+            PlanFeature(
+              id: 'wishes',
+              labelFa: 'آرزوها / هدایا / حمایت‌ها',
+              labelEn: 'Wishes / gifts / supports',
               included: true,
             ),
             PlanFeature(
@@ -61,19 +93,13 @@ class AppPlans {
               labelFa: 'کتابخانه رسانه',
               labelEn: 'Media library',
               included: true,
-              valueFa: 'محدود',
-              valueEn: 'Limited',
+              valueFa: '۱۰ آیتم',
+              valueEn: '10 items',
             ),
             PlanFeature(
               id: 'budget',
-              labelFa: 'بودجه و هزینه‌ها',
-              labelEn: 'Budget & expenses',
-              included: false,
-            ),
-            PlanFeature(
-              id: 'vendors',
-              labelFa: 'تأمین‌کننده‌ها',
-              labelEn: 'Vendors',
+              labelFa: 'بودجه و تأمین‌کننده‌ها',
+              labelEn: 'Budget & vendors',
               included: false,
             ),
             PlanFeature(
@@ -84,36 +110,31 @@ class AppPlans {
             ),
             PlanFeature(
               id: 'camera',
-              labelFa: 'دوربین مهمان',
-              labelEn: 'Guest camera',
+              labelFa: 'دوربین یک‌بارمصرف مهمان',
+              labelEn: 'Disposable guest camera',
               included: false,
             ),
             PlanFeature(
-              id: 'support',
-              labelFa: 'پشتیبانی اولویت‌دار',
-              labelEn: 'Priority support',
+              id: 'qr',
+              labelFa: 'QR دعوت‌نامه',
+              labelEn: 'Invite QR',
               included: false,
             ),
           ],
         ),
         SubscriptionPlan(
-          id: proId,
-          nameFa: 'پرو (۱ ساله)',
-          nameEn: 'Pro (1 year)',
-          subtitleFa: 'تجربه‌ای کامل و حرفه‌ای',
-          subtitleEn: 'Complete professional experience',
-          ctaFa: 'انتخاب پرو',
-          ctaEn: 'Choose Pro',
-          iconCode: Icons.workspace_premium_rounded.codePoint,
-          priceToman: 499000,
-          priceUsd: 12,
-          discountPercent: 0,
-          periodFa: 'سالانه',
-          periodEn: 'per year',
-          badgeFa: 'محبوب‌ترین انتخاب',
-          badgeEn: 'Most popular',
-          popular: true,
-          highlighted: true,
+          id: proMonthlyId,
+          nameFa: 'پرو ماهانه',
+          nameEn: 'Pro Monthly',
+          subtitleFa: 'همه‌چیز برای اجرا — ماه به ماه',
+          subtitleEn: 'Everything to run, monthly',
+          ctaFa: 'شروع پرو ماهانه',
+          ctaEn: 'Start Pro monthly',
+          iconCode: Icons.auto_awesome_rounded.codePoint,
+          priceToman: 298000,
+          priceUsd: 8,
+          periodFa: 'ماهانه',
+          periodEn: 'per month',
           sortOrder: 1,
           features: const [
             PlanFeature(
@@ -127,51 +148,87 @@ class AppPlans {
               labelFa: 'مهمان‌ها',
               labelEn: 'Guests',
               included: true,
-              valueFa: '∞',
-              valueEn: '∞',
+              valueFa: 'نامحدود',
+              valueEn: 'Unlimited',
             ),
             PlanFeature(
               id: 'budget',
-              labelFa: 'بودجه و هزینه‌ها',
-              labelEn: 'Budget & expenses',
-              included: true,
-            ),
-            PlanFeature(
-              id: 'vendors',
-              labelFa: 'تأمین‌کننده‌ها + اقساط',
-              labelEn: 'Vendors & payments',
+              labelFa: 'بودجه + تأمین‌کننده‌ها + اقساط',
+              labelEn: 'Budget + vendors + payments',
               included: true,
             ),
             PlanFeature(
               id: 'seating',
-              labelFa: 'چیدمان نشیمن',
-              labelEn: 'Seating chart',
+              labelFa: 'چیدمان نشیمن چندسالنه',
+              labelEn: 'Multi-hall seating',
               included: true,
             ),
             PlanFeature(
-              id: 'invite',
+              id: 'camera',
+              labelFa: 'دوربین مهمان + گالری تأیید',
+              labelEn: 'Guest camera + approvals',
+              included: true,
+              valueFa: '۱۰ شات/مهمان',
+              valueEn: '10 shots/guest',
+            ),
+            PlanFeature(
+              id: 'qr',
               labelFa: 'دعوت‌نامه کامل + QR',
               labelEn: 'Full invite + QR',
               included: true,
             ),
             PlanFeature(
+              id: 'support',
+              labelFa: 'پشتیبانی اولویت‌دار',
+              labelEn: 'Priority support',
+              included: true,
+            ),
+          ],
+        ),
+        SubscriptionPlan(
+          id: proId,
+          nameFa: 'پرو (۱ ساله)',
+          nameEn: 'Pro (1 year)',
+          subtitleFa: 'یک پرداخت، یک سال آرامش',
+          subtitleEn: 'One payment, a year of calm',
+          ctaFa: 'انتخاب پرو',
+          ctaEn: 'Choose Pro',
+          iconCode: Icons.workspace_premium_rounded.codePoint,
+          priceToman: 1780000,
+          priceUsd: 38,
+          discountPercent: 50,
+          periodFa: 'سالانه',
+          periodEn: 'per year',
+          badgeFa: 'محبوب‌ترین انتخاب',
+          badgeEn: 'Most popular',
+          popular: true,
+          highlighted: true,
+          sortOrder: 2,
+          features: const [
+            PlanFeature(
+              id: 'all_monthly',
+              labelFa: 'تمام امکانات پرو ماهانه',
+              labelEn: 'Everything in Pro monthly',
+              included: true,
+            ),
+            PlanFeature(
+              id: 'year',
+              labelFa: '۱۲ ماه به‌جای ۱ ماه',
+              labelEn: '12 months instead of 1',
+              included: true,
+            ),
+            PlanFeature(
               id: 'media',
-              labelFa: 'رسانه + کاورها',
-              labelEn: 'Media + covers',
+              labelFa: 'رسانه',
+              labelEn: 'Media',
               included: true,
-              valueFa: 'کامل',
-              valueEn: 'Full',
+              valueFa: '۵۰۰ آیتم',
+              valueEn: '500 items',
             ),
             PlanFeature(
-              id: 'camera',
-              labelFa: 'دوربین مهمان + گالری',
-              labelEn: 'Guest camera + gallery',
-              included: true,
-            ),
-            PlanFeature(
-              id: 'music',
-              labelFa: 'موسیقی و تایم‌لاین',
-              labelEn: 'Music & timeline',
+              id: 'story_u',
+              labelFa: 'داستان عشق نامحدود',
+              labelEn: 'Unlimited love story',
               included: true,
             ),
             PlanFeature(
@@ -187,16 +244,16 @@ class AppPlans {
           nameFa: 'پرمیوم (مادام‌العمر)',
           nameEn: 'Premium (Lifetime)',
           subtitleFa: 'کامل‌ترین تجربه، برای همیشه',
-          subtitleEn: 'Fullest experience, forever',
+          subtitleEn: 'The fullest experience, forever',
           ctaFa: 'انتخاب پرمیوم',
           ctaEn: 'Choose Premium',
           iconCode: Icons.diamond_rounded.codePoint,
-          priceToman: 1299000,
-          priceUsd: 29,
+          priceToman: 3980000,
+          priceUsd: 98,
           discountPercent: 0,
           periodFa: 'یک‌بار پرداخت',
           periodEn: 'one-time',
-          sortOrder: 2,
+          sortOrder: 3,
           features: const [
             PlanFeature(
               id: 'all_pro',
@@ -206,32 +263,40 @@ class AppPlans {
             ),
             PlanFeature(
               id: 'lifetime',
-              labelFa: 'دسترسی مادام‌العمر',
-              labelEn: 'Lifetime access',
+              labelFa: 'دسترسی مادام‌العمر + همه به‌روزرسانی‌ها',
+              labelEn: 'Lifetime access + all updates',
+              included: true,
+            ),
+            PlanFeature(
+              id: 'export',
+              labelFa: 'خروجی PDF/اکسل (مهمان‌ها و بودجه)',
+              labelEn: 'PDF/Excel export (guests & budget)',
+              included: true,
+            ),
+            PlanFeature(
+              id: 'templates',
+              labelFa: 'قالب‌های اختصاصی دعوت‌نامه',
+              labelEn: 'Exclusive invite templates',
+              included: true,
+              valueFa: '۴ تم',
+              valueEn: '4 themes',
+            ),
+            PlanFeature(
+              id: 'multi',
+              labelFa: 'دو مراسم هم‌زمان',
+              labelEn: 'Two active weddings',
+              included: true,
+            ),
+            PlanFeature(
+              id: 'unl',
+              labelFa: 'رسانه و شات دوربین نامحدود',
+              labelEn: 'Unlimited media & camera shots',
               included: true,
             ),
             PlanFeature(
               id: 'vip',
-              labelFa: 'پشتیبانی VIP',
-              labelEn: 'VIP support',
-              included: true,
-            ),
-            PlanFeature(
-              id: 'consult',
-              labelFa: 'مشاوره اختصاصی',
-              labelEn: 'Private consult',
-              included: true,
-            ),
-            PlanFeature(
-              id: 'early',
-              labelFa: 'دسترسی زودهنگام',
-              labelEn: 'Early access',
-              included: true,
-            ),
-            PlanFeature(
-              id: 'report',
-              labelFa: 'گزارش و شخصی‌سازی',
-              labelEn: 'Custom reports',
+              labelFa: 'پشتیبانی VIP + مشاوره اختصاصی',
+              labelEn: 'VIP support + private consult',
               included: true,
             ),
           ],
@@ -246,6 +311,7 @@ class AppPlans {
       if (p != null && p.enabled) out.add(p);
     }
     for (final p in input) {
+      if (p.id == trialId) continue; // تریال مخفی
       if (!displayOrder.contains(p.id) && p.enabled) out.add(p);
     }
     return out;

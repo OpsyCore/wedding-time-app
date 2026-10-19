@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../core/app_config.dart';
 import '../core/app_date_picker.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
@@ -32,6 +33,19 @@ class _WeddingSetupScreenState extends State<WeddingSetupScreen> {
   String? _inviteCode;
   String? _currentWeddingId;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // لینک دعوت پارتنر (?join=CODE) → مستقیم مرحلهٔ پیوستن با کد پرشده.
+    // کد تا موفقیت پیوستن/ساخت نگه داشته می‌شود تا مسیرهای دیگر
+    // (لاگین و…) در حالت join باقی بمانند و به مهمان تبدیل نشوند.
+    final pending = AppConfig.pendingJoinCode;
+    if (pending != null && pending.isNotEmpty) {
+      _joinCodeCtrl.text = pending;
+      _step = 3;
+    }
+  }
 
   @override
   void dispose() {
@@ -107,6 +121,7 @@ class _WeddingSetupScreenState extends State<WeddingSetupScreen> {
       setState(() {
         _currentWeddingId = result.weddingId;
         _inviteCode = result.inviteCode;
+        AppConfig.pendingJoinCode = null;
         _step = 2;
       });
     } catch (e) {
@@ -144,6 +159,7 @@ class _WeddingSetupScreenState extends State<WeddingSetupScreen> {
       );
 
       _currentWeddingId = weddingId;
+      AppConfig.pendingJoinCode = null; // حالت پیوستن تمام شد
       await _goHome();
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');

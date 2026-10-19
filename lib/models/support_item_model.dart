@@ -83,6 +83,18 @@ class SupportCategory {
     switch (iconKey) {
       case 'home':
         return Icons.home_outlined;
+      case 'kitchen':
+        return Icons.kitchen_outlined;
+      case 'electronics':
+      case 'appliances':
+        return Icons.devices_outlined;
+      case 'decor':
+        return Icons.palette_outlined;
+      case 'experience':
+      case 'experiences':
+        return Icons.attractions_outlined;
+      case 'furniture':
+        return Icons.chair_outlined;
       case 'travel':
         return Icons.flight_takeoff_rounded;
       case 'ring':
@@ -296,12 +308,30 @@ class SupportSettings {
       ),
       SupportCategory(
         id: 'home',
-        titleFa: 'خانه و زندگی',
+        titleFa: 'خانه و جهیزیه',
         titleEn: 'Home',
-        descFa: 'وسایل خانه و جهیزیه',
-        descEn: 'Home essentials',
+        descFa: 'وسایل خانه و اسباب و اثاثیه',
+        descEn: 'Home essentials & furniture',
         iconKey: 'home',
         sortOrder: 1,
+      ),
+      SupportCategory(
+        id: 'kitchen',
+        titleFa: 'لوازم آشپزخانه',
+        titleEn: 'Kitchen',
+        descFa: 'ظروف، وسایل پخت‌وپز و پذیرایی',
+        descEn: 'Kitchenware & cookware',
+        iconKey: 'kitchen',
+        sortOrder: 2,
+      ),
+      SupportCategory(
+        id: 'appliances',
+        titleFa: 'لوازم برقی و دیجیتال',
+        titleEn: 'Appliances & Tech',
+        descFa: 'وسایل برقی خانه، صوتی و تصویری',
+        descEn: 'Home appliances & electronics',
+        iconKey: 'electronics',
+        sortOrder: 3,
       ),
       SupportCategory(
         id: 'honeymoon',
@@ -310,7 +340,16 @@ class SupportSettings {
         descFa: 'سفر و خاطره ماه‌عسل',
         descEn: 'Honeymoon trip',
         iconKey: 'travel',
-        sortOrder: 2,
+        sortOrder: 4,
+      ),
+      SupportCategory(
+        id: 'experiences',
+        titleFa: 'تجربه و تفریح',
+        titleEn: 'Experiences',
+        descFa: 'بسته‌های تفریحی، رستوران و فعالیت دونفره',
+        descEn: 'Couple activities, dining & experiences',
+        iconKey: 'experience',
+        sortOrder: 5,
       ),
       SupportCategory(
         id: 'cash',
@@ -319,7 +358,7 @@ class SupportSettings {
         descFa: 'واریز مستقیم به کارت',
         descEn: 'Direct bank transfer',
         iconKey: 'cash',
-        sortOrder: 3,
+        sortOrder: 6,
       ),
     ];
   }
@@ -347,6 +386,7 @@ class SupportItem {
     this.note = '',
     this.categoryId = 'general',
     this.imageUrl = '',
+    this.purchaseUrl = '',
     this.sortOrder = 0,
     this.status = SupportStatus.open,
     this.targetToman = 0,
@@ -367,6 +407,7 @@ class SupportItem {
   final String note;
   final String categoryId;
   final String imageUrl;
+  final String purchaseUrl;
   final int sortOrder;
   final SupportStatus status;
 
@@ -449,6 +490,7 @@ class SupportItem {
     String? note,
     String? categoryId,
     String? imageUrl,
+    String? purchaseUrl,
     int? sortOrder,
     SupportStatus? status,
     int? targetToman,
@@ -469,6 +511,7 @@ class SupportItem {
       note: note ?? this.note,
       categoryId: categoryId ?? this.categoryId,
       imageUrl: imageUrl ?? this.imageUrl,
+      purchaseUrl: purchaseUrl ?? this.purchaseUrl,
       sortOrder: sortOrder ?? this.sortOrder,
       status: status ?? this.status,
       targetToman: targetToman ?? this.targetToman,
@@ -490,6 +533,7 @@ class SupportItem {
         'note': note,
         'categoryId': categoryId,
         'imageUrl': imageUrl,
+        'purchaseUrl': purchaseUrl,
         'sortOrder': sortOrder,
         'status': status.name,
         'targetToman': targetToman,
@@ -525,6 +569,7 @@ class SupportItem {
       note: (map['note'] ?? '').toString(),
       categoryId: (map['categoryId'] ?? 'general').toString(),
       imageUrl: (map['imageUrl'] ?? '').toString(),
+      purchaseUrl: (map['purchaseUrl'] ?? '').toString(),
       sortOrder: _asInt(map['sortOrder']),
       status: supportStatusFromRaw(map['status']),
       targetToman: _asInt(map['targetToman']),

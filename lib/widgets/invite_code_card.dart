@@ -172,6 +172,57 @@ class InviteCodeCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (code.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          AppLang.I.isFa
+                              ? 'لینک دعوت پارتنر (پیوستن همسر)'
+                              : 'Partner join link (spouse)',
+                          style: TextStyle(
+                            color: textSoft,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: bg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  AppConfig.partnerJoinUrl(code),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: accentDeep,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: AppLang.tr('copy'),
+                                onPressed: () => _copy(
+                                  context,
+                                  AppConfig.partnerJoinUrl(code),
+                                ),
+                                icon: Icon(Icons.link,
+                                    color: accent, size: 20),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       Text(
                         AppLang.tr('public_invite_link'),
