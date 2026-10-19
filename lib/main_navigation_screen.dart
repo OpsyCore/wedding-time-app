@@ -14,6 +14,7 @@ import 'screens/wedding_palette_screen.dart';
 import 'widgets/effect_background.dart';
 import 'widgets/page_glass.dart';
 import 'widgets/plan_gate.dart';
+import 'widgets/trial_welcome_dialog.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final String weddingId;
@@ -68,6 +69,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       CalendarScreen(weddingId: widget.weddingId),
       WeddingPaletteScreen(weddingId: widget.weddingId),
     ];
+    // اولین ورود → پاپ‌آپ 1 ماه رایگان (فقط یک بار)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      TrialWelcomeDialog.showIfNeeded(context, widget.weddingId);
+    });
   }
 
   void _goToTab(int index) {

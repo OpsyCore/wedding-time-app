@@ -30,6 +30,7 @@ import '../screens/rsvp_inbox_screen.dart';
 import '../screens/supports_manage_screen.dart';
 import '../screens/support_tickets_screen.dart';
 import '../screens/timeline_screen.dart';
+import '../screens/tutorials_screen.dart';
 import '../screens/vendors_screen.dart';
 import '../screens/wishes_screen.dart';
 import '../services/notification_service.dart';
@@ -571,6 +572,21 @@ class AppDrawer extends StatelessWidget {
                               builder: (_) => SupportsManageScreen(
                                 weddingId: weddingId,
                               ),
+                            ),
+                          );
+                        },
+                      ),
+                      // ── آموزش ──
+                      _section(context, 'آموزش', 'Learn'),
+                      _item(
+                        context,
+                        Icons.school_outlined,
+                        AppLang.I.isFa ? 'آموزش استفاده از هر قسمت' : 'How to use each section',
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TutorialsScreen(weddingId: weddingId),
                             ),
                           );
                         },
