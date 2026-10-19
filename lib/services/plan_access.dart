@@ -50,10 +50,11 @@ class PlanLimits {
   bool get unlimitedMedia => maxMedia < 0;
   bool get unlimitedChapters => maxStoryChapters < 0;
 
+  // سخت‌گیرانه برای پوش به خرید — بعد از تریال ۳۰ روزه
   static const free = PlanLimits(
-    maxGuests: 100,
-    maxMedia: 20,
-    maxStoryChapters: 2,
+    maxGuests: 40,
+    maxMedia: 10,
+    maxStoryChapters: 1,
     maxShotsPerGuest: 0,
     budget: false,
     vendors: false,
@@ -64,6 +65,22 @@ class PlanLimits {
     templates: ['classic'],
     maxWeddings: 1,
     supportTier: 'normal',
+  );
+
+  static const trial = PlanLimits(
+    maxGuests: -1,
+    maxMedia: -1,
+    maxStoryChapters: -1,
+    maxShotsPerGuest: -1,
+    budget: true,
+    vendors: true,
+    seating: true,
+    camera: true,
+    qr: true,
+    exportDocs: true,
+    templates: ['classic', 'royal_gold', 'floral_rose', 'minimal_modern'],
+    maxWeddings: -1,
+    supportTier: 'vip',
   );
 
   static const pro = PlanLimits(
@@ -117,6 +134,9 @@ class PlanLimits {
 
   static PlanLimits forPlanId(String? planId) {
     switch ((planId ?? '').trim()) {
+      case AppPlans.trialId:
+      case 'trial':
+        return trial;
       case AppPlans.proId:
       case 'pro_monthly':
         return pro;
@@ -124,6 +144,19 @@ class PlanLimits {
         return premium;
       default:
         return free;
+    }
+  }
+
+  /// آیا تریال هنوز معتبر است؟ بر اساس trialEndsAt در سند کاربر/مراسم
+  static bool isTrialValid(Map<String, dynamic>? data) {
+    if (data == null) return false;
+    final v = data['trialEndsAt'];
+    if (v == null) return false;
+    try {
+      final DateTime ends = v is Timestamp ? v.toDate() : DateTime.parse(v.toString());
+      return DateTime.now().isBefore(ends);
+    } catch (_) {
+      return false;
     }
   }
 }
@@ -141,13 +174,17 @@ class PlanAccess {
   DocumentReference<Map<String, dynamic>> _userRef(String uid) =>
       _db.collection('users').doc(uid);
 
-  /// پلنِ یک مراسم — از سند مراسم (mirror شده هنگام فعال‌سازی)
+  /// پلنِ یک مراسم — از سند مراسم (mirror شده هنگام فعال‌سازی) — تریال منقضی → free
   Stream<String> watchWeddingPlanId(String weddingId) {
     return _db
         .collection('weddings')
         .doc(weddingId)
         .snapshots()
-        .map((s) => (s.data()?['planId'] ?? AppPlans.freeId).toString());
+        .map((s) {
+      final raw = (s.data()?['planId'] ?? AppPlans.freeId).toString();
+      if (raw == AppPlans.trialId && !PlanLimits.isTrialValid(s.data())) return AppPlans.freeId;
+      return raw;
+    });
   }
 
   /// محدودیت‌ها = کد پایه + سوییچ‌های ادمین (app_config/plans).
@@ -225,8 +262,10 @@ class PlanAccess {
   Future<PlanLimits> weddingLimits(String weddingId) async {
     if (!PlansService.I.monetizationOn) return PlanLimits.everythingOpen;
     final s = await _db.collection('weddings').doc(weddingId).get();
+    final raw = (s.data()?['planId'] ?? '').toString();
+    final effective = (raw == AppPlans.trialId && !PlanLimits.isTrialValid(s.data())) ? AppPlans.freeId : raw;
     final plans = await PlansService.I.fetchPlans();
-    return limitsFor((s.data()?['planId'] ?? '').toString(), plans);
+    return limitsFor(effective, plans);
   }
 
   /// محدودیت‌های مبتنی بر پلن خودِ کاربر (با رعایت سوییچ کلی مانتایزیشن)
@@ -240,16 +279,23 @@ class PlanAccess {
     final u = uid;
     if (u == null) return AppPlans.freeId;
     final s = await _userRef(u).get();
-    return (s.data()?['planId'] ?? AppPlans.freeId).toString();
+    final raw = (s.data()?['planId'] ?? AppPlans.freeId).toString();
+    if (raw == AppPlans.trialId && !PlanLimits.isTrialValid(s.data())) return AppPlans.freeId;
+    return raw;
   }
 
   Stream<String> watchMyPlanId() {
     final u = uid;
     if (u == null) return Stream.value(AppPlans.freeId);
-    return _userRef(u)
-        .snapshots()
-        .map((s) => (s.data()?['planId'] ?? AppPlans.freeId).toString());
+    return _userRef(u).snapshots().map((s) {
+      final raw = (s.data()?['planId'] ?? AppPlans.freeId).toString();
+      if (raw == AppPlans.trialId && !PlanLimits.isTrialValid(s.data())) return AppPlans.freeId;
+      return raw;
+    });
   }
+
+  /// تریال: هر کاربر جدید ۳۰ روز فول — تاریخ انقضا
+  DateTime get trialEndsAt => DateTime.now().add(const Duration(days: 30));
 
   /// فعال‌سازی پلن برای کاربر + mirror به مراسم فعال او
   Future<void> activatePlan({

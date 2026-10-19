@@ -53,12 +53,16 @@ class WeddingService {
     // کد فقط در سند خصوصی کاربر و در invite_codes نگه داشته می‌شود.
     final batch = _firestore.batch();
 
+    final trialEnds = Timestamp.fromDate(DateTime.now().add(const Duration(days: 30)));
     batch.set(weddingRef, {
       'brideName': brideName.trim(),
       'groomName': groomName.trim(),
       'weddingDate': Timestamp.fromDate(weddingDate),
       if (role == 'bride') 'brideUid': uid,
       if (role == 'groom') 'groomUid': uid,
+      'planId': 'trial',
+      'trialStartedAt': FieldValue.serverTimestamp(),
+      'trialEndsAt': trialEnds,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -69,7 +73,10 @@ class WeddingService {
         if (email != null && email.isNotEmpty) 'email': email,
         'weddingId': weddingId,
         'role': role,
-        'plan': 'free',
+        'plan': 'trial',
+        'planId': 'trial',
+        'trialStartedAt': FieldValue.serverTimestamp(),
+        'trialEndsAt': trialEnds,
         'language': AppLang.I.code,
         'inviteCode': inviteCode,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -146,7 +153,11 @@ class WeddingService {
       );
     }
 
-    // 3) اتمیک: user + نقش روی wedding
+    // 3) اتمیک: user + نقش روی wedding — تریال: هر عضو جدید ۳۰ روز فول (اگر مراسم هنوز در تریال است همان trialEnds مشترک)
+    final weddingPlan = (data['planId'] ?? 'trial').toString();
+    final existingTrialEnds = data['trialEndsAt'];
+    final trialEndsForJoin = existingTrialEnds is Timestamp ? existingTrialEnds : Timestamp.fromDate(DateTime.now().add(const Duration(days: 30)));
+    final effectivePlan = weddingPlan == 'trial' ? 'trial' : weddingPlan;
     final batch = _firestore.batch();
 
     batch.set(
@@ -155,7 +166,10 @@ class WeddingService {
         if (email != null && email.isNotEmpty) 'email': email,
         'weddingId': weddingId,
         'role': role,
-        'plan': 'free',
+        'plan': effectivePlan,
+        'planId': effectivePlan,
+        if (effectivePlan == 'trial') 'trialEndsAt': trialEndsForJoin,
+        if (effectivePlan == 'trial') 'trialStartedAt': FieldValue.serverTimestamp(),
         'language': AppLang.I.code,
         // FIX-02: کد پیوستن برای نمایش در پروفایل هر دو طرف
         'inviteCode': normalized,
