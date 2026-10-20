@@ -1074,6 +1074,9 @@ class _TrialCountdownBanner extends StatefulWidget {
 class _TrialCountdownBannerState extends State<_TrialCountdownBanner> {
   Timer? _ticker;
   Stream<DocumentSnapshot<Map<String, dynamic>>>? _docStream;
+  late final DateTime _defaultEndsAt =
+      DateTime.now().add(const Duration(days: 30));
+  bool _seededMissingTrial = false;
 
   @override
   void initState() {
@@ -1088,8 +1091,35 @@ class _TrialCountdownBannerState extends State<_TrialCountdownBanner> {
   void didUpdateWidget(covariant _TrialCountdownBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.weddingId != widget.weddingId) {
+      _seededMissingTrial = false;
       _bindStream();
     }
+  }
+
+  Future<void> _ensureTrialInitializedIfMissing() async {
+    if (_seededMissingTrial) return;
+    _seededMissingTrial = true;
+    try {
+      final db = FirebaseFirestore.instance;
+      final endsTs = Timestamp.fromDate(_defaultEndsAt);
+      final wid = (widget.weddingId ?? '').trim();
+      if (wid.isNotEmpty) {
+        await db.collection('weddings').doc(wid).set({
+          'planId': AppPlans.trialId,
+          'trialStartedAt': FieldValue.serverTimestamp(),
+          'trialEndsAt': endsTs,
+        }, SetOptions(merge: true));
+      }
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await db.collection('users').doc(uid).set({
+          'plan': AppPlans.trialId,
+          'planId': AppPlans.trialId,
+          'trialStartedAt': FieldValue.serverTimestamp(),
+          'trialEndsAt': endsTs,
+        }, SetOptions(merge: true));
+      }
+    } catch (_) {}
   }
 
   void _bindStream() {
@@ -1204,10 +1234,17 @@ class _TrialCountdownBannerState extends State<_TrialCountdownBanner> {
 
         DateTime? endsAt = _parseDate(data['trialEndsAt']);
         if (endsAt == null) {
-          final started = _parseDate(data['trialStartedAt']) ??
-              _parseDate(data['createdAt']) ??
-              FirebaseAuth.instance.currentUser?.metadata.creationTime;
-          endsAt = (started ?? DateTime.now()).add(const Duration(days: 30));
+          final started = _parseDate(data['trialStartedAt']);
+          if (started != null) {
+            endsAt = started.add(const Duration(days: 30));
+          } else {
+            endsAt = _defaultEndsAt;
+            if (snap.hasData && (snap.data?.exists ?? false)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _ensureTrialInitializedIfMissing();
+              });
+            }
+          }
         }
 
         final now = DateTime.now();

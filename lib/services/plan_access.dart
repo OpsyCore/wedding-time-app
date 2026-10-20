@@ -150,7 +150,7 @@ class PlanLimits {
   static bool isTrialValid(Map<String, dynamic>? data) {
     if (data == null) return false;
     final v = data['trialEndsAt'];
-    if (v == null) return false;
+    if (v == null) return true;
     try {
       final DateTime ends = v is Timestamp ? v.toDate() : DateTime.parse(v.toString());
       return DateTime.now().isBefore(ends);
