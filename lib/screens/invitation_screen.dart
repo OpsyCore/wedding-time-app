@@ -1665,7 +1665,7 @@ class _InvitationScreenState extends State<InvitationScreen>
         StreamBuilder<Map<String, bool>>(
           stream: EntertainmentService.watch(widget.weddingId),
           builder: (context, snap) {
-            final ent = snap.data ??
+            final ent = (snap.hasError ? null : snap.data) ??
                 {for (final k in EntertainmentService.keys) k: true};
             return GridView.builder(
               shrinkWrap: true,

@@ -11,6 +11,7 @@ import '../models/expense_item_model.dart';
 import '../services/export_service.dart';
 import '../services/plan_access.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/async_state_views.dart';
 import '../widgets/wedding_time_header.dart';
 
 class BudgetScreen extends StatefulWidget {
@@ -349,6 +350,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           StreamBuilder<QuerySnapshot>(
                             stream: groupsRef.orderBy('order').snapshots(),
                             builder: (context, snapshot) {
+                              if (snapshot.hasError) {
+                                return AsyncErrorView(
+                                  error: snapshot.error,
+                                  compact: true,
+                                );
+                              }
                               if (!snapshot.hasData) {
                                 return const SizedBox();
                               }
@@ -860,6 +867,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: groupsRef.orderBy('order').snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return AsyncErrorView(
+            error: snapshot.error,
+            onRetry: () => setState(() {
+              _totalsSnapshot = null;
+              _totalsFuture = null;
+            }),
+          );
+        }
         if (!snapshot.hasData) {
           return Center(
             child: Padding(
@@ -876,6 +892,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
         return FutureBuilder<_BudgetTotals>(
           future: _totalsFor(snapshot.data!, groups),
           builder: (context, totalSnap) {
+            if (totalSnap.hasError) {
+              return AsyncErrorView(
+                error: totalSnap.error,
+                onRetry: () => setState(() {
+                  _totalsSnapshot = null;
+                  _totalsFuture = null;
+                }),
+              );
+            }
             if (!totalSnap.hasData) {
               return Center(
                 child: Padding(
@@ -1127,6 +1152,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: groupsRef.orderBy('order').snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return AsyncErrorView(
+            error: snapshot.error,
+            compact: true,
+            onRetry: () => setState(() {}),
+          );
+        }
         if (!snapshot.hasData) {
           return const SizedBox();
         }
@@ -1194,6 +1226,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
       child: StreamBuilder<QuerySnapshot>(
         stream: expensesRef.snapshots(),
         builder: (context, expenseSnap) {
+          if (expenseSnap.hasError && !expenseSnap.hasData) {
+            return AsyncErrorView(
+              error: expenseSnap.error,
+              compact: true,
+              onRetry: () => setState(() {}),
+            );
+          }
           final expenses = (expenseSnap.data?.docs ?? [])
               .map((d) => ExpenseItemModel.fromDoc(d))
               .toList();

@@ -8,6 +8,7 @@ import '../core/app_config.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../services/plan_access.dart';
+import '../widgets/async_state_views.dart';
 
 /// سیستم تیکت پشتیبانی — اولویت پاسخ‌گویی بر اساس پلن:
 /// free → عادی | pro → اولویت‌دار | premium → VIP
@@ -525,6 +526,9 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                     stream:
                         _db.collection('support_tickets').doc(id).snapshots(),
                     builder: (context, snap) {
+                      if (snap.hasError && !snap.hasData) {
+                        return AsyncErrorView(error: snap.error);
+                      }
                       final msgs =
                           ((snap.data?.data()?['messages']) as List?) ??
                               const [];

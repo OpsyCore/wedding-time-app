@@ -7,6 +7,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/vendor_model.dart';
 import '../services/vendor_budget_sync.dart';
+import '../widgets/async_state_views.dart';
 import 'vendor_form_screen.dart';
 
 class VendorsScreen extends StatefulWidget {
@@ -221,8 +222,22 @@ class _VendorsScreenState extends State<VendorsScreen> {
                         return StreamBuilder<
                             QuerySnapshot<Map<String, dynamic>>>(
                           stream: _ref.snapshots(),
-                          builder: (context, snap2) =>
-                              _buildList(snap2.data?.docs ?? []),
+                          builder: (context, snap2) {
+                            if (snap2.hasError && !snap2.hasData) {
+                              return AsyncErrorView(
+                                error: snap2.error,
+                                onRetry: () => setState(() {}),
+                              );
+                            }
+                            if (!snap2.hasData) {
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  color: AppTok.accent(context),
+                                ),
+                              );
+                            }
+                            return _buildList(snap2.data!.docs);
+                          },
                         );
                       }
                       if (!snap.hasData) {

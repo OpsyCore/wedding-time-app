@@ -193,3 +193,29 @@ No manual Gradle, NDK, or Firebase file edits are needed.
 
 Version lives in `pubspec.yaml` (`version: 1.0.0+1`). Bump the `+N` before
 **every** store upload.
+
+## 9) ImgBB API Key Security & CI Split-per-ABI Release Builds
+
+- **Important — Rotate Leaked Key:** The previous ImgBB API key was committed
+  in git history. Visit your [ImgBB API dashboard](https://api.imgbb.com/) and
+  **Reset / Rotate** that key immediately.
+- **No Hardcoded Key in Source:** `AppConfig.imgbbApiKey` in
+  `lib/core/app_config.dart` now defaults to `''` and reads `IMGBB_API_KEY` via
+  `--dart-define`.
+- **Local Runs & Builds:**
+  - The helper scripts (`run.bat`, `run_web.bat`, `run_android.bat`) read
+    `IMGBB_API_KEY` from your environment and pass
+    `--dart-define=IMGBB_API_KEY=...`.
+  - For manual builds:
+    ```bat
+    flutter build apk --release --split-per-abi --dart-define=IMGBB_API_KEY=YOUR_NEW_KEY
+    ```
+- **GitHub Actions (`apk.yml`):**
+  - Add your rotated key in GitHub repository settings under
+    **Settings → Secrets and variables → Actions → New repository secret** with
+    the name `IMGBB_API_KEY`.
+  - The workflow builds release APKs split by ABI
+    (`--release --split-per-abi`), producing `app-arm64-v8a-release.apk`,
+    `app-armeabi-v7a-release.apk`, and `app-x86_64-release.apk` (shrinking APK
+    download size from ~212 MB debug fat APK down to ~45–55 MB per ABI).
+

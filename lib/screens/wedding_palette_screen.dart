@@ -8,6 +8,7 @@ import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../widgets/effect_background.dart';
+import '../widgets/async_state_views.dart';
 import '../widgets/page_glass.dart';
 import '../widgets/full_color_picker.dart';
 
@@ -91,6 +92,12 @@ class _WeddingPaletteScreenState extends State<WeddingPaletteScreen> {
               body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                 stream: _paletteDoc.snapshots(),
                 builder: (context, snap) {
+                  if (snap.hasError && !snap.hasData) {
+                    return AsyncErrorView(
+                      error: snap.error,
+                      onRetry: () => setState(() {}),
+                    );
+                  }
                   final data = snap.data?.data() ?? {};
                   final enabled = data['enabled'] == true;
                   final rawColors = (data['colors'] as List?)?.map((e) => e.toString()).toList() ?? <String>[];

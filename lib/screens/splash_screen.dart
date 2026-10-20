@@ -23,7 +23,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   static const _coverAsset = 'assets/images/og-cover.png';
-  static const _coverDuration = Duration(seconds: 10);
+  static const _coverDuration = Duration(seconds: 4);
 
   /// مهلت پاسخ شبکه — بدون این، اسپلش روی اینترنت ضعیف بی‌نهایت می‌ماند.
   static const _networkTimeout = Duration(seconds: 20);

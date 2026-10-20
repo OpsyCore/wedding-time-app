@@ -5,6 +5,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
+import '../widgets/async_state_views.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({
@@ -187,6 +188,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             body: StreamBuilder<List<AppNotification>>(
               stream: _service.watchStored(),
               builder: (context, snap) {
+                if (snap.hasError && !snap.hasData && _smart.isEmpty) {
+                  return AsyncErrorView(
+                    error: snap.error,
+                    onRetry: _loadSmart,
+                  );
+                }
                 final stored = snap.data ?? [];
                 final items = <AppNotification>[..._smart, ...stored];
                 items.sort((a, b) => b.createdAt.compareTo(a.createdAt));

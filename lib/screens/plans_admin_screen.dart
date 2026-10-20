@@ -7,6 +7,7 @@ import '../core/app_theme_controller.dart';
 import '../models/subscription_plan.dart';
 import '../services/plan_access.dart';
 import '../services/plans_service.dart';
+import '../widgets/async_state_views.dart';
 
 class PlansAdminScreen extends StatefulWidget {
   const PlansAdminScreen({super.key});
@@ -210,7 +211,7 @@ class _MonetizationSwitchCardState extends State<_MonetizationSwitchCard> {
     return StreamBuilder<bool>(
       stream: PlansService.I.watchMonetizationEnabled(),
       builder: (context, snap) {
-        final on = snap.data ?? true;
+        final on = (snap.hasError ? null : snap.data) ?? true;
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
@@ -698,6 +699,9 @@ class _ReviewsAdmin extends StatelessWidget {
     return StreamBuilder<List<PlanReview>>(
       stream: PlansService.I.watchAllReviewsAdmin(),
       builder: (context, snap) {
+        if (snap.hasError && !snap.hasData) {
+          return AsyncErrorView(error: snap.error);
+        }
         final list = snap.data ?? const <PlanReview>[];
         if (list.isEmpty) {
           return Center(child: Text(t('plans_reviews_empty')));

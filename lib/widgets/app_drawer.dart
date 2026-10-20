@@ -94,7 +94,9 @@ class AppDrawer extends StatelessWidget {
                           .doc(user.uid)
                           .snapshots(),
                   builder: (context, snap) {
-                    final data = snap.data?.data() ?? {};
+                    final data = snap.hasError
+                        ? const <String, dynamic>{}
+                        : (snap.data?.data() ?? const <String, dynamic>{});
                     final name = (data['displayName'] ??
                             data['name'] ??
                             user?.email?.split('@').first ??
@@ -716,7 +718,7 @@ class AppDrawer extends StatelessWidget {
     return StreamBuilder<int>(
       stream: NotificationService(weddingId).watchUnreadCount(),
       builder: (context, snap) {
-        final count = snap.data ?? 0;
+        final count = snap.hasError ? 0 : (snap.data ?? 0);
         final label = count > 99 ? '99+' : _faDigits('$count');
 
         return ListTile(

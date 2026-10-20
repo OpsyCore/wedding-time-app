@@ -5,6 +5,7 @@ import '../../core/app_lang.dart';
 import '../../core/app_theme.dart';
 import '../../models/gift_item_model.dart';
 import '../../services/gift_registry_service.dart';
+import '../../widgets/async_state_views.dart';
 
 /// هدایا برای مهمان — فقط‌خواندنی (مطابق هنداف: مهمان read-only، نه claim).
 /// فقط هدیه‌هایی با isPublic == true نمایش داده می‌شوند.
@@ -60,6 +61,12 @@ class _GuestGiftsTabState extends State<GuestGiftsTab> {
     return StreamBuilder<GiftSettingsModel>(
       stream: _service.watchSettings(),
       builder: (context, setSnap) {
+        if (setSnap.hasError && !setSnap.hasData) {
+          return AsyncErrorView(
+            error: setSnap.error,
+            onRetry: () => setState(() {}),
+          );
+        }
         final settings = setSnap.data ?? GiftSettingsModel.defaults();
         if (!settings.showRegistry) {
           return Center(

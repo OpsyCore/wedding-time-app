@@ -9,6 +9,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/support_item_model.dart';
 import '../services/support_service.dart';
+import '../widgets/async_state_views.dart';
 import '../widgets/support_progress_bar.dart';
 import 'login_screen.dart';
 
@@ -98,6 +99,12 @@ class _SupportsGuestScreenState extends State<SupportsGuestScreen> {
             body: StreamBuilder<SupportSettings>(
               stream: _svc.watchSettings(),
               builder: (context, setSnap) {
+                if (setSnap.hasError && !setSnap.hasData) {
+                  return AsyncErrorView(
+                    error: setSnap.error,
+                    onRetry: () => setState(() {}),
+                  );
+                }
                 final settings = setSnap.data ?? const SupportSettings();
                 if (!settings.enabled && !widget.previewMode) {
                   return Center(
@@ -109,6 +116,12 @@ class _SupportsGuestScreenState extends State<SupportsGuestScreen> {
                 return StreamBuilder<List<SupportItem>>(
                   stream: _svc.watchItemsSimple(),
                   builder: (context, itemSnap) {
+                    if (itemSnap.hasError && !itemSnap.hasData) {
+                      return AsyncErrorView(
+                        error: itemSnap.error,
+                        onRetry: () => setState(() {}),
+                      );
+                    }
                     final items = itemSnap.data ?? const <SupportItem>[];
                     final intro = settings.intro(isFa);
                     final thanks = settings.thanks(isFa);
@@ -823,6 +836,9 @@ class _GuestItemTile extends StatelessWidget {
                 StreamBuilder<List<SupportContribution>>(
                   stream: svc.watchContributions(item.id),
                   builder: (context, cSnap) {
+                    if (cSnap.hasError && !cSnap.hasData) {
+                      return const SizedBox.shrink();
+                    }
                     final contribs = cSnap.data ?? const <SupportContribution>[];
                     if (contribs.isEmpty) return const SizedBox.shrink();
 

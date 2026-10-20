@@ -7,6 +7,7 @@ import '../core/app_theme_controller.dart';
 import '../services/export_service.dart';
 import '../services/plan_access.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/async_state_views.dart';
 import '../widgets/wedding_time_header.dart';
 
 class GuestsScreen extends StatefulWidget {
@@ -400,6 +401,12 @@ class _GuestsScreenState extends State<GuestsScreen> {
                     child: StreamBuilder<QuerySnapshot>(
                       stream: guestsRef.orderBy('createdAt').snapshots(),
                       builder: (context, snapshot) {
+                        if (snapshot.hasError && !snapshot.hasData) {
+                          return AsyncErrorView(
+                            error: snapshot.error,
+                            onRetry: () => setState(() {}),
+                          );
+                        }
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return Center(

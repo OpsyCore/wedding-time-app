@@ -110,7 +110,7 @@ class _TrialWelcomeContent extends StatelessWidget {
                                   ? null
                                   : FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).snapshots(),
                               builder: (ctx, snap) {
-                                final d = snap.data?.data();
+                                final d = snap.hasError ? null : snap.data?.data();
                                 final ts = d?['trialEndsAt'];
                                 String txt = isFa ? '۳۰ روز باقی' : '30 days left';
                                 if (ts is Timestamp) {

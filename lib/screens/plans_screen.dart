@@ -8,6 +8,7 @@ import '../core/app_theme_controller.dart';
 import '../models/subscription_plan.dart';
 import '../services/plan_access.dart';
 import '../services/plans_service.dart';
+import '../widgets/async_state_views.dart';
 import 'plans_admin_screen.dart';
 
 class PlansScreen extends StatefulWidget {
@@ -103,6 +104,12 @@ class _PlansScreenState extends State<PlansScreen> {
             body: StreamBuilder<List<SubscriptionPlan>>(
               stream: PlansService.I.watchPlans(),
               builder: (context, snap) {
+                if (snap.hasError && !snap.hasData) {
+                  return AsyncErrorView(
+                    error: snap.error,
+                    onRetry: () => setState(() {}),
+                  );
+                }
                 final plans = snap.data ?? const <SubscriptionPlan>[];
                 if (snap.connectionState == ConnectionState.waiting &&
                     plans.isEmpty) {
@@ -248,6 +255,13 @@ class _PlansScreenState extends State<PlansScreen> {
                     StreamBuilder<List<PlanReview>>(
                       stream: PlansService.I.watchApprovedReviewsSimple(),
                       builder: (context, rSnap) {
+                        if (rSnap.hasError && !rSnap.hasData) {
+                          return AsyncErrorView(
+                            error: rSnap.error,
+                            compact: true,
+                            onRetry: () => setState(() {}),
+                          );
+                        }
                         final reviews = rSnap.data ?? const <PlanReview>[];
                         if (reviews.isEmpty) {
                           return Padding(

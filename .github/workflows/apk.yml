@@ -34,11 +34,14 @@ jobs:
       - name: Flutter doctor (diagnostics only)
         run: flutter doctor -v || true
 
-      - name: Build debug APK (installable without keystore)
+      - name: Build release APK (split per ABI, debug-signed fallback)
         id: build
+        env:
+          IMGBB_KEY: ${{ secrets.IMGBB_API_KEY }}
         run: |
           set -o pipefail
-          flutter build apk --debug 2>&1 | tee /tmp/build.log
+          flutter build apk --release --split-per-abi --dart-define=IMGBB_API_KEY="${IMGBB_KEY}" 2>&1 | tee /tmp/build.log
+          ls -lh build/app/outputs/flutter-apk/app-*-release.apk
 
       # خطاها را به‌صورت annotation در صفحهٔ Actions و در API قابل‌خواندن می‌کند
       # (لاگ خام آرتیفکت روی برخی شبکه‌ها در دسترس نیست)
@@ -75,7 +78,14 @@ jobs:
           tag_name: apk-${{ github.run_number }}
           name: "نصب روی اندروید — APK #${{ github.run_number }}"
           body: |
-            فایل app-debug.apk را دانلود و روی گوشی اندرویدی نصب کنید
-            (پیغام «منبع ناشناخته» را تأیید کنید).
-          files: build/app/outputs/flutter-apk/app-debug.apk
+            نسخهٔ Release کم‌حجم (تفکیک‌شده بر اساس پردازنده):
+            - **تقریباً همهٔ گوشی‌های اندرویدی جدید (۶۴ بیتی):** فایل `app-arm64-v8a-release.apk` را دانلود و نصب کنید.
+            - **گوشی‌های قدیمی‌تر ۳۲ بیتی:** فایل `app-armeabi-v7a-release.apk`
+            - **شبیه‌ساز کامپیوتر (x86_64):** فایل `app-x86_64-release.apk`
+
+            (هنگام نصب، پیغام «منبع ناشناخته / Install unknown apps» را تأیید کنید.)
+          files: |
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
           make_latest: "true"

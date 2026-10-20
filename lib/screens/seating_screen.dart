@@ -6,6 +6,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/table_model.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/async_state_views.dart';
 import '../widgets/wedding_time_header.dart';
 
 /// view:
@@ -308,13 +309,72 @@ class _SeatingScreenState extends State<SeatingScreen> {
                   : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: hallsRef.orderBy('order').snapshots(),
                       builder: (context, hallSnap) {
+                        if (hallSnap.hasError && !hallSnap.hasData) {
+                          return Column(
+                            children: [
+                              Builder(
+                                builder: (context) => WeddingTimeHeader(
+                                  weddingId: widget.weddingId,
+                                  onMenuPressed: () =>
+                                      Scaffold.of(context).openDrawer(),
+                                ),
+                              ),
+                              Expanded(
+                                child: AsyncErrorView(
+                                  error: hallSnap.error,
+                                  onRetry: () => setState(() {}),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
                         return StreamBuilder<
                             QuerySnapshot<Map<String, dynamic>>>(
                           stream: tablesRef.orderBy('order').snapshots(),
                           builder: (context, tableSnap) {
+                            if (tableSnap.hasError && !tableSnap.hasData) {
+                              return Column(
+                                children: [
+                                  Builder(
+                                    builder: (context) => WeddingTimeHeader(
+                                      weddingId: widget.weddingId,
+                                      onMenuPressed: () =>
+                                          Scaffold.of(context).openDrawer(),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: AsyncErrorView(
+                                      error: tableSnap.error,
+                                      onRetry: () => setState(() {}),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
                             return StreamBuilder<QuerySnapshot>(
                               stream: guestsRef.snapshots(),
                               builder: (context, guestSnap) {
+                                if (guestSnap.hasError && !guestSnap.hasData) {
+                                  return Column(
+                                    children: [
+                                      Builder(
+                                        builder: (context) =>
+                                            WeddingTimeHeader(
+                                          weddingId: widget.weddingId,
+                                          onMenuPressed: () => Scaffold.of(
+                                            context,
+                                          ).openDrawer(),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: AsyncErrorView(
+                                          error: guestSnap.error,
+                                          onRetry: () => setState(() {}),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }
                                 if (!tableSnap.hasData || !guestSnap.hasData) {
                                   return Column(
                                     children: [

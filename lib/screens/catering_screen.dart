@@ -6,6 +6,7 @@ import '../core/app_effects.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../widgets/async_state_views.dart';
 
 /// برنامه‌ریز پذیرایی: شام، نوشیدنی، دسر + حساب‌کتاب کامل هزینه‌ها.
 /// ذخیره در: weddings/{weddingId}/catering/{prefs | items}
@@ -272,6 +273,12 @@ class _CateringScreenState extends State<CateringScreen> {
                 : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: _items.snapshots(),
                     builder: (context, snap) {
+                      if (snap.hasError && !snap.hasData) {
+                        return AsyncErrorView(
+                          error: snap.error,
+                          onRetry: () => setState(() {}),
+                        );
+                      }
                       final docs = (snap.data?.docs ?? []).toList();
                       final visible = docs
                           .where((d) =>

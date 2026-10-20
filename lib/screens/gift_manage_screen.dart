@@ -5,6 +5,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/gift_item_model.dart';
 import '../services/gift_registry_service.dart';
+import '../widgets/async_state_views.dart';
 
 class GiftManageScreen extends StatefulWidget {
   const GiftManageScreen({super.key, required this.weddingId});
@@ -306,6 +307,13 @@ class _GiftManageScreenState extends State<GiftManageScreen> {
                 StreamBuilder<List<GiftItemModel>>(
                   stream: _service.watchGifts(),
                   builder: (context, snap) {
+                    if (snap.hasError && !snap.hasData) {
+                      return AsyncErrorView(
+                        error: snap.error,
+                        compact: true,
+                        onRetry: () => setState(() {}),
+                      );
+                    }
                     final items = snap.data ?? [];
                     return Column(
                       children: [
@@ -392,6 +400,13 @@ class _GiftManageScreenState extends State<GiftManageScreen> {
                 StreamBuilder<List<ReceivedGiftModel>>(
                   stream: _service.watchReceivedGifts(),
                   builder: (context, snap) {
+                    if (snap.hasError && !snap.hasData) {
+                      return AsyncErrorView(
+                        error: snap.error,
+                        compact: true,
+                        onRetry: () => setState(() {}),
+                      );
+                    }
                     final list = snap.data ?? [];
                     if (list.isEmpty) {
                       return Padding(

@@ -8,6 +8,7 @@ import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../services/media_upload_service.dart';
+import '../widgets/async_state_views.dart';
 import '../widgets/image_crop_screen.dart';
 
 /// برنامه‌ریز ماه عسل — preferenze، مقصدها، علاقه‌مندی‌ها، رزرو و مکان‌های شخصی.
@@ -359,6 +360,12 @@ class _HoneymoonScreenState extends State<HoneymoonScreen> {
                 : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: _dests.snapshots(),
                     builder: (context, snap) {
+                      if (snap.hasError && !snap.hasData) {
+                        return AsyncErrorView(
+                          error: snap.error,
+                          onRetry: () => setState(() {}),
+                        );
+                      }
                       final docs = (snap.data?.docs ?? []).toList();
                       docs.sort((a, b) {
                         final fa = a.data()['finalPick'] == true ? 0 : 1;

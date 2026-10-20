@@ -75,7 +75,9 @@ class InviteCodeCard extends StatelessWidget {
                 .doc(weddingId)
                 .snapshots(),
             builder: (context, snap) {
-              final data = snap.data?.data() ?? {};
+              final data = snap.hasError
+                  ? const <String, dynamic>{}
+                  : (snap.data?.data() ?? const <String, dynamic>{});
               final code = _pickCode(data);
               final slug = _pickSlug(data);
               final url = _inviteUrl(slug);

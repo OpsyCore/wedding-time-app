@@ -1858,6 +1858,8 @@ const Map<String, Map<String, String>> _tables = {
     'splash_network_error': 'اتصال به سرور برقرار نشد',
     'splash_network_hint': 'اینترنت را بررسی کن و دوباره تلاش کن.',
     'tap_to_continue': 'برای ادامه ضربه بزنید',
+    'async_load_error': 'دریافت اطلاعات انجام نشد',
+    'async_network_hint': 'اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.',
   },
 
   'en': {
@@ -3616,5 +3618,7 @@ const Map<String, Map<String, String>> _tables = {
     'splash_network_error': 'Could not reach the server',
     'splash_network_hint': 'Check your connection and try again.',
     'tap_to_continue': 'Tap to continue',
+    'async_load_error': 'Could not load data',
+    'async_network_hint': 'Please check your connection and try again.',
   },
 };
