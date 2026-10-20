@@ -255,6 +255,17 @@ class WeddingService {
     final doc = await _firestore.collection('weddings').doc(weddingId).get();
     if (!doc.exists) return null;
 
+    // اگر weddingId کاربر به مراسمی اشاره کند که عضو آن نیست (دادهٔ قدیمی)،
+    // نباید وارد پنل شد — همهٔ خواندن‌های زیرمجموعه permission-denied می‌شدند
+    // و کاربر گیر می‌کرد. null → مسیر setup.
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final data = doc.data() ?? const <String, dynamic>{};
+      final isMember =
+          data['brideUid'] == uid || data['groomUid'] == uid;
+      if (!isMember) return null;
+    }
+
     // FIX-02: پاک‌سازی خودبه‌خودی مراسم‌های قدیمی که هنوز کد پیوستن
     // روی سند عمومی آن‌ها مانده است.
     await _stripLeakedInviteCode(doc);

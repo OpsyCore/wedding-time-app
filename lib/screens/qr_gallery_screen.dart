@@ -160,6 +160,7 @@ class _QrGalleryScreenState extends State<QrGalleryScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
+      if (!mounted) return;
       _toast(AppLang.tr('album_link_saved'));
       setState(() {});
     } catch (e) {

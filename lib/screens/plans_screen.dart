@@ -950,6 +950,8 @@ class _ReviewFormState extends State<_ReviewForm> {
         comment: _comment.text,
         planId: _planId ?? '',
       );
+      // کاربر ممکن است شیت را حین ارسال بسته باشد
+      if (!mounted) return;
       _name.clear();
       _comment.clear();
       setState(() {

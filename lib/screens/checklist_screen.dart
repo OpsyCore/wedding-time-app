@@ -28,6 +28,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   List<Map<String, dynamic>> tasks = [];
   String searchQuery = '';
   bool isLoading = true;
+  String? _loadError;
   _StatusFilter statusFilter = _StatusFilter.all;
 
   final Set<String> expandedGroups = {};
@@ -89,23 +90,33 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   bool _isSuggestion(Map<String, dynamic> t) => !_isInChecklist(t);
 
   Future<void> loadTasks() async {
-    final snapshot = await ref.get();
+    try {
+      final snapshot = await ref.get();
 
-    if (snapshot.docs.isEmpty) {
-      await seedDefaultTasks();
-      await loadTasks();
-      return;
+      if (snapshot.docs.isEmpty) {
+        await seedDefaultTasks();
+        await loadTasks();
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        tasks = snapshot.docs.map((d) {
+          final data = Map<String, dynamic>.from(d.data() as Map);
+          data['id'] = d.id;
+          return data;
+        }).toList();
+        isLoading = false;
+        _loadError = null;
+      });
+    } catch (_) {
+      // بدون این، قطعی شبکه یعنی اسپینر بی‌پایان
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        _loadError = AppLang.tr('checklist_load_error');
+      });
     }
-
-    if (!mounted) return;
-    setState(() {
-      tasks = snapshot.docs.map((d) {
-        final data = Map<String, dynamic>.from(d.data() as Map);
-        data['id'] = d.id;
-        return data;
-      }).toList();
-      isLoading = false;
-    });
   }
 
   Future<void> seedDefaultTasks() async {
@@ -179,13 +190,36 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     if (data.containsKey('title') && !data.containsKey('titleKey')) {
       merged.remove('titleKey');
     }
+    final previous = tasks[index];
     setState(() => tasks[index] = merged);
-    await ref.doc(id).set(merged, SetOptions(merge: true));
+    try {
+      await ref.doc(id).set(merged, SetOptions(merge: true));
+    } catch (_) {
+      if (!mounted) return;
+      // برگرداندن تغییر خوش‌بینانه — UI نباید چیزی را نشان دهد که ذخیره نشده
+      final i = tasks.indexWhere((t) => t['id'] == id);
+      if (i != -1) setState(() => tasks[i] = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLang.tr('save_failed'))),
+      );
+    }
   }
 
   Future<void> deleteTask(String id) async {
-    await ref.doc(id).delete();
-    setState(() => tasks.removeWhere((t) => t['id'] == id));
+    final index = tasks.indexWhere((t) => t['id'] == id);
+    if (index == -1) return;
+    final removed = tasks[index];
+    setState(() => tasks.removeAt(index));
+    try {
+      await ref.doc(id).delete();
+    } catch (_) {
+      if (!mounted) return;
+      final at = index > tasks.length ? tasks.length : index;
+      setState(() => tasks.insert(at, removed));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLang.tr('delete_failed'))),
+      );
+    }
   }
 
   Future<void> addFromSuggestions(Map<String, dynamic> task) async {
@@ -234,8 +268,14 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       ),
     );
 
-    if (confirmed == true) {
-      setState(() => isLoading = true);
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    setState(() {
+      isLoading = true;
+      _loadError = null;
+    });
+    try {
       final docs = await ref.get();
       final batch = FirebaseFirestore.instance.batch();
       for (final doc in docs.docs) {
@@ -244,6 +284,12 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       await batch.commit();
       await seedDefaultTasks();
       await loadTasks();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        _loadError = AppLang.tr('reset_failed');
+      });
     }
   }
 
@@ -811,6 +857,51 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             backgroundColor: Colors.transparent,
             body: Center(
               child: CircularProgressIndicator(color: AppTok.accent(context)),
+            ),
+          );
+        }
+
+        if (_loadError != null) {
+          return Directionality(
+            textDirection: AppLang.I.direction,
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.cloud_off_rounded,
+                        color: AppTok.danger(context),
+                        size: 40,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _loadError!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppTok.textSoft(context),
+                          height: 1.8,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            isLoading = true;
+                            _loadError = null;
+                          });
+                          loadTasks();
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: Text(AppLang.tr('retry')),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           );
         }
