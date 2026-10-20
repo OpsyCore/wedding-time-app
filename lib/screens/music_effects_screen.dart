@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_effect.dart';
+import '../core/app_effect_controller.dart';
 import '../core/app_effects.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
@@ -162,7 +163,9 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
       _ambientEnabled = d['ambientEnabled'] == true;
       final fx = d['effects'];
       if (fx is Map) {
-        _effectId = (fx['styleId'] ?? fx['effectId'] ?? 'none').toString();
+        _effectId = AppEffect.normalizeId(
+          (fx['styleId'] ?? fx['effectId'] ?? 'none').toString(),
+        );
         if (_effectId == 'none' || _effectId.isEmpty) {
           if (fx['inviteHearts'] == true) {
             _effectId = AppEffectStyle.lavenderId;
@@ -170,6 +173,8 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
             _effectId = AppEffectStyle.goldId;
           }
         }
+      } else {
+        _effectId = AppEffectController.I.effectId;
       }
       if (_ambientId == 'classic' ||
           _ambientId == 'piano' ||
@@ -283,6 +288,7 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
 
   Future<void> _selectEffect(String id) async {
     setState(() => _effectId = id);
+    await AppEffectController.I.setEffect(id);
     await _saveSettings();
   }
 
@@ -1236,6 +1242,9 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
         child: CircularProgressIndicator(color: AppTok.accent(context)),
       );
     }
+    final isDark = AppTok.isDark(context);
+    final activeEff = AppEffect.byId(_effectId);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
       children: [
@@ -1255,78 +1264,149 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
         ),
         const SizedBox(height: 12),
         ...AppEffectStyle.all.map((s) {
-          final selected = _effectId == s.id;
-          final subtleBorder = AppTok.border(context).withValues(alpha: 0.35);
+          final eff = AppEffect.byId(s.id);
+          final selected = AppEffect.normalizeId(_effectId) == eff.id;
+          final subtleBorder = s.isOff
+              ? AppTok.border(context).withValues(alpha: 0.35)
+              : s.primary.withValues(alpha: isDark ? 0.32 : 0.26);
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Material(
-              color: AppTok.card(context),
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: _savingSettings ? null : () => _selectEffect(s.id),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: selected ? s.primary : subtleBorder,
-                      width: selected ? 1.4 : 1,
-                    ),
-                    gradient: selected
-                        ? LinearGradient(
-                            colors: [
-                              s.primary.withValues(alpha: 0.16),
-                              AppTok.card(context),
-                            ],
-                          )
-                        : null,
-                  ),
-                  child: Row(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Material(
+                color: AppTok.card(context),
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: _savingSettings ? null : () => _selectEffect(s.id),
+                  child: Stack(
                     children: [
-                      EffectPatternIcon(
-                        effect: AppEffect.byId(s.id),
-                        size: 44,
-                        iconSize: 22,
-                        borderRadius: 14,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      if (!s.isOff)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: CustomPaint(
+                              painter: EffectCardVisualPainter(
+                                effectId: s.id,
+                                primary: s.primary,
+                                secondary: s.secondary,
+                                isDark: isDark,
+                              ),
+                            ),
+                          ),
+                        ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: selected ? s.primary : subtleBorder,
+                            width: selected ? 1.8 : 1.0,
+                          ),
+                          gradient: s.isOff
+                              ? null
+                              : LinearGradient(
+                                  begin: Alignment.centerRight,
+                                  end: Alignment.centerLeft,
+                                  colors: [
+                                    s.primary.withValues(
+                                      alpha: selected
+                                          ? (isDark ? 0.24 : 0.18)
+                                          : (isDark ? 0.10 : 0.07),
+                                    ),
+                                    s.secondary.withValues(
+                                      alpha: selected
+                                          ? (isDark ? 0.14 : 0.10)
+                                          : (isDark ? 0.05 : 0.04),
+                                    ),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              AppLang.tr(s.nameKey),
-                              style: TextStyle(
-                                color: AppTok.text(context),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
+                            EffectPatternIcon(
+                              effect: eff,
+                              size: 46,
+                              iconSize: 22,
+                              borderRadius: 14,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          AppLang.tr(s.nameKey),
+                                          style: TextStyle(
+                                            color: AppTok.text(context),
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      if (!s.isOff) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: BoxDecoration(
+                                            color: s.primary,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white.withValues(alpha: 0.45),
+                                              width: 1,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: BoxDecoration(
+                                            color: s.secondary,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white.withValues(alpha: 0.45),
+                                              width: 1,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    AppLang.tr(s.subtitleKey),
+                                    style: TextStyle(
+                                      color: AppTok.textSoft(context),
+                                      fontSize: 11.5,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              AppLang.tr(s.subtitleKey),
-                              style: TextStyle(
-                                color: AppTok.textSoft(context),
-                                fontSize: 11.5,
-                                height: 1.35,
-                              ),
-                            ),
+                            if (_savingSettings && selected)
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: s.primary,
+                                ),
+                              )
+                            else if (selected)
+                              Icon(Icons.check_circle_rounded, color: s.primary, size: 24),
                           ],
                         ),
                       ),
-                      if (_savingSettings && selected)
-                        SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppTok.accent(context),
-                          ),
-                        )
-                      else if (selected)
-                        Icon(Icons.check_circle_rounded, color: s.primary),
                     ],
                   ),
                 ),
@@ -1334,22 +1414,89 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
             ),
           );
         }),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: SizedBox(
-            height: 120,
+          borderRadius: BorderRadius.circular(22),
+          child: Container(
+            height: 148,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: activeEff.isNone
+                    ? AppTok.border(context)
+                    : activeEff.primary.withValues(alpha: 0.55),
+                width: 1.4,
+              ),
+            ),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Container(color: AppTok.card(context)),
-                AppEffectOverlay(effectId: _effectId, intensity: 1.2),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppTok.card(context),
+                    gradient: activeEff.isNone
+                        ? null
+                        : activeEff.gradientForBrightness(
+                            isDark ? Brightness.dark : Brightness.light,
+                          ),
+                  ),
+                ),
+                if (!activeEff.isNone)
+                  CustomPaint(
+                    painter: EffectCardVisualPainter(
+                      effectId: activeEff.id,
+                      primary: activeEff.primary,
+                      secondary: activeEff.secondary,
+                      isDark: isDark,
+                    ),
+                  ),
+                AppEffectOverlay(effectId: activeEff.id, intensity: 1.35),
                 Center(
-                  child: Text(
-                    AppLang.tr('music_fx_preview'),
-                    style: TextStyle(
-                      color: AppTok.text(context),
-                      fontWeight: FontWeight.w700,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTok.card(context).withValues(alpha: 0.76),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: activeEff.primary.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              activeEff.icon,
+                              color: activeEff.isNone
+                                  ? AppTok.textSoft(context)
+                                  : activeEff.primary,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${AppLang.tr('music_fx_preview')} · ${AppLang.tr(activeEff.nameKey)}',
+                              style: TextStyle(
+                                color: AppTok.text(context),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          AppLang.tr(activeEff.subtitleKey),
+                          style: TextStyle(
+                            color: AppTok.textSoft(context),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
