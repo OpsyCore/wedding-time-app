@@ -125,16 +125,24 @@ class _LoginScreenState extends State<LoginScreen> {
           email: email,
           password: pass,
         );
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(credential.user!.uid)
-            .set({
-          'email': email,
-          'plan': 'free',
-          'language': AppLang.I.isFa ? 'fa' : 'en',
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        try {
+          final trialEnds = Timestamp.fromDate(
+            DateTime.now().add(const Duration(days: 30)),
+          );
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(credential.user!.uid)
+              .set({
+            'email': email,
+            'plan': 'trial',
+            'planId': 'trial',
+            'trialStartedAt': FieldValue.serverTimestamp(),
+            'trialEndsAt': trialEnds,
+            'language': AppLang.I.isFa ? 'fa' : 'en',
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        } catch (_) {}
       }
 
       final user = credential.user;
@@ -144,6 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await _routeAfterAuth(user);
     } on FirebaseAuthException catch (e) {
+      final isFa = AppLang.I.isFa;
       String message = AppLang.tr('login_error');
       if (e.code == 'user-not-found') {
         message = AppLang.tr('user_not_found');
@@ -155,6 +164,24 @@ class _LoginScreenState extends State<LoginScreen> {
         message = AppLang.tr('weak_password');
       } else if (e.code == 'invalid-email') {
         message = AppLang.tr('email_invalid');
+      } else if (e.code == 'network-request-failed') {
+        message = isFa
+            ? 'عدم دسترسی به سرور فایربیس (لطفاً اتصال اینترنت یا فیلترشکن را بررسی کنید).'
+            : 'Network error connecting to Firebase Auth. Check your connection/VPN.';
+      } else if (e.code == 'too-many-requests') {
+        message = isFa
+            ? 'تعداد تلاش‌ها بیش از حد مجاز است. لطفاً کمی بعد دوباره امتحان کنید.'
+            : 'Too many attempts. Please try again later.';
+      } else if (e.code == 'operation-not-allowed') {
+        message = isFa
+            ? 'ورود با ایمیل و رمز عبور در کنسول فایربیس غیرفعال است.'
+            : 'Email/password sign-in is disabled in Firebase Console.';
+      } else if (e.code == 'user-disabled') {
+        message = isFa
+            ? 'این حساب کاربری غیرفعال شده است.'
+            : 'This user account has been disabled.';
+      } else {
+        message = '$message (${e.code})';
       }
 
       if (mounted) {

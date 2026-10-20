@@ -1,8 +1,12 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_lang.dart';
+import '../core/app_plans.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/subscription_plan.dart';
@@ -144,6 +148,12 @@ class _PlansScreenState extends State<PlansScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+                      child: _TrialCountdownBanner(
+                        weddingId: widget.weddingId,
                       ),
                     ),
                     Padding(
@@ -1044,6 +1054,379 @@ class _ReviewTile extends StatelessWidget {
           Text(
             review.comment,
             style: TextStyle(color: textSoft, height: 1.5, fontSize: 13.5),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// بنر شمارش معکوس زندهٔ ۱ ماه هدیهٔ رایگان در بالای صفحهٔ پلن‌ها
+class _TrialCountdownBanner extends StatefulWidget {
+  const _TrialCountdownBanner({this.weddingId});
+
+  final String? weddingId;
+
+  @override
+  State<_TrialCountdownBanner> createState() => _TrialCountdownBannerState();
+}
+
+class _TrialCountdownBannerState extends State<_TrialCountdownBanner> {
+  Timer? _ticker;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _docStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _bindStream();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _TrialCountdownBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.weddingId != widget.weddingId) {
+      _bindStream();
+    }
+  }
+
+  void _bindStream() {
+    final db = FirebaseFirestore.instance;
+    final wid = (widget.weddingId ?? '').trim();
+    if (wid.isNotEmpty) {
+      _docStream = db.collection('weddings').doc(wid).snapshots();
+      return;
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _docStream = db.collection('users').doc(uid).snapshots();
+    } else {
+      _docStream = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  static DateTime? _parseDate(dynamic raw) {
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is DateTime) return raw;
+    if (raw is String && raw.trim().isNotEmpty) {
+      return DateTime.tryParse(raw.trim());
+    }
+    return null;
+  }
+
+  static String _two(int n) => n.toString().padLeft(2, '0');
+
+  @override
+  Widget build(BuildContext context) {
+    final isFa = AppLang.I.isFa;
+    final accent = AppTok.accent(context);
+    final accentDeep = AppTok.accentDeep(context);
+    final card = AppTok.card(context);
+    final cardSoft = AppTok.cardSoft(context);
+    final text = AppTok.text(context);
+    final textSoft = AppTok.textSoft(context);
+    final border = AppTok.border(context);
+    final danger = AppTok.danger(context);
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _docStream,
+      builder: (context, snap) {
+        final data = snap.hasError
+            ? const <String, dynamic>{}
+            : (snap.data?.data() ?? const <String, dynamic>{});
+
+        final rawPlan = (data['planId'] ?? data['plan'] ?? AppPlans.trialId)
+            .toString()
+            .trim();
+
+        // اگر کاربر پلن پرو یا پرمیوم خریده باشد، وضعیت پلن فعال را نشان بده
+        if (rawPlan == AppPlans.proId ||
+            rawPlan == 'pro_monthly' ||
+            rawPlan == AppPlans.premiumId) {
+          final isPremium = rawPlan == AppPlans.premiumId;
+          final planLabel = isPremium
+              ? (isFa ? 'پرمیوم مادام‌العمر' : 'Lifetime Premium')
+              : (isFa ? 'پرو (حرفه‌ای)' : 'Pro Plan');
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: card,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: accent.withValues(alpha: 0.45)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.verified_rounded, color: accent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isFa
+                            ? 'پلن فعال شما: $planLabel'
+                            : 'Your active plan: $planLabel',
+                        style: TextStyle(
+                          color: text,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isFa
+                            ? 'تمام امکانات پلن شما بدون محدودیت زمانیِ تریال فعال است.'
+                            : 'All features of your plan are unlocked.',
+                        style: TextStyle(color: textSoft, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        DateTime? endsAt = _parseDate(data['trialEndsAt']);
+        if (endsAt == null) {
+          final started = _parseDate(data['trialStartedAt']) ??
+              _parseDate(data['createdAt']) ??
+              FirebaseAuth.instance.currentUser?.metadata.creationTime;
+          endsAt = (started ?? DateTime.now()).add(const Duration(days: 30));
+        }
+
+        final now = DateTime.now();
+        final diff = endsAt.difference(now);
+        final expired = diff.isNegative || diff.inSeconds <= 0;
+
+        const totalSeconds = 30 * 24 * 3600;
+        final leftSeconds = expired ? 0 : diff.inSeconds.clamp(0, totalSeconds);
+        final progress = (leftSeconds / totalSeconds).clamp(0.0, 1.0);
+
+        final days = expired ? 0 : diff.inDays;
+        final hours = expired ? 0 : diff.inHours.remainder(24);
+        final minutes = expired ? 0 : diff.inMinutes.remainder(60);
+        final seconds = expired ? 0 : diff.inSeconds.remainder(60);
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [
+                accent.withValues(alpha: 0.14),
+                card,
+                cardSoft.withValues(alpha: 0.85),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: expired
+                  ? danger.withValues(alpha: 0.45)
+                  : accent.withValues(alpha: 0.40),
+              width: 1.2,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: (expired ? danger : accent).withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      expired
+                          ? Icons.timer_off_outlined
+                          : Icons.card_giftcard_rounded,
+                      color: expired ? danger : accent,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          expired
+                              ? (isFa
+                                  ? 'مهلت ۱ ماه هدیهٔ رایگان به پایان رسیده است'
+                                  : 'Your 1-month free trial has ended')
+                              : (isFa
+                                  ? '🎁 هدیه ۱ ماه دسترسی کامل (پرمیوم رایگان)'
+                                  : '🎁 1-Month Full Access Gift (Free Trial)'),
+                          style: TextStyle(
+                            color: text,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          expired
+                              ? (isFa
+                                  ? 'حساب شما روی پلن پایه (۴۰ مهمان) است؛ برای باز شدن همهٔ امکانات، پرو یا پرمیوم را انتخاب کنید.'
+                                  : 'Your account is on the Free plan (40 guests). Upgrade to Pro or Premium to unlock everything.')
+                              : (isFa
+                                  ? 'زمان باقی‌مانده از ۳۰ روز اشتراک هدیهٔ شما:'
+                                  : 'Time remaining in your 30-day free trial:'),
+                          style: TextStyle(
+                            color: textSoft,
+                            fontSize: 11.5,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: expired ? danger : accent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      expired
+                          ? (isFa ? 'پایان‌یافته' : 'Ended')
+                          : (isFa
+                              ? '${_PlansScreenState.dig('$days')} روز مانده'
+                              : '$days days left'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (!expired) ...[
+                const SizedBox(height: 14),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _timeCell(
+                          value: _PlansScreenState.dig('$days'),
+                          label: isFa ? 'روز' : 'Days',
+                          accentDeep: accentDeep,
+                          textSoft: textSoft,
+                          card: card,
+                          border: border,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _timeCell(
+                          value: _PlansScreenState.dig(_two(hours)),
+                          label: isFa ? 'ساعت' : 'Hours',
+                          accentDeep: accentDeep,
+                          textSoft: textSoft,
+                          card: card,
+                          border: border,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _timeCell(
+                          value: _PlansScreenState.dig(_two(minutes)),
+                          label: isFa ? 'دقیقه' : 'Minutes',
+                          accentDeep: accentDeep,
+                          textSoft: textSoft,
+                          card: card,
+                          border: border,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _timeCell(
+                          value: _PlansScreenState.dig(_two(seconds)),
+                          label: isFa ? 'ثانیه' : 'Seconds',
+                          accentDeep: accentDeep,
+                          textSoft: textSoft,
+                          card: card,
+                          border: border,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: border.withValues(alpha: 0.55),
+                    valueColor: AlwaysStoppedAnimation<Color>(accent),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _timeCell({
+    required String value,
+    required String label,
+    required Color accentDeep,
+    required Color textSoft,
+    required Color card,
+    required Color border,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: accentDeep,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: textSoft,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
