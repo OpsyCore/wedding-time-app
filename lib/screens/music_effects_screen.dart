@@ -1285,13 +1285,9 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
                       if (!s.isOff)
                         Positioned.fill(
                           child: IgnorePointer(
-                            child: CustomPaint(
-                              painter: EffectCardVisualPainter(
-                                effectId: s.id,
-                                primary: s.primary,
-                                secondary: s.secondary,
-                                isDark: isDark,
-                              ),
+                            child: AnimatedEffectCardBackground(
+                              effect: eff,
+                              isDark: isDark,
                             ),
                           ),
                         ),
@@ -1442,13 +1438,9 @@ class _MusicEffectsScreenState extends State<MusicEffectsScreen>
                   ),
                 ),
                 if (!activeEff.isNone)
-                  CustomPaint(
-                    painter: EffectCardVisualPainter(
-                      effectId: activeEff.id,
-                      primary: activeEff.primary,
-                      secondary: activeEff.secondary,
-                      isDark: isDark,
-                    ),
+                  AnimatedEffectCardBackground(
+                    effect: activeEff,
+                    isDark: isDark,
                   ),
                 AppEffectOverlay(effectId: activeEff.id, intensity: 1.35),
                 Center(
