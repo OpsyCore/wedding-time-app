@@ -1846,6 +1846,18 @@ const Map<String, Map<String, String>> _tables = {
     'your_name': 'نام شما',
     'your_table': 'میز شما',
     'your_wish': 'آرزوی شما برای زوج',
+
+    // ── تکمیل‌شده — کلیدهایی که در UI استفاده می‌شدند ولی ترجمه نداشتند ──
+    'checklist_load_error': 'بارگذاری چک‌لیست ناموفق بود',
+    'currency_toman': 'تومان',
+    'go_to_login': 'ورود با حساب دیگر',
+    'item_saved': 'ذخیره شد',
+    'love_story_guest_hint': 'همان روایتی که عروس و داماد نوشته‌اند',
+    'no_results': 'نتیجه‌ای پیدا نشد',
+    'select_city': 'انتخاب شهر',
+    'splash_network_error': 'اتصال به سرور برقرار نشد',
+    'splash_network_hint': 'اینترنت را بررسی کن و دوباره تلاش کن.',
+    'tap_to_continue': 'برای ادامه ضربه بزنید',
   },
 
   'en': {
@@ -3592,5 +3604,17 @@ const Map<String, Map<String, String>> _tables = {
     'your_name': 'Your name',
     'your_table': 'Your table',
     'your_wish': 'Your wish for the couple',
+
+    // ── added — keys used by the UI that had no translation ──
+    'checklist_load_error': 'Could not load the checklist',
+    'currency_toman': 'Toman',
+    'go_to_login': 'Sign in with another account',
+    'item_saved': 'Saved',
+    'love_story_guest_hint': 'Exactly as the couple shared it',
+    'no_results': 'No results found',
+    'select_city': 'Select city',
+    'splash_network_error': 'Could not reach the server',
+    'splash_network_hint': 'Check your connection and try again.',
+    'tap_to_continue': 'Tap to continue',
   },
 };

@@ -315,25 +315,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        TextField(
-                          readOnly: true,
-                          controller: TextEditingController(text: _email),
-                          style: TextStyle(color: textSoft),
+                        // InputDecorator به‌جای TextField با کنترلرِ ساخته‌شده
+                        // در build — هر rebuild کنترلر قبلی را لیک می‌کرد.
+                        InputDecorator(
                           decoration: _dec(
                             context,
                             t('email'),
                             Icons.email_outlined,
                           ),
+                          child: Text(
+                            _email.isEmpty ? '—' : _email,
+                            style: TextStyle(color: textSoft),
+                          ),
                         ),
                         const SizedBox(height: 14),
-                        TextField(
-                          readOnly: true,
-                          controller: TextEditingController(text: roleLabel),
-                          style: TextStyle(color: textSoft),
+                        InputDecorator(
                           decoration: _dec(
                             context,
                             t('role'),
                             Icons.favorite_border,
+                          ),
+                          child: Text(
+                            roleLabel,
+                            style: TextStyle(color: textSoft),
                           ),
                         ),
                         const SizedBox(height: 22),

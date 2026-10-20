@@ -1,5 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show FlutterError, debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -21,31 +21,213 @@ import 'screens/guest_portal/guest_auth_gate.dart';
 import 'screens/splash_screen.dart';
 import 'services/ambient_music_service.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
     configureWebUrlStrategy();
   }
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  _installGlobalErrorHandlers();
 
-  await AppLang.I.load();
-  await AppThemeController.I.load();
-  await AppEffectController.I.load();
-  await AppFontController.I.load();
+  await _bootstrap();
+}
+
+/// پایداری: هیچ خطای تکی نباید کلِ اپ را سفید/قرمز کند.
+void _installGlobalErrorHandlers() {
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exceptionAsString()}');
+  };
+
+  // خطاهای asyncِ مدیریت‌نشده (قطعی شبکه، Timestamp نامعتبر و …)
+  // به‌جای terminate شدن اپ، لاگ می‌شوند.
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    debugPrint('Uncaught async error: $error\n$stack');
+    return true;
+  };
+
+  // جایگزین صفحهٔ قرمز/خاکستری خطا با یک پیام آرام هم‌خوان با تم
+  ErrorWidget.builder = (_) => const _AppErrorFallback();
+}
+
+Future<void> _bootstrap() async {
   try {
-    await AmbientMusicService.I.init();
-  } catch (_) {
-    // missing-file safe — never crash app start
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    await AppLang.I.load();
+    await AppThemeController.I.load();
+    await AppEffectController.I.load();
+    await AppFontController.I.load();
+    try {
+      await AmbientMusicService.I.init();
+    } catch (_) {
+      // missing-file safe — never crash app start
+    }
+
+    // مهم: slug مهمان را یک‌بار در استارت قفل کن
+    // تا rebuild تم/زبان آن را گم نکند
+    WeddingTimeApp.lockInitialGuestSlug();
+
+    runApp(const WeddingTimeApp());
+  } catch (e, stack) {
+    // Firebase/SharedPreferences در دسترس نیست (آفلاین، پروژهٔ اشتباه، …)
+    // به‌جای صفحهٔ سفید، پیام قابل‌فهم + تلاش دوباره نشان بده.
+    debugPrint('Startup failed: $e\n$stack');
+    WeddingTimeApp.lockInitialGuestSlug();
+    runApp(StartupErrorApp(message: e.toString(), onRetry: _bootstrap));
+  }
+}
+
+/// نمای جایگزین ویجت خراب — به‌جای صفحهٔ خاکستری/قرمز
+class _AppErrorFallback extends StatelessWidget {
+  const _AppErrorFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFF5F0E8),
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'مشکلی در نمایش این بخش پیش آمد\nThis section could not be shown',
+            textDirection: TextDirection.rtl,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF7A736C),
+              fontSize: 12,
+              height: 1.7,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// صفحهٔ خطای استارت — وقتی Firebase بالا نیامده است
+class StartupErrorApp extends StatefulWidget {
+  const StartupErrorApp({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  State<StartupErrorApp> createState() => _StartupErrorAppState();
+}
+
+class _StartupErrorAppState extends State<StartupErrorApp> {
+  bool _retrying = false;
+  bool _isFa = true;
+
+  Future<void> _retry() async {
+    if (_retrying) return;
+    setState(() => _retrying = true);
+    await widget.onRetry();
+    if (mounted) setState(() => _retrying = false);
   }
 
-  // مهم: slug مهمان را یک‌بار در استارت قفل کن
-  // تا rebuild تم/زبان آن را گم نکند
-  WeddingTimeApp.lockInitialGuestSlug();
-
-  runApp(const WeddingTimeApp());
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(AppFontController.defaultFamily),
+      locale: const Locale('fa'),
+      supportedLocales: const [Locale('fa'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      builder: (context, child) => Directionality(
+        textDirection: _isFa ? TextDirection.rtl : TextDirection.ltr,
+        child: child ?? const SizedBox.shrink(),
+      ),
+      home: Scaffold(
+        backgroundColor: AppPalette.background,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.cloud_off_rounded,
+                    size: 52,
+                    color: AppPalette.brandBlush,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _isFa
+                        ? 'اتصال برقرار نشد'
+                        : 'Could not connect',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppPalette.text,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      height: 1.7,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _isFa
+                        ? 'اینترنت را بررسی کن و دوباره تلاش کن.'
+                        : 'Check your internet connection and try again.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppPalette.textSoft,
+                      fontSize: 13,
+                      height: 1.9,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  SizedBox(
+                    height: 48,
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _retrying ? null : _retry,
+                      child: _retrying
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(_isFa ? 'تلاش دوباره' : 'Retry'),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextButton(
+                    onPressed: () => setState(() => _isFa = !_isFa),
+                    child: Text(_isFa ? 'English' : 'فارسی'),
+                  ),
+                  const SizedBox(height: 12),
+                  if (!_isFa)
+                    Text(
+                      widget.message,
+                      textAlign: TextAlign.center,
+                      textDirection: TextDirection.ltr,
+                      style: const TextStyle(
+                        color: AppPalette.textSoft,
+                        fontSize: 10,
+                        height: 1.5,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class WeddingTimeApp extends StatelessWidget {
@@ -147,8 +329,9 @@ class WeddingTimeApp extends StatelessWidget {
 
         final font = AppFontController.I.family;
         return MaterialApp(
-          // کلید ثابت — کمتر stack را می‌پرد
-          key: ValueKey('wedding_time_root_$font'),
+          // ⚠️ هیچ key وابسته به فونت/تم اینجا نگذار:
+          // key جدید یعنی دور ریختن کل Element tree و از دست رفتن
+          // Navigator state. تغییر فونت فقط از طریق theme اعمال می‌شود.
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           locale: lang.locale,

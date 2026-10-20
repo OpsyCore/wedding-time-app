@@ -893,16 +893,26 @@ class _CategoriesTabState extends State<_CategoriesTab> {
       ),
     );
 
-    if (ok != true) return;
+    // مقادیر را قبل از dispose بخوان (controller بعد از dispose قابل استفاده نیست)
     final tFa = titleFaC.text.trim();
+    final tEn = titleEnC.text.trim();
+    final dFa = descFaC.text.trim();
+    final dEn = descEnC.text.trim();
+    titleFaC.dispose();
+    titleEnC.dispose();
+    descFaC.dispose();
+    descEnC.dispose();
+
+    // کاربر ممکن است حین باز بودن دیالوگ صفحه را ترک کرده باشد
+    if (!mounted || ok != true) return;
     if (tFa.isEmpty) return;
 
     final updated = SupportCategory(
       id: cat?.id ?? 'cat_${DateTime.now().millisecondsSinceEpoch}',
       titleFa: tFa,
-      titleEn: titleEnC.text.trim(),
-      descFa: descFaC.text.trim(),
-      descEn: descEnC.text.trim(),
+      titleEn: tEn,
+      descFa: dFa,
+      descEn: dEn,
       iconKey: iconKey,
       sortOrder: cat?.sortOrder ?? _cats.length,
       enabled: cat?.enabled ?? true,
@@ -1031,6 +1041,10 @@ class _SettingsTabState extends State<_SettingsTab> {
   late TextEditingController _thanksFaC;
   late TextEditingController _thanksEnC;
   late List<SupportBankCard> _cards;
+
+  /// برای هر کارت بانکی سه کنترلر ثابت — ساخت کنترلر внутри build
+  /// باعث پرش مکان‌نما و ریست شدن تایپ می‌شد.
+  List<List<TextEditingController>> _cardCtrls = [];
   bool _saving = false;
 
   @override
@@ -1059,6 +1073,51 @@ class _SettingsTabState extends State<_SettingsTab> {
     _thanksFaC = TextEditingController(text: s.thanksFa);
     _thanksEnC = TextEditingController(text: s.thanksEn);
     _cards = [...s.cards];
+    _rebuildCardCtrls();
+  }
+
+  void _rebuildCardCtrls() {
+    for (final group in _cardCtrls) {
+      for (final c in group) {
+        c.dispose();
+      }
+    }
+    _cardCtrls = [
+      for (final card in _cards)
+        [
+          TextEditingController(text: card.holderName),
+          TextEditingController(text: card.bankName),
+          TextEditingController(text: card.cardNumber),
+        ],
+    ];
+  }
+
+  void _addCard() {
+    setState(() {
+      _cards.add(
+        SupportBankCard(
+          id: 'card_${DateTime.now().millisecondsSinceEpoch}',
+        ),
+      );
+      _cardCtrls.add([
+        TextEditingController(),
+        TextEditingController(),
+        TextEditingController(),
+      ]);
+    });
+  }
+
+  void _removeCard(int i) {
+    if (i < 0 || i >= _cards.length) return;
+    setState(() {
+      _cards.removeAt(i);
+      if (i < _cardCtrls.length) {
+        final group = _cardCtrls.removeAt(i);
+        for (final c in group) {
+          c.dispose();
+        }
+      }
+    });
   }
 
   @override
@@ -1067,6 +1126,11 @@ class _SettingsTabState extends State<_SettingsTab> {
     _introEnC.dispose();
     _thanksFaC.dispose();
     _thanksEnC.dispose();
+    for (final group in _cardCtrls) {
+      for (final c in group) {
+        c.dispose();
+      }
+    }
     super.dispose();
   }
 
@@ -1276,7 +1340,7 @@ class _SettingsTabState extends State<_SettingsTab> {
                         tooltip: t('delete'),
                         icon: Icon(Icons.delete_outline,
                             color: AppTok.danger(context)),
-                        onPressed: () => setState(() => _cards.removeAt(i)),
+                        onPressed: () => _removeCard(i),
                       ),
                     ],
                   ),
@@ -1284,12 +1348,9 @@ class _SettingsTabState extends State<_SettingsTab> {
                     decoration: InputDecoration(
                       labelText: t('supports_card_holder'),
                     ),
-                    controller:
-                        TextEditingController(text: _cards[i].holderName)
-                          ..selection = TextSelection.collapsed(
-                            offset: _cards[i].holderName.length,
-                          ),
-                    onChanged: (v) => _cards[i] = _cards[i].copyWith(holderName: v),
+                    controller: _cardCtrls[i][0],
+                    onChanged: (v) =>
+                        _cards[i] = _cards[i].copyWith(holderName: v),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -1299,11 +1360,7 @@ class _SettingsTabState extends State<_SettingsTab> {
                           decoration: InputDecoration(
                             labelText: t('supports_card_bank'),
                           ),
-                          controller:
-                              TextEditingController(text: _cards[i].bankName)
-                                ..selection = TextSelection.collapsed(
-                                  offset: _cards[i].bankName.length,
-                                ),
+                          controller: _cardCtrls[i][1],
                           onChanged: (v) =>
                               _cards[i] = _cards[i].copyWith(bankName: v),
                         ),
@@ -1316,11 +1373,7 @@ class _SettingsTabState extends State<_SettingsTab> {
                           decoration: InputDecoration(
                             labelText: t('supports_card_number'),
                           ),
-                          controller:
-                              TextEditingController(text: _cards[i].cardNumber)
-                                ..selection = TextSelection.collapsed(
-                                  offset: _cards[i].cardNumber.length,
-                                ),
+                          controller: _cardCtrls[i][2],
                           onChanged: (v) =>
                               _cards[i] = _cards[i].copyWith(cardNumber: v),
                         ),
@@ -1332,13 +1385,7 @@ class _SettingsTabState extends State<_SettingsTab> {
             ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => setState(
-              () => _cards.add(
-                SupportBankCard(
-                  id: 'card_${DateTime.now().millisecondsSinceEpoch}',
-                ),
-              ),
-            ),
+            onPressed: _addCard,
             icon: const Icon(Icons.add),
             label: Text(t('supports_bank_cards')),
           ),

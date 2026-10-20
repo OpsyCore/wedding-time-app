@@ -126,8 +126,11 @@ class _HomeScreenState extends State<HomeScreen>
     _pulse.repeat(reverse: true);
 
     _weddingSub = _weddingDoc.snapshots().listen((doc) {
+      if (!mounted) return;
       final data = doc.data() ?? {};
-      final timestamp = data['weddingDate'] as Timestamp?;
+      // نوع دادهٔ قدیمی ممکن است String باشد؛ کست مستقیم listener را می‌شکست
+      final rawDate = data['weddingDate'];
+      final Timestamp? timestamp = rawDate is Timestamp ? rawDate : null;
       setState(() {
         weddingDate = timestamp?.toDate();
 
@@ -172,6 +175,7 @@ class _HomeScreenState extends State<HomeScreen>
     });
 
     _profileSub = _profileDoc.snapshots().listen((doc) {
+      if (!mounted) return;
       final p = doc.data();
       if (p == null) return;
       final newBanner = (p[heroBannerField] ?? kDefaultHeroBannerId).toString();
@@ -224,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen>
     });
 
     _musicSub = _musicSettingsDoc.snapshots().listen((doc) {
+      if (!mounted) return;
       final m = doc.data();
       if (m == null) return;
       setState(() {
@@ -250,6 +255,7 @@ class _HomeScreenState extends State<HomeScreen>
           .doc(uid)
           .snapshots()
           .listen((doc) {
+        if (!mounted) return;
         setState(() {
           role = doc.data()?['role']?.toString();
         });

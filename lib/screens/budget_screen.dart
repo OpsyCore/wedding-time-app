@@ -32,6 +32,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
       .doc(widget.weddingId)
       .collection('budgetGroups');
 
+  /// کش جمع‌ها — قبلاً در هر rebuild (تم/زبان/موسیقی) برای هر گروه
+  /// یک کوئری Firestore زده می‌شد. حالا فقط با تغییر واقعی snapshot.
+  QuerySnapshot? _totalsSnapshot;
+  Future<_BudgetTotals>? _totalsFuture;
+
+  Future<_BudgetTotals> _totalsFor(
+    QuerySnapshot snapshot,
+    List<BudgetGroupModel> groups,
+  ) {
+    if (!identical(snapshot, _totalsSnapshot) || _totalsFuture == null) {
+      _totalsSnapshot = snapshot;
+      _totalsFuture = _calculateTotals(groups);
+    }
+    return _totalsFuture!;
+  }
+
   /// رنگ هر تکهٔ حلقه / گروه (لوکس تیره)
   static const List<Color> _segmentColors = [
     Color(0xFFD4AF8C), // رزگلد
@@ -858,7 +874,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             .toList();
 
         return FutureBuilder<_BudgetTotals>(
-          future: _calculateTotals(groups),
+          future: _totalsFor(snapshot.data!, groups),
           builder: (context, totalSnap) {
             if (!totalSnap.hasData) {
               return Center(

@@ -118,6 +118,8 @@ class _WeddingSetupScreenState extends State<WeddingSetupScreen> {
         email: user.email,
       );
 
+      // اگر کاربر حین درخواست صفحه را ترک کرده باشد، setState مجاز نیست
+      if (!mounted) return;
       setState(() {
         _currentWeddingId = result.weddingId;
         _inviteCode = result.inviteCode;

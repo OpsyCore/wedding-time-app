@@ -159,36 +159,44 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               final isActive = index == currentIndex;
               final item = items[index];
 
-              return GestureDetector(
-                onTap: () => _goToTab(index),
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isActive ? softPill : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        item['icon'] as IconData,
-                        color: isActive ? accentDeep : textSoft,
-                        size: 22,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item['label'] as String,
-                        style: TextStyle(
+              // Expanded + ellipsis: ۷ تب روی گوشی‌های باریک یا با
+              // textScale بزرگ‌تر از overflow می‌دادند (نوار زرد).
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => _goToTab(index),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isActive ? softPill : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          item['icon'] as IconData,
                           color: isActive ? accentDeep : textSoft,
-                          fontSize: 10,
-                          fontWeight:
-                              isActive ? FontWeight.bold : FontWeight.normal,
+                          size: 21,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          item['label'] as String,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: isActive ? accentDeep : textSoft,
+                            fontSize: 10,
+                            fontWeight:
+                                isActive ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
