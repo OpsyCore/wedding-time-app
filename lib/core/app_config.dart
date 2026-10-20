@@ -72,9 +72,13 @@ class AppConfig {
   ///
   /// توجه: هر کلیدی که در کلاینت باشد در نهایت قابل استخراج است؛
   /// راه‌حل قطعی، آپلود از طریق یک endpoint در بک‌اند است.
+  // No embedded fallback: a client-side key is extractable from every build.
+  // This temporary fail-closed default disables ImgBB uploads until the app
+  // is switched to a server-side upload endpoint. Do not pass a real secret
+  // with --dart-define in production; it is still recoverable from the client.
   static const String imgbbApiKey = String.fromEnvironment(
     'IMGBB_API_KEY',
-    defaultValue: '63ad9a49b307c10e9cbcbbe65c1e23bf',
+    defaultValue: '',
   );
 
   static bool get hasImgbbKey => imgbbApiKey.trim().isNotEmpty;
