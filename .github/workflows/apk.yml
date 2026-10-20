@@ -40,7 +40,11 @@ jobs:
           IMGBB_KEY: ${{ secrets.IMGBB_API_KEY }}
         run: |
           set -o pipefail
-          flutter build apk --release --split-per-abi --dart-define=IMGBB_API_KEY="${IMGBB_KEY}" 2>&1 | tee /tmp/build.log
+          DEFINE_ARGS=()
+          if [ -n "${IMGBB_KEY}" ]; then
+            DEFINE_ARGS+=(--dart-define=IMGBB_API_KEY="${IMGBB_KEY}")
+          fi
+          flutter build apk --release --split-per-abi "${DEFINE_ARGS[@]}" 2>&1 | tee /tmp/build.log
           ls -lh build/app/outputs/flutter-apk/app-*-release.apk
 
       # خطاها را به‌صورت annotation در صفحهٔ Actions و در API قابل‌خواندن می‌کند

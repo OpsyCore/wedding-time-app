@@ -72,10 +72,15 @@ class AppConfig {
   ///
   /// توجه: هر کلیدی که در کلاینت باشد در نهایت قابل استخراج است؛
   /// راه‌حل قطعی، آپلود از طریق یک endpoint در بک‌اند است.
-  static const String imgbbApiKey = String.fromEnvironment(
+  static const String _envImgbbApiKey = String.fromEnvironment(
     'IMGBB_API_KEY',
-    defaultValue: '',
   );
+  static const String _defaultImgbbApiKey =
+      'f0029110e4569e03fa0de1970e617c35';
+
+  static String get imgbbApiKey => _envImgbbApiKey.trim().isNotEmpty
+      ? _envImgbbApiKey.trim()
+      : _defaultImgbbApiKey;
 
   static bool get hasImgbbKey => imgbbApiKey.trim().isNotEmpty;
 
