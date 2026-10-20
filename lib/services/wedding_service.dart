@@ -56,10 +56,14 @@ class WeddingService {
       DateTime.now().add(const Duration(days: 30)),
     );
     String initialPlan = 'trial';
+    bool hasCreatedAt = false;
+    bool hasTrialStartedAt = false;
     try {
       final existingUser = await userRef.get();
       final uData = existingUser.data();
       if (uData != null) {
+        hasCreatedAt = uData['createdAt'] != null;
+        hasTrialStartedAt = uData['trialStartedAt'] != null;
         final existingEnds = uData['trialEndsAt'];
         if (existingEnds is Timestamp) {
           trialEnds = existingEnds;
@@ -96,25 +100,25 @@ class WeddingService {
         'role': role,
         'plan': initialPlan,
         'planId': initialPlan,
-        'trialStartedAt': FieldValue.serverTimestamp(),
+        if (!hasTrialStartedAt) 'trialStartedAt': FieldValue.serverTimestamp(),
         'trialEndsAt': trialEnds,
         'language': AppLang.I.code,
         'inviteCode': inviteCode,
         'updatedAt': FieldValue.serverTimestamp(),
-        'createdAt': FieldValue.serverTimestamp(),
+        if (!hasCreatedAt) 'createdAt': FieldValue.serverTimestamp(),
       },
       SetOptions(merge: true),
     );
 
-    await batch.commit();
-
-    // مرحله ۲: invite_codes (بعد از وجود wedding + member)
-    await codeRef.set({
+    // ثبت اتمیک invite_codes داخل همان batch تا ساخت مراسم تک‌مرحله‌ای و کاملاً اتمیک باشد
+    batch.set(codeRef, {
       'weddingId': weddingId,
       'inviteCode': inviteCode,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    await batch.commit();
 
     try {
       await BudgetSeeder.seedDefaultBudget(weddingId);
@@ -177,8 +181,29 @@ class WeddingService {
     // 3) اتمیک: user + نقش روی wedding — تریال: هر عضو جدید ۳۰ روز فول (اگر مراسم هنوز در تریال است همان trialEnds مشترک)
     final weddingPlan = (data['planId'] ?? 'trial').toString();
     final existingTrialEnds = data['trialEndsAt'];
-    final trialEndsForJoin = existingTrialEnds is Timestamp ? existingTrialEnds : Timestamp.fromDate(DateTime.now().add(const Duration(days: 30)));
-    final effectivePlan = weddingPlan == 'trial' ? 'trial' : weddingPlan;
+    Timestamp trialEndsForJoin = existingTrialEnds is Timestamp
+        ? existingTrialEnds
+        : Timestamp.fromDate(DateTime.now().add(const Duration(days: 30)));
+    String effectivePlan =
+        (weddingPlan == 'free' || weddingPlan == 'trial') ? weddingPlan : 'trial';
+    bool hasUserCreatedAt = false;
+    bool hasUserTrialEnds = false;
+    try {
+      final userSnap = await _firestore.collection('users').doc(uid).get();
+      final uData = userSnap.data();
+      if (uData != null) {
+        hasUserCreatedAt = uData['createdAt'] != null;
+        if (uData['trialEndsAt'] is Timestamp) {
+          hasUserTrialEnds = true;
+          trialEndsForJoin = uData['trialEndsAt'] as Timestamp;
+        }
+        final uPlan = (uData['planId'] ?? uData['plan'] ?? '').toString();
+        if (uPlan == 'pro' || uPlan == 'pro_monthly' || uPlan == 'premium') {
+          effectivePlan = uPlan;
+        }
+      }
+    } catch (_) {}
+
     final batch = _firestore.batch();
 
     batch.set(
@@ -189,13 +214,15 @@ class WeddingService {
         'role': role,
         'plan': effectivePlan,
         'planId': effectivePlan,
-        if (effectivePlan == 'trial') 'trialEndsAt': trialEndsForJoin,
-        if (effectivePlan == 'trial') 'trialStartedAt': FieldValue.serverTimestamp(),
+        if (effectivePlan == 'trial' && !hasUserTrialEnds)
+          'trialEndsAt': trialEndsForJoin,
+        if (effectivePlan == 'trial' && !hasUserTrialEnds)
+          'trialStartedAt': FieldValue.serverTimestamp(),
         'language': AppLang.I.code,
         // FIX-02: کد پیوستن برای نمایش در پروفایل هر دو طرف
         'inviteCode': normalized,
         'updatedAt': FieldValue.serverTimestamp(),
-        'createdAt': FieldValue.serverTimestamp(),
+        if (!hasUserCreatedAt) 'createdAt': FieldValue.serverTimestamp(),
       },
       SetOptions(merge: true),
     );
@@ -241,20 +268,27 @@ class WeddingService {
     return map.values.toList();
   }
 
-  /// سوییچ مراسم فعال کاربر + mirror پلن روی سند مراسم جدید
+  /// سوییچ مراسم فعال کاربر + mirror پلن واقعیِ کاربر روی سند مراسم جدید
   static Future<void> switchActiveWedding({
     required String uid,
     required String weddingId,
     required String role,
     String planId = 'free',
   }) async {
-    await _firestore.collection('users').doc(uid).set({
+    final userRef = _firestore.collection('users').doc(uid);
+    String verifiedPlan = 'trial';
+    try {
+      final snap = await userRef.get();
+      final p = (snap.data()?['planId'] ?? snap.data()?['plan'] ?? '').toString();
+      if (p.isNotEmpty) verifiedPlan = p;
+    } catch (_) {}
+    await userRef.set({
       'weddingId': weddingId,
       'role': role,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     await _firestore.collection('weddings').doc(weddingId).set({
-      'planId': planId,
+      'planId': verifiedPlan,
     }, SetOptions(merge: true));
   }
 

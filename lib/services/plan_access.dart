@@ -302,6 +302,7 @@ class PlanAccess {
     required String planId,
   }) async {
     await _userRef(targetUid).set({
+      'plan': planId,
       'planId': planId,
       'planActivatedAt': FieldValue.serverTimestamp(),
       'planActivatedBy': email ?? 'system',

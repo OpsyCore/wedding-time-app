@@ -63,9 +63,16 @@ class MediaUploadService {
 
     final json = jsonDecode(res.body) as Map<String, dynamic>;
     if (json['success'] != true) {
-      final err = json['error']?.toString() ?? res.body;
+      final errObj = json['error'];
+      final rawMsg = errObj is Map
+          ? (errObj['message'] ?? '').toString()
+          : (errObj?.toString() ?? '');
+      final cleanMsg = rawMsg.length > 120 ? rawMsg.substring(0, 120) : rawMsg;
       throw Exception(
-        AppLang.tr('err_upload_failed_detail').replaceAll('{detail}', err),
+        AppLang.tr('err_upload_failed_detail').replaceAll(
+          '{detail}',
+          cleanMsg.isEmpty ? 'upload_error' : cleanMsg,
+        ),
       );
     }
 

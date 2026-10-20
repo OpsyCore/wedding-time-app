@@ -167,7 +167,7 @@ class PlansService {
       'rating': r,
       'comment': c,
       'planId': planId,
-      'approved': true,
+      'approved': false,
       'createdAt': FieldValue.serverTimestamp(),
       'uid': FirebaseAuth.instance.currentUser?.uid,
     });

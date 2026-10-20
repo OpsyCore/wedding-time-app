@@ -34,7 +34,31 @@ jobs:
       - name: Flutter doctor (diagnostics only)
         run: flutter doctor -v || true
 
-      - name: Build release APK (split per ABI, debug-signed fallback)
+      - name: Run build regression tests
+        run: flutter test test/build_regression_test.dart
+
+      - name: Cache Android debug keystore for consistent APK signing
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore-v1
+
+      - name: Ensure Android debug keystore exists
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore ~/.android/debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Build release APK (split per ABI, consistent signing)
         id: build
         env:
           IMGBB_KEY: ${{ secrets.IMGBB_API_KEY }}
@@ -44,7 +68,7 @@ jobs:
           if [ -n "${IMGBB_KEY}" ]; then
             DEFINE_ARGS+=(--dart-define=IMGBB_API_KEY="${IMGBB_KEY}")
           fi
-          flutter build apk --release --split-per-abi "${DEFINE_ARGS[@]}" 2>&1 | tee /tmp/build.log
+          flutter build apk --release --split-per-abi --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee /tmp/build.log
           ls -lh build/app/outputs/flutter-apk/app-*-release.apk
 
       # خطاها را به‌صورت annotation در صفحهٔ Actions و در API قابل‌خواندن می‌کند

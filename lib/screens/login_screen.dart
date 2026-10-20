@@ -154,9 +154,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       final isFa = AppLang.I.isFa;
       String message = AppLang.tr('login_error');
-      if (e.code == 'user-not-found') {
-        message = AppLang.tr('user_not_found');
-      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+      if (e.code == 'user-not-found' ||
+          e.code == 'wrong-password' ||
+          e.code == 'invalid-credential') {
         message = AppLang.tr('wrong_credentials');
       } else if (e.code == 'email-already-in-use') {
         message = AppLang.tr('email_already_in_use');

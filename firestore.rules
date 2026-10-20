@@ -25,22 +25,45 @@ service cloud.firestore {
         );
     }
 
+    function isWeddingMemberAfter(weddingId) {
+      let afterDoc = getAfter(/databases/$(database)/documents/weddings/$(weddingId)).data;
+      return isSignedIn()
+        && afterDoc != null
+        && (
+          (afterDoc.keys().hasAny(['brideUid']) && afterDoc.brideUid == uid())
+          || (afterDoc.keys().hasAny(['groomUid']) && afterDoc.groomUid == uid())
+        );
+    }
+
     // ⚠️ این لیست باید دقیقاً با AppConfig.adminEmails در
     // lib/core/app_config.dart یکی باشد. بعد از تغییر،
     // با `firebase deploy --only firestore:rules` منتشر کنید.
     function isAdmin() {
       return isSignedIn()
         && request.auth.token.email is string
+        && request.auth.token.email_verified == true
         && request.auth.token.email.lower() in [
           'mishe.nemishetube4@gmail.com',
           'abrt1369@gmail.com'
         ];
     }
 
-    function isJoinBrideUpdate() {
+    // بررسی کد دعوت معتبر هنگام پیوستن همسر دوم (از روی inviteCode نوشته‌شده در سند خصوصی users/{uid})
+    function hasValidInviteCodeForJoin(weddingId) {
+      let userAfter = getAfter(/databases/$(database)/documents/users/$(uid())).data;
+      let code = (userAfter != null && 'inviteCode' in userAfter && userAfter.inviteCode is string)
+        ? userAfter.inviteCode
+        : '';
+      return code.size() > 0
+        && exists(/databases/$(database)/documents/invite_codes/$(code))
+        && get(/databases/$(database)/documents/invite_codes/$(code)).data.weddingId == weddingId;
+    }
+
+    function isJoinBrideUpdate(weddingId) {
       let before = resource.data;
       let after = request.resource.data;
       return isSignedIn()
+        && hasValidInviteCodeForJoin(weddingId)
         && after.keys().hasAny(['brideUid'])
         && after.brideUid == uid()
         && (
@@ -51,10 +74,11 @@ service cloud.firestore {
         && after.diff(before).affectedKeys().hasOnly(['brideUid', 'updatedAt']);
     }
 
-    function isJoinGroomUpdate() {
+    function isJoinGroomUpdate(weddingId) {
       let before = resource.data;
       let after = request.resource.data;
       return isSignedIn()
+        && hasValidInviteCodeForJoin(weddingId)
         && after.keys().hasAny(['groomUid'])
         && after.groomUid == uid()
         && (
@@ -134,7 +158,7 @@ service cloud.firestore {
         && d.rating is number
         && d.rating >= 1
         && d.rating <= 5
-        && d.approved == true
+        && d.approved == false
         && (!('planId' in d) || d.planId is string)
         && (!('uid' in d) || d.uid == uid());
     }
@@ -218,7 +242,8 @@ service cloud.firestore {
         && d.name.size() <= 80
         && d.message is string
         && d.message.size() > 0
-        && d.message.size() <= 1000;
+        && d.message.size() <= 1000
+        && (!('status' in d) || d.status == 'pending');
     }
 
     // ─── Plans ───
@@ -229,13 +254,22 @@ service cloud.firestore {
 
     match /plan_reviews/{reviewId} {
       allow read: if true;
-      allow create: if isValidPlanReviewCreate();
+      allow create: if isValidPlanReviewCreate() || isAdmin();
       allow update, delete: if isAdmin();
     }
 
     // ─── Users ───
-    // کاربر عادی فقط می‌تواند پلن free/trial برای خودش ثبت کند و نمی‌تواند بدون تأیید ادمین
-    // پلن خودش را به pro/premium ارتقا دهد.
+    // کاربر عادی فقط می‌تواند پلن free/trial برای خودش ثبت کند، نمی‌تواند بدون تأیید ادمین
+    // پلن خودش را به pro/premium ارتقا دهد و نمی‌تواند trialEndsAt را بیش از ۳۱ روز جلو ببرد یا تغییر دهد.
+    function isValidTrialWindow(data, existing) {
+      let hasPrior = existing != null && 'trialEndsAt' in existing && existing.trialEndsAt != null;
+      return !('trialEndsAt' in data)
+        || (hasPrior && data.trialEndsAt == existing.trialEndsAt)
+        || (!hasPrior
+            && data.trialEndsAt is timestamp
+            && data.trialEndsAt <= request.time + duration.value(31, 'd'));
+    }
+
     function isSafeUserPlanWrite(data, existing) {
       let allowedSelfPlans = ['free', 'trial'];
       let prevPlanId = (existing != null && 'planId' in existing) ? existing.planId : '';
@@ -246,11 +280,11 @@ service cloud.firestore {
       let okPlan = !('plan' in data)
         || data.plan in allowedSelfPlans
         || data.plan == prevPlan;
-      return okPlanId && okPlan;
+      return okPlanId && okPlan && isValidTrialWindow(data, existing);
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn() && uid() == userId;
+      allow read: if (isSignedIn() && uid() == userId) || isAdmin();
       allow create: if (isSignedIn() && uid() == userId && isSafeUserPlanWrite(request.resource.data, null))
         || isAdmin();
       // ادمین برای فعال‌سازی پلن، planId کاربر را می‌نویسد
@@ -299,7 +333,10 @@ service cloud.firestore {
         && request.resource.data.weddingId is string
         && request.resource.data.inviteCode is string
         && request.resource.data.inviteCode == code
-        && isWeddingMember(request.resource.data.weddingId);
+        && (
+          isWeddingMember(request.resource.data.weddingId)
+          || isWeddingMemberAfter(request.resource.data.weddingId)
+        );
 
       allow update, delete: if isSignedIn()
         && resource.data.keys().hasAny(['weddingId'])
@@ -309,7 +346,14 @@ service cloud.firestore {
     match /public_slugs/{slug} {
       allow read: if true;
 
-      allow create, update: if isSignedIn()
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasAll(['weddingId'])
+        && request.resource.data.weddingId is string
+        && isWeddingMember(request.resource.data.weddingId);
+
+      allow update: if isSignedIn()
+        && resource.data.keys().hasAny(['weddingId'])
+        && isWeddingMember(resource.data.weddingId)
         && request.resource.data.keys().hasAll(['weddingId'])
         && request.resource.data.weddingId is string
         && isWeddingMember(request.resource.data.weddingId);
@@ -326,10 +370,11 @@ service cloud.firestore {
       let userPlanId = exists(/databases/$(database)/documents/users/$(uid()))
         ? get(/databases/$(database)/documents/users/$(uid())).data.planId
         : '';
-      return !('planId' in data)
+      let okPlanId = !('planId' in data)
         || data.planId in allowedSelfPlans
         || data.planId == prevPlanId
         || data.planId == userPlanId;
+      return okPlanId && isValidTrialWindow(data, existing);
     }
 
     match /weddings/{weddingId} {
@@ -342,8 +387,8 @@ service cloud.firestore {
       // ادمین برای mirror کردن planId روی سند مراسم هم دسترسی دارد
       allow update: if isAdmin()
         || (isWeddingMember(weddingId) && isSafeWeddingPlanWrite(request.resource.data, resource.data))
-        || isJoinBrideUpdate()
-        || isJoinGroomUpdate();
+        || isJoinBrideUpdate(weddingId)
+        || isJoinGroomUpdate(weddingId);
       allow delete: if false;
 
       match /invitation/{docId} {
@@ -481,8 +526,15 @@ service cloud.firestore {
       }
 
       match /cameraUsage/{docId} {
-        allow read: if true;
-        allow create, update: if true;
+        allow read: if isWeddingMember(weddingId);
+        allow create, update: if isWeddingMember(weddingId)
+          || (
+            request.resource.data.keys().size() <= 4
+            && (!('count' in request.resource.data)
+                || (request.resource.data.count is int
+                    && request.resource.data.count >= 0
+                    && request.resource.data.count <= 500))
+          );
         allow delete: if isWeddingMember(weddingId);
       }
 
