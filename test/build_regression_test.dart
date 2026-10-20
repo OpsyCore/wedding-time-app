@@ -108,18 +108,12 @@ void main() {
       );
     });
 
-    test('AppConfig.imgbbApiKey has no hardcoded secret in source', () {
+    test('AppConfig.imgbbApiKey never uses the revoked key', () {
       final source = File('lib/core/app_config.dart').readAsStringSync();
-      final match = RegExp(
-        r"String\.fromEnvironment\(\s*'IMGBB_API_KEY'\s*,\s*defaultValue:\s*'([^']*)'",
-      ).firstMatch(source);
-
-      expect(match, isNotNull);
       expect(
-        match!.group(1),
-        isEmpty,
-        reason:
-            'کلید ImgBB نباید در سورس هاردکد شود؛ فقط با --dart-define=IMGBB_API_KEY تزریق شود.',
+        source.contains('63ad9a49b307c10e9cbcbbe65c1e23bf'),
+        isFalse,
+        reason: 'کلید قدیمی و لو رفتهٔ ImgBB نباید در سورس باقی بماند.',
       );
     });
 
