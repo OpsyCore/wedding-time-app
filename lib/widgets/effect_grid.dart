@@ -237,7 +237,10 @@ class EffectCardVisualPainter extends CustomPainter {
     final r = Rect.fromCenter(center: Offset.zero, width: rx * 2, height: ry * 2);
     canvas.drawOval(r, paint);
     // لایه دوم کوچک‌تر برای عمق آبرنگ
-    canvas.drawOval(r.deflate(rx * 0.35), paint..color = paint.color.withValues(alpha: paint.color.a * 0.6));
+    canvas.drawOval(
+      r.deflate(rx * 0.35),
+      paint..color = paint.color.withValues(alpha: paint.color.opacity * 0.6),
+    );
     canvas.restore();
   }
 

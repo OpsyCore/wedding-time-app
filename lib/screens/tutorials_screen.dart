@@ -5,14 +5,6 @@ import '../core/app_theme.dart';
 import '../widgets/page_glass.dart';
 import '../widgets/wedding_time_header.dart';
 
-class TutorialsScreen extends StatefulWidget {
-  final String weddingId;
-  const TutorialsScreen({super.key, required this.weddingId});
-
-  @override
-  State<TutorialsScreen> createState() => _TutorialsScreenState();
-}
-
 class _Tutorial {
   final String id;
   final String fa;
