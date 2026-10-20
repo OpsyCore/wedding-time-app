@@ -135,7 +135,6 @@ class PlanLimits {
   static PlanLimits forPlanId(String? planId) {
     switch ((planId ?? '').trim()) {
       case AppPlans.trialId:
-      case 'trial':
         return trial;
       case AppPlans.proId:
       case 'pro_monthly':
@@ -202,7 +201,7 @@ class PlanAccess {
     }
     if (plan == null) return base;
     bool flag(String id, bool fallback) {
-      for (final f in plan.features) {
+      for (final f in plan!.features) {
         if (f.id == id) return f.included;
       }
       return fallback;
