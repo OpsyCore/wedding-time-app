@@ -239,6 +239,7 @@ class EffectCardVisualPainter extends CustomPainter {
     // لایه دوم کوچک‌تر برای عمق آبرنگ
     canvas.drawOval(
       r.deflate(rx * 0.35),
+      // ignore: deprecated_member_use
       paint..color = paint.color.withValues(alpha: paint.color.opacity * 0.6),
     );
     canvas.restore();
