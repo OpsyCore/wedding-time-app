@@ -51,16 +51,37 @@ class WeddingService {
     // مرحله ۱: wedding + user (عضویت از brideUid/groomUid)
     // FIX-02: کد پیوستن روی سند عمومی مراسم ذخیره نمی‌شود؛
     // کد فقط در سند خصوصی کاربر و در invite_codes نگه داشته می‌شود.
+    // اگر کاربر قبلاً دورهٔ آزمایشی را شروع کرده، همان تاریخ انقضا حفظ می‌شود تا با ساخت مراسم جدید ریست نشود.
+    Timestamp trialEnds = Timestamp.fromDate(
+      DateTime.now().add(const Duration(days: 30)),
+    );
+    String initialPlan = 'trial';
+    try {
+      final existingUser = await userRef.get();
+      final uData = existingUser.data();
+      if (uData != null) {
+        final existingEnds = uData['trialEndsAt'];
+        if (existingEnds is Timestamp) {
+          trialEnds = existingEnds;
+        }
+        final existingPlan = (uData['planId'] ?? uData['plan'] ?? '').toString();
+        if (existingPlan == 'pro' ||
+            existingPlan == 'pro_monthly' ||
+            existingPlan == 'premium') {
+          initialPlan = existingPlan;
+        }
+      }
+    } catch (_) {}
+
     final batch = _firestore.batch();
 
-    final trialEnds = Timestamp.fromDate(DateTime.now().add(const Duration(days: 30)));
     batch.set(weddingRef, {
       'brideName': brideName.trim(),
       'groomName': groomName.trim(),
       'weddingDate': Timestamp.fromDate(weddingDate),
       if (role == 'bride') 'brideUid': uid,
       if (role == 'groom') 'groomUid': uid,
-      'planId': 'trial',
+      'planId': initialPlan,
       'trialStartedAt': FieldValue.serverTimestamp(),
       'trialEndsAt': trialEnds,
       'createdAt': FieldValue.serverTimestamp(),
@@ -73,8 +94,8 @@ class WeddingService {
         if (email != null && email.isNotEmpty) 'email': email,
         'weddingId': weddingId,
         'role': role,
-        'plan': 'trial',
-        'planId': 'trial',
+        'plan': initialPlan,
+        'planId': initialPlan,
         'trialStartedAt': FieldValue.serverTimestamp(),
         'trialEndsAt': trialEnds,
         'language': AppLang.I.code,

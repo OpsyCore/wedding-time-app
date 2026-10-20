@@ -41,14 +41,16 @@ class MediaUploadService {
 
     final b64 = base64Encode(bytes);
 
-    final res = await http.post(
-      _uri,
-      body: {
-        'key': AppConfig.imgbbApiKey,
-        'image': b64,
-        'name': fileName,
-      },
-    );
+    final res = await http
+        .post(
+          _uri,
+          body: {
+            'key': AppConfig.imgbbApiKey,
+            'image': b64,
+            'name': fileName,
+          },
+        )
+        .timeout(const Duration(seconds: 45));
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception(

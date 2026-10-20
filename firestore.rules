@@ -234,11 +234,28 @@ service cloud.firestore {
     }
 
     // ─── Users ───
+    // کاربر عادی فقط می‌تواند پلن free/trial برای خودش ثبت کند و نمی‌تواند بدون تأیید ادمین
+    // پلن خودش را به pro/premium ارتقا دهد.
+    function isSafeUserPlanWrite(data, existing) {
+      let allowedSelfPlans = ['free', 'trial'];
+      let prevPlanId = (existing != null && 'planId' in existing) ? existing.planId : '';
+      let prevPlan = (existing != null && 'plan' in existing) ? existing.plan : '';
+      let okPlanId = !('planId' in data)
+        || data.planId in allowedSelfPlans
+        || data.planId == prevPlanId;
+      let okPlan = !('plan' in data)
+        || data.plan in allowedSelfPlans
+        || data.plan == prevPlan;
+      return okPlanId && okPlan;
+    }
+
     match /users/{userId} {
       allow read: if isSignedIn() && uid() == userId;
-      allow create: if isSignedIn() && uid() == userId;
+      allow create: if (isSignedIn() && uid() == userId && isSafeUserPlanWrite(request.resource.data, null))
+        || isAdmin();
       // ادمین برای فعال‌سازی پلن، planId کاربر را می‌نویسد
-      allow update: if (isSignedIn() && uid() == userId) || isAdmin();
+      allow update: if isAdmin()
+        || (isSignedIn() && uid() == userId && isSafeUserPlanWrite(request.resource.data, resource.data));
       allow delete: if false;
     }
 
@@ -303,17 +320,30 @@ service cloud.firestore {
     }
 
     // ─── Weddings ───
+    function isSafeWeddingPlanWrite(data, existing) {
+      let allowedSelfPlans = ['free', 'trial'];
+      let prevPlanId = (existing != null && 'planId' in existing) ? existing.planId : '';
+      let userPlanId = exists(/databases/$(database)/documents/users/$(uid()))
+        ? get(/databases/$(database)/documents/users/$(uid())).data.planId
+        : '';
+      return !('planId' in data)
+        || data.planId in allowedSelfPlans
+        || data.planId == prevPlanId
+        || data.planId == userPlanId;
+    }
+
     match /weddings/{weddingId} {
       // مهمان بدون لاگین هم spec را get کند (دوربین/خانه)
       // توجه: سند مراسم دیگر شامل inviteCode نیست (FIX-02)
       allow get: if true;
       allow list: if isWeddingMember(weddingId);
-      allow create: if isValidWeddingCreate();
+      allow create: if isValidWeddingCreate()
+        && (isAdmin() || isSafeWeddingPlanWrite(request.resource.data, null));
       // ادمین برای mirror کردن planId روی سند مراسم هم دسترسی دارد
-      allow update: if isWeddingMember(weddingId)
+      allow update: if isAdmin()
+        || (isWeddingMember(weddingId) && isSafeWeddingPlanWrite(request.resource.data, resource.data))
         || isJoinBrideUpdate()
-        || isJoinGroomUpdate()
-        || isAdmin();
+        || isJoinGroomUpdate();
       allow delete: if false;
 
       match /invitation/{docId} {

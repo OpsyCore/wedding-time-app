@@ -8,9 +8,12 @@ import '../models/subscription_plan.dart';
 class PlansService {
   PlansService._() {
     // کش زندهٔ پرچم مانتایزیشن — وقتی خاموش شود همهٔ قابلیت‌ها برای همه باز است
-    _plansDoc.snapshots().listen((s) {
-      _monetizationOn = (s.data()?['monetizationEnabled'] ?? true) != false;
-    });
+    _plansDoc.snapshots().listen(
+      (s) {
+        _monetizationOn = (s.data()?['monetizationEnabled'] ?? true) != false;
+      },
+      onError: (_) {},
+    );
   }
   static final PlansService I = PlansService._();
 
