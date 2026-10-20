@@ -1133,6 +1133,7 @@ class _TimelineAmbientPainter extends CustomPainter {
         Offset(x, y),
         r * 2.4,
         Paint()
+          // ignore: deprecated_member_use
           ..color = col.withValues(alpha: col.opacity * 0.35)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
       );

@@ -39,6 +39,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
     _tab = TabController(length: 3, vsync: this);
     final c = widget.initialColor;
     _hsv = HSVColor.fromColor(c);
+    // ignore: deprecated_member_use
     _opacity = c.opacity;
     _r = (c.r * 255).round();
     _g = (c.g * 255).round();
@@ -66,6 +67,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
   void _updateFromColor(Color c) {
     setState(() {
       _hsv = HSVColor.fromColor(c.withValues(alpha: 1));
+      // ignore: deprecated_member_use
       _opacity = c.opacity;
       _r = (c.r * 255).round();
       _g = (c.g * 255).round();
@@ -106,7 +108,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
               padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
               child: Row(
                 children: [
-                  Icon(Icons.brush_rounded, color: const Color(0xFF1E88E5), size: 20),
+                  const Icon(Icons.brush_rounded, color: Color(0xFF1E88E5), size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -248,8 +250,8 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                     child: Container(
                       width: 36,
                       height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8E8EC),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE8E8EC),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.add_rounded, size: 22, color: Colors.black54),
@@ -283,7 +285,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
         itemCount: _gridColors.length,
         itemBuilder: (context, i) {
           final c = _gridColors[i];
-          final selected = c.value == _color.withValues(alpha: 1).value;
+          final selected = c.hexNoHash == _color.hexNoHash;
           return GestureDetector(
             onTap: () => _updateFromColor(c),
             child: Container(
@@ -309,7 +311,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
             onPanUpdate: (d) {
               final local = d.localPosition;
               final w = cons.maxWidth;
-              final h = 280.0;
+              const h = 280.0;
               // h is fixed height approx
               final dx = local.dx.clamp(0, w);
               final dy = local.dy.clamp(0, h);
@@ -318,7 +320,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
               // screenshot spectrum: vertical rainbow fading to black on right, white on left
               // approximate: hue from x, saturation from 1 - (y/h)*0.3, value 1
               final sat = (1 - (dy / h) * 0.2).clamp(0.6, 1.0);
-              final val = 1.0;
+              const val = 1.0;
               setState(() {
                 _hsv = HSVColor.fromAHSV(1, hue, sat, val);
                 final c = _hsv.toColor();
@@ -331,7 +333,6 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
             onTapDown: (d) {
               final local = d.localPosition;
               final w = cons.maxWidth;
-              final h = 280.0;
               final dx = local.dx.clamp(0, w);
               final hue = (dx / w) * 360;
               setState(() {
@@ -349,10 +350,10 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                   height: 300,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: const [
+                      colors: [
                         Color(0xFFFF0000),
                         Color(0xFFFFEB3B),
                         Color(0xFF00E676),

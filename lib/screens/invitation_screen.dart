@@ -176,7 +176,7 @@ class _InvitationScreenState extends State<InvitationScreen>
     _bootstrap();
     // لایو شنیدن تغییر قالب از Firestore (وقتی _openTemplatePicker می‌زند)
     _templateSub = weddingRef.snapshots().listen((snap) {
-      final data = snap.data() as Map<String, dynamic>?;
+      final data = snap.data();
       final t = (data?[inviteTemplateField] ?? 'classic').toString().trim();
       final id = t.isEmpty ? 'classic' : t;
       if (id != _templateId && mounted) {
@@ -213,13 +213,13 @@ class _InvitationScreenState extends State<InvitationScreen>
 
   Future<void> _bootstrap() async {
     final weddingSnap = await weddingRef.get();
-    final wedding = weddingSnap.data() as Map<String, dynamic>? ?? {};
+    final wedding = weddingSnap.data() ?? {};
     // مقدار اولیه قالب
     final tpl0 = (wedding[inviteTemplateField] ?? 'classic').toString().trim();
     _templateId = tpl0.isEmpty ? 'classic' : tpl0;
 
     final profileSnap = await profileRef.get();
-    final profile = profileSnap.data() as Map<String, dynamic>? ?? {};
+    final profile = profileSnap.data() ?? {};
 
     // پروفایل زوج منبع اصلیِ اسم‌هاست؛ wedding doc هم هنگام ذخیره‌ی پروفایل
     // همگام می‌شود. این‌طور اگر کاربر اسم را در پروفایل عوض کند، دعوتنامه هم
@@ -236,7 +236,7 @@ class _InvitationScreenState extends State<InvitationScreen>
 
     if (inviteSnap.exists) {
       data = Map<String, dynamic>.from(
-        inviteSnap.data() as Map<String, dynamic>? ?? {},
+        inviteSnap.data() ?? {},
       );
     } else {
       final bride = truthBride;
@@ -1876,7 +1876,6 @@ class _InvitationCard extends StatelessWidget {
     final text = template.text;
     final textSoft = template.textSoft;
     final border = template.border;
-    final decor = template.decor;
 
     return Container(
       width: double.infinity,

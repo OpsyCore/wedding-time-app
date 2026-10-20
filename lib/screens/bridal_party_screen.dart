@@ -557,6 +557,7 @@ class _BridalPartyScreenState extends State<BridalPartyScreen> {
                     Text(isFa ? 'رنگ لباس ساقدوش‌ها' : 'Bridal party dress colors', style: TextStyle(color: AppTok.text(context), fontWeight: FontWeight.w800, fontSize: 14)),
                     Text(isFa ? 'تا ۷ رنگ برای هر طرف — از پالت فول انتخاب کن' : 'Up to 7 colors per side — pick from full palette', style: TextStyle(color: AppTok.textSoft(context), fontSize: 11.5)),
                   ])),
+                  // ignore: deprecated_member_use
                   Switch(value: enabled, activeColor: AppTok.accent(context), onChanged: (v)=> _saveBridalPalette(enabled: v)),
                 ],
               ),

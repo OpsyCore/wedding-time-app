@@ -128,6 +128,7 @@ class _WeddingPaletteScreenState extends State<WeddingPaletteScreen> {
                             ),
                             Switch(
                               value: enabled,
+                              // ignore: deprecated_member_use
                               activeColor: AppTok.accent(context),
                               onChanged: (v) => _savePalette(enabled: v, colors: colors, note: note),
                             ),
@@ -203,8 +204,9 @@ class _WeddingPaletteScreenState extends State<WeddingPaletteScreen> {
                                         await _savePalette(enabled: enabled, colors: next, note: note);
                                       },
                                       onCopy: () async {
+                                        final messenger = ScaffoldMessenger.of(context);
                                         await Clipboard.setData(ClipboardData(text: colors[i]));
-                                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isFa ? 'کپی شد ${colors[i]}' : 'Copied ${colors[i]}')));
+                                        if (mounted) messenger.showSnackBar(SnackBar(content: Text(isFa ? 'کپی شد ${colors[i]}' : 'Copied ${colors[i]}')));
                                       },
                                     ),
                                   if (colors.length < 7)

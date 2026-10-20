@@ -27,13 +27,12 @@ const _catSnack = 'snack';
 const _catAlcohol = 'alcohol';
 
 class _Preset {
-  const _Preset(this.name, this.cat, this.price,
-      {this.pp = true, this.qty = 0});
+  const _Preset(this.name, this.cat, this.price, {this.pp = true});
   final String name;
   final String cat;
   final int price;
   final bool pp;
-  final int qty;
+  final int qty = 0;
 }
 
 const _presets = <_Preset>[

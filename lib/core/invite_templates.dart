@@ -114,6 +114,7 @@ class InviteTemplate {
   /// پالت‌داینامیک — از رنگ‌های زوج (تا ۷) یک تم دعوت می‌سازد
   /// اولین رنگ accent، بقیه برای گرادیان پس‌زمینه
   static InviteTemplate fromPalette(List<Color> rawColors) {
+    // ignore: deprecated_member_use
     final colors = rawColors.where((c) => c.opacity > 0.01).toList();
     if (colors.isEmpty) return classic;
     final accent = colors[0];

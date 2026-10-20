@@ -349,6 +349,7 @@ class _SoftBlobsPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width * 0.5, size.height * 0.5),
       size.width * 0.22,
+      // ignore: deprecated_member_use
       paints[0]..color = paints[0].color.withValues(alpha: paints[0].color.opacity * 0.6),
     );
   }

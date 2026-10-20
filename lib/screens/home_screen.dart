@@ -119,8 +119,6 @@ class _HomeScreenState extends State<HomeScreen>
       _dark ? AppDarkPalette.brandGreenSoft : AppPalette.brandGreenSoft;
   Color get _brandBlushSoft =>
       _dark ? AppDarkPalette.brandBlushSoft : AppPalette.brandBlushSoft;
-  Color get _brandBlush =>
-      _dark ? AppDarkPalette.brandBlush : AppPalette.brandBlush;
 
   @override
   void initState() {
@@ -706,7 +704,6 @@ class _HomeScreenState extends State<HomeScreen>
 
     final bgPhoto = (coverPhoto ?? '').trim();
 
-    final accent = AppTok.accent(context);
     final cardSoft = AppTok.cardSoft(context);
     final textSoft = AppTok.textSoft(context);
     final accentDeep = AppTok.accentDeep(context);
@@ -936,29 +933,6 @@ class _HomeScreenState extends State<HomeScreen>
     return art;
   }
 
-  /// وقتی قلب مخفی است  /// وقتی قلب مخفی است — فقط عکس دو نفره + کادر شیشه‌ای
-  Widget _buildCouplePhotoOnly(String bgPhoto) {
-    final hasPhoto = bgPhoto.isNotEmpty;
-    return Container(
-      width: 210,
-      height: 192,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: AppTok.card(context).withValues(alpha: 0.92),
-        border: Border.all(color: AppTok.border(context), width: 1),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 6))],
-        image: hasPhoto
-            ? DecorationImage(image: NetworkImage(bgPhoto), fit: BoxFit.cover, onError: (_, __) {})
-            : null,
-      ),
-      child: hasPhoto
-          ? null
-          : Center(
-              child: Icon(Icons.favorite_rounded, size: 64, color: AppTok.accent(context).withValues(alpha: 0.85)),
-            ),
-    );
-  }
-
   /// قلب بزرگ تپنده — ۸ طرح حرفه‌ای (هر استایل ۲ قلب)
   Widget _buildBigPulsingHeart({
     required String groom,
@@ -1025,11 +999,11 @@ class _HomeScreenState extends State<HomeScreen>
                   if (heart.style == HeartStyle.skyWatercolor) CustomPaint(painter: _WatercolorPainter()),
                   if (heart.style == HeartStyle.pearlSatin)
                     Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [const Color(0xFFFFFBF5), const Color(0xFFFDF6E8), const Color(0xFFF0E6D2)],
+                          colors: [Color(0xFFFFFBF5), Color(0xFFFDF6E8), Color(0xFFF0E6D2)],
                         ),
                       ),
                     ),
@@ -1243,111 +1217,6 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           Container(width: width * 0.22, height: height * 0.62, decoration: BoxDecoration(color: knotColor, borderRadius: BorderRadius.circular(4))),
         ],
-      ),
-    );
-  }
-
-  /// ستاره چهارپر کوچک — شبیه ستاره‌های رفرنس
-  Widget _sparkle({required double size, required Color color, double angle = 0}) {
-    return Transform.rotate(
-      angle: angle,
-      child: Icon(
-        Icons.auto_awesome,
-        size: size,
-        color: color,
-      ),
-    );
-  }
-
-  Widget _personAvatar({
-    required String? photoUrl,
-    required String name,
-  }) {
-    final initial =
-        name.isNotEmpty ? name.characters.first.toUpperCase() : '?';
-    final accent = AppTok.accent(context);
-    final card = AppTok.card(context);
-    final textSoft = AppTok.textSoft(context);
-
-    return Column(
-      children: [
-        SizedBox(
-          width: 116,
-          height: 106,
-          child: Stack(
-            children: [
-              // حاشیهٔ گرادیانیِ قلب
-              Positioned.fill(
-                child: ClipPath(
-                  clipper: _HeartClipper(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          accent,
-                          _brandBlush,
-                          _brandGreenSoft,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // داخل قلب: عکس یا حرف اول نام
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.all(3.5),
-                  child: ClipPath(
-                    clipper: _HeartClipper(),
-                    child: Container(
-                      color: card,
-                      child: photoUrl != null && photoUrl.isNotEmpty
-                          ? Image.network(
-                              photoUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _avatarFallback(initial),
-                            )
-                          : _avatarFallback(initial),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: 110,
-          child: Text(
-            name.split(' ').first,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: textSoft,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _avatarFallback(String initial) {
-    return Container(
-      color: _brandGreenSoft.withValues(alpha: 0.55),
-      child: Center(
-        child: Text(
-          initial,
-          style: TextStyle(
-            color: AppTok.accentDeep(context),
-            fontSize: 34,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'serif',
-          ),
-        ),
       ),
     );
   }
@@ -2609,59 +2478,6 @@ class _HeartClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-class _DottedBorderPainter extends CustomPainter {
-  final Color dotColor;
-  const _DottedBorderPainter({required this.dotColor});
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = dotColor..style = PaintingStyle.fill;
-    // dotted rim — 28 dots evenly spaced around perimeter (approx)
-    final pts = [
-      Offset(size.width * 0.12, size.height * 0.18),
-      Offset(size.width * 0.20, size.height * 0.09),
-      Offset(size.width * 0.33, size.height * 0.05),
-      Offset(size.width * 0.48, size.height * 0.11),
-      Offset(size.width * 0.62, size.height * 0.05),
-      Offset(size.width * 0.77, size.height * 0.08),
-      Offset(size.width * 0.88, size.height * 0.16),
-      Offset(size.width * 0.94, size.height * 0.28),
-      Offset(size.width * 0.91, size.height * 0.42),
-      Offset(size.width * 0.83, size.height * 0.56),
-      Offset(size.width * 0.71, size.height * 0.71),
-      Offset(size.width * 0.58, size.height * 0.84),
-      Offset(size.width * 0.41, size.height * 0.84),
-      Offset(size.width * 0.28, size.height * 0.71),
-      Offset(size.width * 0.16, size.height * 0.56),
-      Offset(size.width * 0.08, size.height * 0.42),
-      Offset(size.width * 0.06, size.height * 0.28),
-    ];
-    for (final p in pts) {
-      canvas.drawCircle(p, 2.4, paint);
-    }
-  }
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _LaceBorderPainter extends CustomPainter {
-  final Color color;
-  const _LaceBorderPainter({required this.color});
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 0.9;
-    final path = _HeartClipper().getClip(size);
-    canvas.drawPath(path, p);
-    final dot = Paint()..color = color..style = PaintingStyle.fill;
-    for (double t = 0.08; t < 0.92; t += 0.08) {
-      final x = size.width * t;
-      final y = size.height * (0.04 + 0.06 * (t < 0.5 ? t : 1 - t));
-      canvas.drawCircle(Offset(x, y), 1.2, dot);
-    }
-  }
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 // ── بافت‌های ۶ قلب جدید ──
 class _WatercolorPainter extends CustomPainter {
   @override
@@ -2686,7 +2502,7 @@ class _FeltNoisePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final p = Paint()..color = Colors.white.withValues(alpha: 0.22)..style = PaintingStyle.fill;
     // نویز خیلی ریز نمدی
-    final rnd = [Offset(0.2, 0.25), Offset(0.7, 0.3), Offset(0.5, 0.7), Offset(0.8, 0.65), Offset(0.3, 0.55)];
+    const rnd = [Offset(0.2, 0.25), Offset(0.7, 0.3), Offset(0.5, 0.7), Offset(0.8, 0.65), Offset(0.3, 0.55)];
     for (final o in rnd) {
       canvas.drawCircle(Offset(size.width * o.dx, size.height * o.dy), 1.0, p);
     }
@@ -2736,7 +2552,7 @@ class _RufflePainter extends CustomPainter {
     // تعداد ruffle ها
     final path = _HeartClipper().getClip(size);
     // outer ruffle circles along path
-    final step = 10.0;
+    const step = 10.0;
     for (final metric in path.computeMetrics()) {
       final len = metric.length;
       for (double d = 0; d < len; d += step) {
@@ -2769,25 +2585,6 @@ class _RufflePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
-class _PinkStar {
-  final double dx, dy, size, angle;
-  final Color color;
-  const _PinkStar(this.dx, this.dy, this.size, this.angle, this.color);
-}
-
-const _pinkStarData = [
-  _PinkStar(0.18, 0.22, 10, 0.2, Color(0xFFFFEB3B)),
-  _PinkStar(0.28, 0.38, 11, -0.15, Color(0xFF81D4FA)),
-  _PinkStar(0.42, 0.28, 8, 0.3, Color(0xFFFFB74D)),
-  _PinkStar(0.58, 0.32, 9, -0.2, Color(0xFFB39DDB)),
-  _PinkStar(0.72, 0.26, 8, 0.15, Color(0xFF80CBC4)),
-  _PinkStar(0.78, 0.45, 9, -0.25, Color(0xFFFFAB91)),
-  _PinkStar(0.35, 0.62, 10, 0.1, Color(0xFFFFEB3B)),
-  _PinkStar(0.52, 0.55, 7, -0.3, Color(0xFF81D4FA)),
-  _PinkStar(0.64, 0.68, 8, 0.2, Color(0xFFFFB74D)),
-  _PinkStar(0.22, 0.58, 7, -0.1, Color(0xFFB39DDB)),
-];
 
 /// گیج نیم‌دایره برای کارت بودجه
 class _HalfGaugePainter extends CustomPainter {

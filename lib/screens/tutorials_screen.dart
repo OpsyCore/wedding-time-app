@@ -13,8 +13,6 @@ class _Tutorial {
   final String enDesc;
   final List<String> faSteps;
   final List<String> enSteps;
-  final String videoHintFa;
-  final String videoHintEn;
   const _Tutorial({
     required this.id,
     required this.fa,
@@ -24,12 +22,10 @@ class _Tutorial {
     required this.enDesc,
     required this.faSteps,
     required this.enSteps,
-    this.videoHintFa = '',
-    this.videoHintEn = '',
   });
 }
 
-final List<_Tutorial> _all = [
+const List<_Tutorial> _all = [
   _Tutorial(
     id: 'home',
     fa: 'خانه — داشبورد و تایمر',

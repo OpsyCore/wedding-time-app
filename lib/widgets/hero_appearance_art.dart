@@ -7,13 +7,6 @@ import 'package:flutter/material.dart';
 import '../core/hero_styles.dart';
 
 // ───────────────────────── ابزار ─────────────────────────
-Color _lighten(Color c, double a) {
-  final h = HSLColor.fromColor(c);
-  return h.withLightness((h.lightness + a).clamp(0.0, 1.0)).toColor();
-}
-
-Color _darken(Color c, double a) => _lighten(c, -a);
-
 Paint _fill(Color c) => Paint()..color = c;
 
 Paint _stroke(Color c, double w) => Paint()
@@ -345,7 +338,9 @@ class HeroBannerArtPainter extends CustomPainter {
 Path _heartFromViewBox(Rect r) {
   // نگاشت viewBox 100x100 به Rect r
   Matrix4 m = Matrix4.identity()
+    // ignore: deprecated_member_use
     ..translate(r.left, r.top)
+    // ignore: deprecated_member_use
     ..scale(r.width / 100, r.height / 100);
   final src = Path()
     ..moveTo(50, 90)
@@ -678,7 +673,7 @@ class _HeroCoupleHeartState extends State<HeroCoupleHeart> with SingleTickerProv
         shape: BoxShape.circle,
         color: const Color(0xE0FFFBF0),
         border: Border.all(color: const Color(0xF2C7D8C4), width: 1.4),
-        boxShadow: [BoxShadow(color: const Color(0x1F1A4D2E), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: const [BoxShadow(color: Color(0x1F1A4D2E), blurRadius: 10, offset: Offset(0, 4))],
       ),
       child: ClipOval(
         child: url.trim().isEmpty
