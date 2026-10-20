@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../widgets/page_glass.dart';
-import '../widgets/wedding_time_header.dart';
 
 class _Tutorial {
   final String id;
@@ -380,9 +379,36 @@ class _TutorialsScreenState extends State<TutorialsScreen> {
       textDirection: AppLang.I.direction,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: WeddingTimeHeader(
-          title: isFa ? 'آموزش استفاده' : 'How to use',
-          subtitle: isFa ? 'قدم‌به‌قدم هر قسمت' : 'Step-by-step for each section',
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          toolbarHeight: 64,
+          iconTheme: IconThemeData(color: AppTok.text(context)),
+          title: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isFa ? 'آموزش استفاده' : 'How to use',
+                style: TextStyle(
+                  color: AppTok.text(context),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                isFa
+                    ? 'قدم‌به‌قدم هر قسمت'
+                    : 'Step-by-step for each section',
+                style: TextStyle(
+                  color: AppTok.textSoft(context),
+                  fontSize: 11.5,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
         ),
         body: PageGlass(
           child: Column(
