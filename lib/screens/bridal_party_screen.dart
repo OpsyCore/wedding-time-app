@@ -530,7 +530,9 @@ class _BridalPartyScreenState extends State<BridalPartyScreen> {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: _paletteDoc.snapshots(),
       builder: (context, snap) {
-        final data = snap.data?.data() ?? {};
+        final data = snap.hasError
+            ? const <String, dynamic>{}
+            : (snap.data?.data() ?? const <String, dynamic>{});
         final brideColors = ((data['brideColors'] as List?)?.map((e)=>e.toString()).where((e)=>e.trim().isNotEmpty).toList() ?? <String>[]);
         final groomColors = ((data['groomColors'] as List?)?.map((e)=>e.toString()).where((e)=>e.trim().isNotEmpty).toList() ?? <String>[]);
         final enabled = data['enabled'] != false; // default true

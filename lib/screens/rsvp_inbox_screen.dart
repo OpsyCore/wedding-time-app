@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/app_lang.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
+import '../widgets/async_state_views.dart';
 
 class RsvpInboxScreen extends StatefulWidget {
   const RsvpInboxScreen({super.key, required this.weddingId});
@@ -132,6 +133,12 @@ class _RsvpInboxScreenState extends State<RsvpInboxScreen> {
               stream:
                   _rsvpRef.orderBy('createdAt', descending: true).snapshots(),
               builder: (context, snap) {
+                if (snap.hasError && !snap.hasData) {
+                  return AsyncErrorView(
+                    error: snap.error,
+                    onRetry: () => setState(() {}),
+                  );
+                }
                 if (snap.connectionState == ConnectionState.waiting) {
                   return Center(
                     child: CircularProgressIndicator(

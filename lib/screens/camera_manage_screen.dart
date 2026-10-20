@@ -9,6 +9,7 @@ import '../core/app_theme_controller.dart';
 import '../models/guest_media_model.dart';
 import '../services/disposable_camera_service.dart';
 import '../services/plan_access.dart';
+import '../widgets/async_state_views.dart';
 import 'guest_camera_screen.dart';
 
 /// مدیریت حرفه‌ای دوربین مهمان + تأیید عکس‌ها
@@ -343,6 +344,12 @@ class _CameraManageScreenState extends State<CameraManageScreen> {
                     body: StreamBuilder<List<GuestMediaModel>>(
                       stream: _service.watchMedia(status: 'all'),
                       builder: (context, snap) {
+                        if (snap.hasError && !snap.hasData) {
+                          return AsyncErrorView(
+                            error: snap.error,
+                            onRetry: () => setState(() {}),
+                          );
+                        }
                         final all = snap.data ?? [];
                         final pending = all
                             .where((m) => m.isPending)

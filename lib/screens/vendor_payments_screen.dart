@@ -10,6 +10,7 @@ import '../models/vendor_model.dart';
 import '../models/vendor_payment_model.dart';
 import '../services/notification_service.dart';
 import '../services/vendor_budget_sync.dart';
+import '../widgets/async_state_views.dart';
 
 class VendorPaymentsScreen extends StatefulWidget {
   const VendorPaymentsScreen({
@@ -822,6 +823,12 @@ class _VendorPaymentsScreenState extends State<VendorPaymentsScreen> {
                             QuerySnapshot<Map<String, dynamic>>>(
                           stream: _payRef.snapshots(),
                           builder: (context, snap2) {
+                            if (snap2.hasError && !snap2.hasData) {
+                              return AsyncErrorView(
+                                error: snap2.error,
+                                onRetry: () => setState(() {}),
+                              );
+                            }
                             if (!snap2.hasData) {
                               return Center(
                                 child: CircularProgressIndicator(

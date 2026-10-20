@@ -63,7 +63,11 @@ class InviteCodeCard extends StatelessWidget {
                   .doc(uid)
                   .snapshots(),
           builder: (context, userSnap) {
-            final code = _pickCode(userSnap.data?.data() ?? {});
+            final code = _pickCode(
+              userSnap.hasError
+                  ? const <String, dynamic>{}
+                  : (userSnap.data?.data() ?? const <String, dynamic>{}),
+            );
 
             return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
               // لینک دعوت عمومی: همچنان از سند مراسم (اسلاگ عمومی است)
@@ -72,7 +76,9 @@ class InviteCodeCard extends StatelessWidget {
                   .doc(weddingId)
                   .snapshots(),
               builder: (context, snap) {
-                final data = snap.data?.data() ?? {};
+                final data = snap.hasError
+                    ? const <String, dynamic>{}
+                    : (snap.data?.data() ?? const <String, dynamic>{});
                 final slug = (data['slug'] ?? data['inviteSlug'] ?? weddingId)
                     .toString()
                     .trim();

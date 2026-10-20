@@ -14,6 +14,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/guest_media_model.dart';
 import '../services/disposable_camera_service.dart';
+import '../widgets/async_state_views.dart';
 import 'camera_manage_screen.dart';
 import 'guest_camera_screen.dart';
 
@@ -550,6 +551,13 @@ class _QrGalleryScreenState extends State<QrGalleryScreen> {
                           StreamBuilder<List<GuestMediaModel>>(
                             stream: _cameraService.watchMedia(),
                             builder: (context, snap) {
+                              if (snap.hasError && !snap.hasData) {
+                                return AsyncErrorView(
+                                  error: snap.error,
+                                  compact: true,
+                                  onRetry: () => setState(() {}),
+                                );
+                              }
                               if (snap.connectionState ==
                                   ConnectionState.waiting) {
                                 return Padding(

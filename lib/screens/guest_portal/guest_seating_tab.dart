@@ -450,7 +450,7 @@ class _GuestSeatingTabState extends State<GuestSeatingTab> {
               stream: _hallsRef.orderBy('order').snapshots(),
               builder: (context, hallSnap) {
                 final halls = <HallModel>[];
-                if (hallSnap.hasData) {
+                if (!hallSnap.hasError && hallSnap.hasData) {
                   halls.addAll(hallSnap.data!.docs.map(HallModel.fromDoc));
                 }
 

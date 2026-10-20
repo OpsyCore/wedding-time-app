@@ -208,7 +208,9 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                             stream: EntertainmentService.watch(
                                 widget.weddingId),
                             builder: (context, entSnap) {
-                              final ent = entSnap.data ??
+                              final ent = (entSnap.hasError
+                                      ? null
+                                      : entSnap.data) ??
                                   {
                                     for (final k
                                         in EntertainmentService.keys)
@@ -331,7 +333,9 @@ class _GuestHomeTabState extends State<GuestHomeTab>
           child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: _weddingStream,
             builder: (context, snap) {
-              final d = snap.data?.data() ?? {};
+              final d = snap.hasError
+                  ? const <String, dynamic>{}
+                  : (snap.data?.data() ?? const <String, dynamic>{});
 
               // عکس دو نفرهٔ زوج دقیقاً همان عکس پروفایل عروس و داماد است:
               // زوج آن را در «پروفایل عروس و داماد» آپلود می‌کند و در
@@ -340,7 +344,10 @@ class _GuestHomeTabState extends State<GuestHomeTab>
               return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                 stream: _profileStream,
                 builder: (context, profileSnap) {
-                  final p = profileSnap.data?.data() ?? {};
+                  final p = profileSnap.hasError
+                      ? const <String, dynamic>{}
+                      : (profileSnap.data?.data() ??
+                          const <String, dynamic>{});
                   final profilePhoto =
                       (p['couplePhotoUrl'] ?? '').toString().trim();
 

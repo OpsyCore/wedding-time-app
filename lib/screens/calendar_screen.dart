@@ -10,6 +10,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../services/weather_service.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/async_state_views.dart';
 import '../widgets/page_glass.dart';
 import '../widgets/wedding_time_header.dart';
 
@@ -533,6 +534,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: StreamBuilder<QuerySnapshot>(
                 stream: eventsRef.orderBy('date').snapshots(),
                 builder: (context, snapshot) {
+                  if (snapshot.hasError && !snapshot.hasData) {
+                    return Column(
+                      children: [
+                        Builder(
+                          builder: (context) => WeddingTimeHeader(
+                            weddingId: widget.weddingId,
+                            onMenuPressed: () =>
+                                Scaffold.of(context).openDrawer(),
+                          ),
+                        ),
+                        Expanded(
+                          child: AsyncErrorView(
+                            error: snapshot.error,
+                            onRetry: () => setState(() {}),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Column(
                       children: [

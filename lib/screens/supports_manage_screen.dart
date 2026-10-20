@@ -5,6 +5,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/support_item_model.dart';
 import '../services/support_service.dart';
+import '../widgets/async_state_views.dart';
 import '../widgets/support_progress_bar.dart';
 import 'supports_guest_screen.dart';
 
@@ -106,6 +107,12 @@ class _SupportsManageScreenState extends State<SupportsManageScreen>
             body: StreamBuilder<SupportSettings>(
               stream: _svc.watchSettings(),
               builder: (context, setSnap) {
+                if (setSnap.hasError && !setSnap.hasData) {
+                  return AsyncErrorView(
+                    error: setSnap.error,
+                    onRetry: () => setState(() {}),
+                  );
+                }
                 final settings = setSnap.data ?? _settings;
                 return TabBarView(
                   controller: _tabs,
@@ -424,6 +431,9 @@ class _ItemsTab extends StatelessWidget {
     return StreamBuilder<List<SupportItem>>(
       stream: svc.watchItemsSimple(),
       builder: (context, snap) {
+        if (snap.hasError && !snap.hasData) {
+          return AsyncErrorView(error: snap.error);
+        }
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }

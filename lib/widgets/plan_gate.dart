@@ -26,6 +26,7 @@ class PlanGate extends StatelessWidget {
     return StreamBuilder<PlanLimits>(
       stream: PlanAccess.I.watchWeddingLimits(weddingId),
       builder: (context, snap) {
+        if (snap.hasError) return child;
         final limits = snap.data;
         if (limits == null) return child;
         if (allow(limits)) return child;

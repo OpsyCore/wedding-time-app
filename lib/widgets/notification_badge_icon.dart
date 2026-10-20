@@ -44,7 +44,7 @@ class NotificationBadgeIcon extends StatelessWidget {
           child: StreamBuilder<int>(
             stream: NotificationService(weddingId).watchUnreadCount(),
             builder: (context, snap) {
-              final count = snap.data ?? 0;
+              final count = snap.hasError ? 0 : (snap.data ?? 0);
               final label = _countLabel(count);
 
               return IconButton(

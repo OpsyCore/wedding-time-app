@@ -27,7 +27,9 @@ class PaletteGuestCard extends StatelessWidget {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: _doc.snapshots(),
       builder: (context, snap) {
-        final data = snap.data?.data() ?? {};
+        final data = snap.hasError
+            ? const <String, dynamic>{}
+            : (snap.data?.data() ?? const <String, dynamic>{});
         final enabled = data['enabled'] == true;
         if (!enabled) return const SizedBox.shrink();
         final raw = (data['colors'] as List?)?.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList() ?? [];

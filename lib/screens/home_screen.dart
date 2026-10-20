@@ -12,6 +12,7 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../core/hero_styles.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/async_state_views.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/hero_appearance_art.dart';
 import '../widgets/floral_decor.dart';
@@ -93,16 +94,24 @@ class _HomeScreenState extends State<HomeScreen>
   // استریم‌ها فقط یک‌بار ساخته می‌شوند؛ اگر داخل build هر بار snapshots()
   // صدا زده شود، هر rebuild (مثل تیک‌تاک ثانیه‌ای شمارش معکوس) باعث
   // subscribe مجدد و خواندن دوبارهٔ همهٔ اسناد می‌شود و سهمیهٔ رایگان را می‌سوزاند.
-  late final Stream<QuerySnapshot<Map<String, dynamic>>> _checklistStream =
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _checklistStream =
       _checklistRef.snapshots();
-  late final Stream<QuerySnapshot<Map<String, dynamic>>> _guestsStream =
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _guestsStream =
       _guestsRef.snapshots();
-  late final Stream<QuerySnapshot<Map<String, dynamic>>> _budgetGroupsStream =
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _budgetGroupsStream =
       _budgetGroupsRef.snapshots();
-  late final Stream<QuerySnapshot<Map<String, dynamic>>> _vendorsStream =
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _vendorsStream =
       _vendorsRef.snapshots();
-  late final Stream<QuerySnapshot<Map<String, dynamic>>> _eventsStream =
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _eventsStream =
       _eventsRef.snapshots();
+
+  void _rebindStreams() {
+    _checklistStream = _checklistRef.snapshots();
+    _guestsStream = _guestsRef.snapshots();
+    _budgetGroupsStream = _budgetGroupsRef.snapshots();
+    _vendorsStream = _vendorsRef.snapshots();
+    _eventsStream = _eventsRef.snapshots();
+  }
 
   bool get _dark => AppTok.isDark(context);
 
@@ -1386,15 +1395,43 @@ class _HomeScreenState extends State<HomeScreen>
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _checklistStream,
       builder: (context, checkSnap) {
+        if (checkSnap.hasError && !checkSnap.hasData) {
+          return AsyncErrorView(
+            error: checkSnap.error,
+            compact: true,
+            onRetry: () => setState(_rebindStreams),
+          );
+        }
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _guestsStream,
           builder: (context, guestSnap) {
+            if (guestSnap.hasError && !guestSnap.hasData) {
+              return AsyncErrorView(
+                error: guestSnap.error,
+                compact: true,
+                onRetry: () => setState(_rebindStreams),
+              );
+            }
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _vendorsStream,
               builder: (context, vendorSnap) {
+                if (vendorSnap.hasError && !vendorSnap.hasData) {
+                  return AsyncErrorView(
+                    error: vendorSnap.error,
+                    compact: true,
+                    onRetry: () => setState(_rebindStreams),
+                  );
+                }
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: _eventsStream,
                   builder: (context, eventSnap) {
+                    if (eventSnap.hasError && !eventSnap.hasData) {
+                      return AsyncErrorView(
+                        error: eventSnap.error,
+                        compact: true,
+                        onRetry: () => setState(_rebindStreams),
+                      );
+                    }
                     final items = <_FocusItem>[];
                     final now = DateTime.now();
                     final today = _dateOnly(now);
@@ -1856,15 +1893,43 @@ class _HomeScreenState extends State<HomeScreen>
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _checklistStream,
       builder: (context, checkSnap) {
+        if (checkSnap.hasError && !checkSnap.hasData) {
+          return AsyncErrorView(
+            error: checkSnap.error,
+            compact: true,
+            onRetry: () => setState(_rebindStreams),
+          );
+        }
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _guestsStream,
           builder: (context, guestSnap) {
+            if (guestSnap.hasError && !guestSnap.hasData) {
+              return AsyncErrorView(
+                error: guestSnap.error,
+                compact: true,
+                onRetry: () => setState(_rebindStreams),
+              );
+            }
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _budgetGroupsStream,
               builder: (context, budgetSnap) {
+                if (budgetSnap.hasError && !budgetSnap.hasData) {
+                  return AsyncErrorView(
+                    error: budgetSnap.error,
+                    compact: true,
+                    onRetry: () => setState(_rebindStreams),
+                  );
+                }
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: _vendorsStream,
                   builder: (context, vendorSnap) {
+                    if (vendorSnap.hasError && !vendorSnap.hasData) {
+                      return AsyncErrorView(
+                        error: vendorSnap.error,
+                        compact: true,
+                        onRetry: () => setState(_rebindStreams),
+                      );
+                    }
                     int checkTotal = 0;
                     int checkDone = 0;
                     if (checkSnap.hasData) {

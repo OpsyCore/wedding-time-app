@@ -122,7 +122,7 @@ class _GuestPortalShellState extends State<GuestPortalShell> {
         return StreamBuilder<Map<String, bool>>(
           stream: EntertainmentService.watch(widget.weddingId),
           builder: (context, entSnap) {
-            final ent = entSnap.data ??
+            final ent = (entSnap.hasError ? null : entSnap.data) ??
                 {for (final k in EntertainmentService.keys) k: true};
 
             final pages = <Widget>[
