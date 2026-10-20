@@ -107,5 +107,46 @@ void main() {
             '${(missing..sort()).join('\n')}',
       );
     });
+
+    test('AppConfig.imgbbApiKey has no hardcoded secret in source', () {
+      final source = File('lib/core/app_config.dart').readAsStringSync();
+      final match = RegExp(
+        r"String\.fromEnvironment\(\s*'IMGBB_API_KEY'\s*,\s*defaultValue:\s*'([^']*)'",
+      ).firstMatch(source);
+
+      expect(match, isNotNull);
+      expect(
+        match!.group(1),
+        isEmpty,
+        reason:
+            'کلید ImgBB نباید در سورس هاردکد شود؛ فقط با --dart-define=IMGBB_API_KEY تزریق شود.',
+      );
+    });
+
+    test('every StreamBuilder in lib handles hasError', () {
+      final missing = <String>[];
+
+      for (final file in _dartFilesUnder('lib')) {
+        final lines = file.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          if (!RegExp(r'\bStreamBuilder\s*(?:<|\()').hasMatch(lines[i])) {
+            continue;
+          }
+          final end = (i + 30 < lines.length) ? i + 30 : lines.length;
+          final window = lines.sublist(i, end).join('\n');
+          if (!window.contains('hasError')) {
+            missing.add('${file.path}:${i + 1}');
+          }
+        }
+      }
+
+      expect(
+        missing,
+        isEmpty,
+        reason:
+            'هر StreamBuilder باید حالت hasError را مدیریت کند تا اسکرین در لودینگ بی‌نهایت نماند:\n'
+            '${missing.join('\n')}',
+      );
+    });
   });
 }

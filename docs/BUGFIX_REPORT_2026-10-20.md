@@ -111,49 +111,31 @@
 
 `checklist_load_error`، `currency_toman`، `go_to_login`، `item_saved`،
 `love_story_guest_hint`، `no_results`، `select_city`،
-`splash_network_error`، `splash_network_hint`، `tap_to_continue`
+`splash_network_error`، `splash_network_hint`، `tap_to_continue`،
+`async_load_error`، `async_network_hint`
 
-هر دو جدول حالا ۱۵۸۲ کلید یکسان دارند (بدون کلید تکراری).
+هر دو جدول حالا ۱۵۸۴ کلید یکسان دارند (بدون کلید تکراری).
 
----
+## ۹) تکمیل پاس دوم (شاخهٔ `arena/a648bdc6-wedding-time-app`)
 
-## چطور بررسی شد
-
-- Flutter SDK در این محیط نصب نیست و دسترسی شبکه برای دانلود آن بسته است؛
-  بنابراین `flutter analyze` / `flutter test` اجرا نشد.
-- همهٔ فایل‌های `lib` و `test` با پارسر Dart (tree-sitter) خوانده شدند:
-  **صفر خطای نحوی**، از جمله فایل‌های تغییر‌یافته (مقایسه با نسخهٔ قبل
-  از تغییر).
-- تعادل براکت‌ها و کلیدهای ترجمه به‌صورت اسکریپتی بررسی شد
-  (fa/en هر دو ۱۵۸۲ کلید، بدون تکرار).
-- تغییرات به‌صورت دستی از نظر نوع داده و API فلاتر بازبینی شدند
-  (مثلاً `AsyncSnapshot.data!` در بودجه، `platformDispatcher.onError`).
-
-پیشنهاد: قبل از انتشار، یک بار
-`flutter analyze && flutter test && flutter run -d chrome`
-روی ماشین خودت اجرا کن.
+1. **رفع لودینگ بی‌نهایت در همهٔ `StreamBuilder`ها (`lib/widgets/async_state_views.dart`):**
+   - ویجت مشترک `AsyncErrorView` (در دو حالت کامل و `compact`) و `AsyncLoadingView` ساخته شد.
+   - تمام ۷۶ `StreamBuilder` پروژه در `lib/screens/` و `lib/widgets/` اکنون وضعیت `hasError` را مدیریت می‌کنند (نمایش `AsyncErrorView` با دکمهٔ تلاش مجدد برای استریم‌های اصلی صفحات، و fallback امن برای ویجت‌های جانبی/بج‌ها).
+   - تست رگرسیون در `test/build_regression_test.dart` اضافه شد تا هیچ `StreamBuilder` جدیدی بدون مدیریت `hasError` وارد کد نشود.
+2. **کوتاه شدن اسپلش (`lib/screens/splash_screen.dart`):**
+   - زمان کاور اسپلش از ۱۰ ثانیه به **۴ ثانیه** کاهش یافت (همچنان با ضربه قابل رد شدن است و مهلت ۲۰ ثانیه‌ای شبکه حفظ شده است).
+3. **حذف کلید هاردکد شدهٔ ImgBB از سورس (`lib/core/app_config.dart`):**
+   - مقدار `defaultValue` کلید `IMGBB_API_KEY` در `AppConfig` خالی (`''`) شد و تست رگرسیون برای جلوگیری از هاردکد مجدد اضافه شد.
+   - راهنمای کامل باطل کردن (Rotate) کلید قبلی در پنل ImgBB و تنظیم Secret `IMGBB_API_KEY` در GitHub Actions به `docs/ANDROID_RELEASE.md` اضافه شد.
+4. **کاهش چشمگیر حجم APK در گیت‌هاب اکشنز (`.github/workflows/apk.yml`):**
+   - بیلد گیت‌هاب از `--debug` (حجم ~۲۱۲ مگابایت شامل تمام معماری‌ها و ابزارهای دیباگ) به `--release --split-per-abi` تغییر یافت و سه فایل تفکیک‌شده (`app-arm64-v8a-release.apk` برای گوشی‌های جدید، `app-armeabi-v7a-release.apk` برای گوشی‌های قدیمی‌تر و `app-x86_64-release.apk`) در Release منتشر می‌شوند.
 
 ---
 
 ## ریسک‌های باقی‌مانده (به ترتیب اولویت)
 
-1. **کلید ImgBB لو رفته** — در `lib/core/app_config.dart` مقدار پیش‌فرض
-   کلید واقعی است. در کامنت خودش هم نوشته باید rotate شود. کلید را در
-   پنل ImgBB باطل/جديد کن و مقدار پیش‌فرض را خالی بگذار
-   (`defaultValue: ''`)، چون اسکریپت‌های `run*.bat` و Netlify باید آن را
-   با `--dart-define` تزریق کنند.
-2. **۷ تب در نوار پایین** — overflow رفع شد، ولی از نظر UX هنوز
-   شلوغ است. پیشنهاد: ۵ تب اصلی + «بیشتر» (طبق HIG).
-3. **`StreamBuilder`های بدون `hasError`** — ۸ مورد در خانه، ۴ در بودجه،
-   ۳ در چیدمان، ۱ در مهمان‌ها و ۱ در تقویم. با خطای مجوز/شبکه، اسپینر
-   بی‌پایان می‌مانند. یک ویجت مشترک `AsyncErrorView` + جایگزینی الگوی
-   `if (!snapshot.hasData) spinner` با `if (hasError) errorView` لازم است.
-4. **مدت کاور اسپلش** — الان ۱۰ ثانیه است (قابل رد کردن). برای بازگشت
-   سریع‌تر کاربر، ۳ تا ۵ ثانیه منطقی‌تر است.
-5. **کنترلرهای دیالوگ‌های محلی** — در چند صفحه (مثل فرم مهمان در
-   `guests_screen.dart`) کنترلرها داخل تابع دیالوگ ساخته می‌شوند و بعد از
-   بسته شدن آزاد نمی‌شوند. لیک کوچک است ولی با یک الگوی
-   `await showModalBottomSheet(...); controller.dispose();` قابل رفع است.
-6. **تست‌ها** — فقط دو تست خالص (`GuestSlug` و `AppLang`) وجود دارد.
-   برای `PlanLimits.isTrialValid`، `WeddingModel.fromDoc` و
-   `GuestSlug.from` حالت‌های مرزی بیشتری اضافه شود.
+1. **باطل کردن کلید قبلی در پنل ImgBB (اقدام دستی توسط شما):**
+   کلید از سورس حذف شد، اما چون در تاریخچهٔ قبلی گیت بوده، حتماً در پنل `api.imgbb.com` کلید قبلی را Regenerate کنید و کلید جدید را در GitHub Secrets با نام `IMGBB_API_KEY` قرار دهید.
+2. **۷ تب در نوار پایین** — overflow رفع شد، ولی در صورت تمایل در آینده می‌توان به ۵ تب اصلی + «بیشتر» بازطراحی کرد.
+3. **کنترلرهای دیالوگ‌های محلی** — در چند صفحه کنترلرهای موقت دیالوگ‌ها پس از بسته شدن آزاد نمی‌شوند (لیک جزئی).
+4. **تست‌های واحد بیشتر** — افزودن تست‌های مرزی برای `PlanLimits.isTrialValid` و `WeddingModel.fromDoc`.
