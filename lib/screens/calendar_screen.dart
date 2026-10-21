@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -41,7 +43,7 @@ class _JalaliDate {
     final gy = d.year;
     final gm = d.month;
     final gd = d.day;
-    const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    const gDayMonth = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
     final gy2 = (gm > 2) ? (gy + 1) : gy;
     var days = 355666 +
         (365 * gy) +
@@ -49,7 +51,7 @@ class _JalaliDate {
         ((gy2 + 99) ~/ 100) +
         ((gy2 + 399) ~/ 400) +
         gd +
-        g_d_m[gm - 1];
+        gDayMonth[gm - 1];
     var jy = -1595 + (33 * (days ~/ 12053));
     days %= 12053;
     jy += 4 * (days ~/ 1461);
