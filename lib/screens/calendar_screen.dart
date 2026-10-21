@@ -2248,6 +2248,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
               cellPadding: EdgeInsets.zero,
             ),
             daysOfWeekStyle: DaysOfWeekStyle(
+              // Persian weekday names such as «چهارشنبه» are too wide for
+              // a seven-column phone calendar; use familiar initials instead.
+              dowTextFormatter: (date, _) {
+                const faInitials = ['', 'د', 'س', 'چ', 'پ', 'ج', 'ش', 'ی'];
+                const enShort = [
+                  '',
+                  'Mon',
+                  'Tue',
+                  'Wed',
+                  'Thu',
+                  'Fri',
+                  'Sat',
+                  'Sun',
+                ];
+                return isFa ? faInitials[date.weekday] : enShort[date.weekday];
+              },
               weekdayStyle: TextStyle(
                 color: textSoft,
                 fontSize: 11.5,
