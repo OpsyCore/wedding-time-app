@@ -2094,51 +2094,52 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          // نوار ابزار تقویم: سوییچ شمسی/میلادی + ماهانه/دو هفته‌ای/هفتگی
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (isFa)
-                InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () =>
-                      setState(() => _showJalaliNumbers = !_showJalaliNumbers),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: accent.withValues(alpha: 0.30),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_month_rounded,
-                          size: 14,
-                          color: accent,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          _showJalaliNumbers
-                              ? 'نمایش: تقویم شمسی (با زیرنویس میلادی)'
-                              : 'نمایش: تقویم میلادی',
-                          style: TextStyle(
-                            color: text,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+          // نوار ابزار تقویم در عرض کم به دو ردیف می‌رود تا سرریز نکند.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 430;
+              final calendarModeToggle = InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () =>
+                    setState(() => _showJalaliNumbers = !_showJalaliNumbers),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: accent.withValues(alpha: 0.30),
                     ),
                   ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        size: 14,
+                        color: accent,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        compact
+                            ? (_showJalaliNumbers ? 'نمایش: شمسی' : 'نمایش: میلادی')
+                            : (_showJalaliNumbers
+                                ? 'نمایش: تقویم شمسی (با زیرنویس میلادی)'
+                                : 'نمایش: تقویم میلادی'),
+                        style: TextStyle(
+                          color: text,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              Row(
+              );
+              final formatControls = Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _formatToggleChip(
@@ -2166,8 +2167,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         setState(() => _calendarFormat = CalendarFormat.week),
                   ),
                 ],
-              ),
-            ],
+              );
+
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isFa)
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: calendarModeToggle,
+                      ),
+                    if (isFa) const SizedBox(height: 8),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: formatControls,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (isFa) calendarModeToggle,
+                  formatControls,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 10),
           Container(

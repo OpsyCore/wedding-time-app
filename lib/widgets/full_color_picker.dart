@@ -44,7 +44,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
     _r = (c.r * 255).round();
     _g = (c.g * 255).round();
     _b = (c.b * 255).round();
-    _hexCtrl.text = '#${_color.hexNoHash.toUpperCase()}';
+    _hexCtrl.text = _color.hexNoHash.toUpperCase();
   }
 
   @override
@@ -54,15 +54,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
     super.dispose();
   }
 
-  Color get _color {
-    final hsvColor = _hsv.toColor();
-    // rebuild with rgb sliders if in sliders tab sync? keep hsv as source for spectrum/grid, rgb for sliders
-    // For sliders tab we use _r,_g,_b directly
-    if (_tab.index == 2) {
-      return Color.fromRGBO(_r, _g, _b, _opacity);
-    }
-    return hsvColor.withValues(alpha: _opacity);
-  }
+  Color get _color => _hsv.toColor().withValues(alpha: _opacity);
 
   void _updateFromColor(Color c) {
     setState(() {
@@ -72,7 +64,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
       _r = (c.r * 255).round();
       _g = (c.g * 255).round();
       _b = (c.b * 255).round();
-      _hexCtrl.text = '#${c.hexNoHash.toUpperCase()}';
+      _hexCtrl.text = c.hexNoHash.toUpperCase();
     });
   }
 
@@ -90,6 +82,29 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
         });
       }
     }
+  }
+
+  void _selectSpectrumAt(Offset position, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+    final x = (position.dx / size.width).clamp(0.0, 1.0).toDouble();
+    final y = (position.dy / size.height).clamp(0.0, 1.0).toDouble();
+
+    // The spectrum is a vertical rainbow: Y chooses hue. X moves from
+    // white (left), through the pure hue (middle), to black (right).
+    final saturation = x <= 0.55 ? (x / 0.55) : 1.0;
+    final value = x <= 0.55
+        ? 1.0
+        : ((1 - x) / 0.45).clamp(0.0, 1.0).toDouble();
+    final selectedHsv = HSVColor.fromAHSV(1, y * 360, saturation, value);
+    final color = selectedHsv.toColor();
+
+    setState(() {
+      _hsv = selectedHsv;
+      _r = (color.r * 255).round();
+      _g = (color.g * 255).round();
+      _b = (color.b * 255).round();
+      _hexCtrl.text = color.hexNoHash.toUpperCase();
+    });
   }
 
   @override
@@ -142,10 +157,10 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                 labelColor: Colors.black87,
                 unselectedLabelColor: Colors.black54,
                 labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
-                tabs: const [
-                  Tab(text: 'Grid'),
-                  Tab(text: 'Spectrum'),
-                  Tab(text: 'Sliders'),
+                tabs: [
+                  Tab(text: isFa ? 'شبکه' : 'Grid'),
+                  Tab(text: isFa ? 'طیف رنگ' : 'Spectrum'),
+                  Tab(text: isFa ? 'اسلایدرها' : 'Sliders'),
                 ],
               ),
             ),
@@ -306,94 +321,94 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: LayoutBuilder(
-        builder: (context, cons) {
+        builder: (context, constraints) {
+          const height = 300.0;
+          final width = constraints.maxWidth;
+          final size = Size(width, height);
+          final huePosition = (_hsv.hue / 360).clamp(0.0, 1.0);
+          final spectrumPosition = _hsv.saturation < 1
+              ? _hsv.saturation * 0.55
+              : 0.55 + (1 - _hsv.value) * 0.45;
+          final maxLeft = (width - 16).clamp(0.0, double.infinity);
+          final markerLeft = (spectrumPosition * width - 8)
+              .clamp(0.0, maxLeft)
+              .toDouble();
+          final markerTop = (huePosition * height - 8)
+              .clamp(0.0, height - 16)
+              .toDouble();
+
           return GestureDetector(
-            onPanUpdate: (d) {
-              final local = d.localPosition;
-              final w = cons.maxWidth;
-              const h = 280.0;
-              // h is fixed height approx
-              final dx = local.dx.clamp(0, w);
-              final dy = local.dy.clamp(0, h);
-              final hue = (dx / w) * 360;
-              // y maps to saturation/value mixed - top is vivid, bottom faded to white?
-              // screenshot spectrum: vertical rainbow fading to black on right, white on left
-              // approximate: hue from x, saturation from 1 - (y/h)*0.3, value 1
-              final sat = (1 - (dy / h) * 0.2).clamp(0.6, 1.0);
-              const val = 1.0;
-              setState(() {
-                _hsv = HSVColor.fromAHSV(1, hue, sat, val);
-                final c = _hsv.toColor();
-                _r = (c.r * 255).round();
-                _g = (c.g * 255).round();
-                _b = (c.b * 255).round();
-                _hexCtrl.text = '#${c.hexNoHash.toUpperCase()}';
-              });
-            },
-            onTapDown: (d) {
-              final local = d.localPosition;
-              final w = cons.maxWidth;
-              final dx = local.dx.clamp(0, w);
-              final hue = (dx / w) * 360;
-              setState(() {
-                _hsv = HSVColor.fromAHSV(1, hue, 1, 1);
-                final c = _hsv.toColor();
-                _r = (c.r * 255).round();
-                _g = (c.g * 255).round();
-                _b = (c.b * 255).round();
-              });
-            },
-            child: Stack(
-              children: [
-                // base rainbow spectrum
-                Container(
-                  height: 300,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFFFF0000),
-                        Color(0xFFFFEB3B),
-                        Color(0xFF00E676),
-                        Color(0xFF00BCD4),
-                        Color(0xFF3F51B5),
-                        Color(0xFFE040FB),
-                        Color(0xFFFF0000),
-                      ],
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) =>
+                _selectSpectrumAt(details.localPosition, size),
+            onPanStart: (details) =>
+                _selectSpectrumAt(details.localPosition, size),
+            onPanUpdate: (details) =>
+                _selectSpectrumAt(details.localPosition, size),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                width: width,
+                height: height,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFFFF0000),
+                              Color(0xFFFFEB3B),
+                              Color(0xFF00E676),
+                              Color(0xFF00BCD4),
+                              Color(0xFF3F51B5),
+                              Color(0xFFE040FB),
+                              Color(0xFFFF0000),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                // left fade to white + right fade to black overlay like screenshot
-                Container(
-                  height: 300,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [Colors.white.withValues(alpha: 0.85), Colors.transparent, Colors.black.withValues(alpha: 0.95)],
-                      stops: const [0.0, 0.55, 1.0],
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              Colors.white,
+                              Colors.transparent,
+                              Colors.black,
+                            ],
+                            stops: const [0, 0.55, 1],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                // selector dot
-                Positioned(
-                  left: (_hsv.hue / 360) * cons.maxWidth - 8,
-                  top: 140,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black26, width: 1.5),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 6)],
+                    Positioned(
+                      left: markerLeft,
+                      top: markerTop,
+                      child: Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: _color,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              blurRadius: 5,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -402,21 +417,66 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
   }
 
   Widget _buildSlidersTab() {
+    final isFa = AppLang.I.isFa;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        _sliderRow('R', _r, Colors.red, (v) => setState(() { _r = v; _hsv = HSVColor.fromColor(Color.fromRGBO(_r, _g, _b, 1)); })),
-        _sliderRow('G', _g, Colors.green, (v) => setState(() { _g = v; _hsv = HSVColor.fromColor(Color.fromRGBO(_r, _g, _b, 1)); })),
-        _sliderRow('B', _b, Colors.blue, (v) => setState(() { _b = v; _hsv = HSVColor.fromColor(Color.fromRGBO(_r, _g, _b, 1)); })),
-        const SizedBox(height: 14),
+        Text(
+          isFa
+              ? 'مقدار قرمز، سبز و آبی را جداگانه تنظیم کن'
+              : 'Adjust the red, green, and blue channels',
+          style: TextStyle(
+            color: AppTok.textSoft(context),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        _sliderRow(
+          'R',
+          _r,
+          Colors.red,
+          (v) => setState(() {
+            _r = v;
+            _hsv = HSVColor.fromColor(Color.fromRGBO(_r, _g, _b, 1));
+            _hexCtrl.text = _hsv.toColor().hexNoHash.toUpperCase();
+          }),
+        ),
+        _sliderRow(
+          'G',
+          _g,
+          Colors.green,
+          (v) => setState(() {
+            _g = v;
+            _hsv = HSVColor.fromColor(Color.fromRGBO(_r, _g, _b, 1));
+            _hexCtrl.text = _hsv.toColor().hexNoHash.toUpperCase();
+          }),
+        ),
+        _sliderRow(
+          'B',
+          _b,
+          Colors.blue,
+          (v) => setState(() {
+            _b = v;
+            _hsv = HSVColor.fromColor(Color.fromRGBO(_r, _g, _b, 1));
+            _hexCtrl.text = _hsv.toColor().hexNoHash.toUpperCase();
+          }),
+        ),
+        const SizedBox(height: 12),
         TextField(
           controller: _hexCtrl,
           decoration: InputDecoration(
-            labelText: 'HEX',
+            labelText: isFa ? 'کد رنگ (HEX)' : 'HEX color code',
+            helperText: isFa
+                ? '۶ رقم؛ برای نمونه FF4081'
+                : '6 digits, for example FF4081',
             prefixText: '# ',
             filled: true,
             fillColor: const Color(0xFFF5F5F7),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
           ),
           onChanged: _updateHex,
           onSubmitted: _updateHex,
@@ -424,9 +484,20 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
         const SizedBox(height: 10),
         Row(
           children: [
-            Container(width: 28, height: 28, decoration: BoxDecoration(color: Color.fromRGBO(_r, _g, _b, 1), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.black12))),
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Color.fromRGBO(_r, _g, _b, 1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.black12),
+              ),
+            ),
             const SizedBox(width: 10),
-            Text('RGB($_r, $_g, $_b)', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            Text(
+              'RGB: $_r, $_g, $_b',
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
           ],
         ),
       ],
