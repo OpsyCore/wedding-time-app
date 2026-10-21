@@ -2218,6 +2218,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             lastDay: DateTime(2035),
             focusedDay: focusedDay,
             calendarFormat: _calendarFormat,
+            // Vertical swipes belong to the parent page scroll; calendar
+            // changes months only with horizontal swipes.
+            availableGestures: AvailableGestures.horizontalSwipe,
             onFormatChanged: (fmt) => setState(() => _calendarFormat = fmt),
             selectedDayPredicate: (day) => isSameDay(selectedDay, day),
             onDaySelected: (selected, focused) {
