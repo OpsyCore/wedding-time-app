@@ -231,6 +231,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   StreamSubscription<DocumentSnapshot>? _weddingSub;
   StreamSubscription<DocumentSnapshot>? _invitationSub;
+  late final Stream<QuerySnapshot> _eventsStream;
+  late final ScrollController _pageScrollController;
 
   CollectionReference get eventsRef => FirebaseFirestore.instance
       .collection('weddings')
@@ -292,6 +294,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
+    // Keep one stream instance across rebuilds; recreating it resets the
+    // StreamBuilder subscription and can make the page jump back to the top.
+    _eventsStream = eventsRef.orderBy('date').snapshots();
+    _pageScrollController = ScrollController();
     _listenWedding();
     _listenInvitation();
   }
@@ -367,6 +373,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void dispose() {
     _weddingSub?.cancel();
     _invitationSub?.cancel();
+    _pageScrollController.dispose();
     super.dispose();
   }
 
@@ -1024,7 +1031,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             drawer: AppDrawer(weddingId: widget.weddingId),
             body: SafeArea(
               child: StreamBuilder<QuerySnapshot>(
-                stream: eventsRef.orderBy('date').snapshots(),
+                stream: _eventsStream,
                 builder: (context, snapshot) {
                   if (snapshot.hasError && !snapshot.hasData) {
                     return Column(
@@ -1081,6 +1088,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       ),
                       Expanded(
                         child: ListView(
+                          key: PageStorageKey<String>(
+                            'calendar-page-${widget.weddingId}',
+                          ),
+                          controller: _pageScrollController,
                           padding: const EdgeInsets.fromLTRB(16, 10, 16, 96),
                           children: [
                             _buildWeddingBanner(context, allDocs),
