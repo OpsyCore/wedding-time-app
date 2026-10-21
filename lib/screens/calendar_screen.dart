@@ -613,11 +613,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AppTok.card(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       builder: (context) {
+        final media = MediaQuery.of(context);
+        final bottomInset = media.viewInsets.bottom > media.viewPadding.bottom
+            ? media.viewInsets.bottom
+            : media.viewPadding.bottom;
         return StatefulBuilder(
           builder: (context, setModalState) {
             return ListenableBuilder(
@@ -631,7 +636,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   textDirection: AppLang.I.direction,
                   child: Padding(
                     padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom,
+                      bottom: bottomInset + 12,
                       left: 20,
                       right: 20,
                       top: 16,
