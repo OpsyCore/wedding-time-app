@@ -290,7 +290,7 @@ service cloud.firestore {
       // ادمین برای فعال‌سازی پلن، planId کاربر را می‌نویسد
       allow update: if isAdmin()
         || (isSignedIn() && uid() == userId && isSafeUserPlanWrite(request.resource.data, resource.data));
-      allow delete: if false;
+      allow delete: if (isSignedIn() && uid() == userId) || isAdmin();
     }
 
     // ─── تیکت‌های پشتیبانی → ایمیل abrt1369@gmail.com ───
@@ -389,7 +389,7 @@ service cloud.firestore {
         || (isWeddingMember(weddingId) && isSafeWeddingPlanWrite(request.resource.data, resource.data))
         || isJoinBrideUpdate(weddingId)
         || isJoinGroomUpdate(weddingId);
-      allow delete: if false;
+      allow delete: if isAdmin() || isWeddingMember(weddingId);
 
       match /invitation/{docId} {
         allow read: if true;

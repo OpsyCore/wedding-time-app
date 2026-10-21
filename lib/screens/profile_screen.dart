@@ -17,6 +17,7 @@ import '../widgets/image_crop_screen.dart';
 import '../widgets/effect_background.dart';
 import '../widgets/effect_picker.dart';
 import '../widgets/invite_code_card.dart';
+import '../widgets/privacy_policy_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.weddingId});
@@ -30,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _nameCtrl = TextEditingController();
   bool _loading = true;
   bool _saving = false;
+  bool _deletingAccount = false;
   String _email = '';
   String _role = '';
   String _photoUrl = '';
@@ -542,6 +544,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ),
                         ),
+                        const SizedBox(height: 28),
+                        Divider(color: border),
+                        const SizedBox(height: 16),
+                        Text(
+                          AppLang.I.isFa
+                              ? 'حریم خصوصی و مدیریت حساب'
+                              : 'Privacy & Account Management',
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: () => PrivacyPolicySheet.show(context),
+                          icon: Icon(
+                            Icons.privacy_tip_outlined,
+                            color: accent,
+                            size: 20,
+                          ),
+                          label: Text(
+                            AppLang.I.isFa
+                                ? 'حریم خصوصی و قوانین استفاده'
+                                : 'Privacy Policy & Terms of Use',
+                            style: TextStyle(
+                              color: text,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 13,
+                              horizontal: 14,
+                            ),
+                            side: BorderSide(color: border),
+                            backgroundColor: card,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            alignment: AlignmentDirectional.centerStart,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: _deletingAccount
+                              ? null
+                              : () => _confirmAndDeleteAccount(context),
+                          icon: _deletingAccount
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.redAccent,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.delete_forever_rounded,
+                                  color: Colors.redAccent,
+                                  size: 20,
+                                ),
+                          label: Text(
+                            AppLang.I.isFa
+                                ? 'حذف دائمی حساب کاربری'
+                                : 'Delete Account Permanently',
+                            style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 13,
+                              horizontal: 14,
+                            ),
+                            side: BorderSide(
+                              color: Colors.redAccent.withValues(alpha: 0.45),
+                            ),
+                            backgroundColor:
+                                Colors.redAccent.withValues(alpha: 0.06),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            alignment: AlignmentDirectional.centerStart,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
                       ],
                     ),
             ),
@@ -549,6 +641,173 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+  }
+
+  Future<void> _confirmAndDeleteAccount(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final isFa = AppLang.I.isFa;
+    final passCtrl = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final surface = AppTok.surface(ctx);
+        final text = AppTok.text(ctx);
+        final textSoft = AppTok.textSoft(ctx);
+        final card = AppTok.card(ctx);
+        final border = AppTok.border(ctx);
+
+        return Directionality(
+          textDirection: AppLang.I.direction,
+          child: AlertDialog(
+            backgroundColor: surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.redAccent,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isFa ? 'حذف دائمی حساب کاربری' : 'Delete Account',
+                    style: TextStyle(
+                      color: text,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isFa
+                      ? 'آیا از حذف دائمی حساب کاربری خود مطمئن هستید؟ این کار غیرقابل بازگشت است و اطلاعات پروفایل شما حذف خواهد شد.'
+                      : 'Are you sure you want to permanently delete your account? This action cannot be undone.',
+                  style: TextStyle(
+                    color: textSoft,
+                    fontSize: 13,
+                    height: 1.55,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: passCtrl,
+                  obscureText: true,
+                  style: TextStyle(color: text, fontSize: 13.5),
+                  decoration: InputDecoration(
+                    labelText: isFa
+                        ? 'رمز عبور فعلی (برای تأیید امنیتی)'
+                        : 'Current password (for verification)',
+                    labelStyle: TextStyle(color: textSoft, fontSize: 12.5),
+                    prefixIcon: const Icon(
+                      Icons.lock_outline_rounded,
+                      color: Colors.redAccent,
+                      size: 19,
+                    ),
+                    filled: true,
+                    fillColor: card,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.redAccent),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(
+                  isFa ? 'انصراف' : 'Cancel',
+                  style: TextStyle(color: textSoft),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  isFa ? 'حذف دائمی حساب' : 'Delete Permanently',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    final password = passCtrl.text.trim();
+    passCtrl.dispose();
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deletingAccount = true);
+    try {
+      final email = user.email;
+      if (email != null && email.isNotEmpty && password.isNotEmpty) {
+        final cred = EmailAuthProvider.credential(
+          email: email,
+          password: password,
+        );
+        await user.reauthenticateWithCredential(cred);
+      }
+
+      // حذف سند کاربر در Firestore
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .delete();
+      } catch (_) {}
+
+      // حذف حساب در Firebase Auth
+      await user.delete();
+
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _deletingAccount = false);
+      String msg;
+      if (e.code == 'requires-recent-login') {
+        msg = isFa
+            ? 'لطفاً رمز عبور فعلی خود را در کادر تأیید وارد کنید یا یک‌بار خارج و دوباره وارد شوید.'
+            : 'Please enter your current password or sign in again to delete your account.';
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        msg = isFa
+            ? 'رمز عبور واردشده نادرست است.'
+            : 'Incorrect password.';
+      } else {
+        msg = '${AppLang.tr('error')}: ${e.message ?? e.code}';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _deletingAccount = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${AppLang.tr('error')}: $e')),
+      );
+    }
   }
 
   Widget _fontPicker(BuildContext context) {

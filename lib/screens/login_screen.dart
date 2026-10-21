@@ -9,6 +9,7 @@ import '../core/app_theme_controller.dart';
 import '../main_navigation_screen.dart';
 import '../services/wedding_service.dart';
 import '../widgets/forgot_password_sheet.dart';
+import '../widgets/privacy_policy_sheet.dart';
 import 'wedding_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -666,6 +667,27 @@ class _LoginScreenState extends State<LoginScreen> {
                     _langSwitch(context),
                     const SizedBox(height: 18),
                     _themeSwitch(context),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () => PrivacyPolicySheet.show(context),
+                        icon: Icon(
+                          Icons.privacy_tip_outlined,
+                          size: 16,
+                          color: AppTok.textSoft(context),
+                        ),
+                        label: Text(
+                          AppLang.I.isFa
+                              ? 'حریم خصوصی و قوانین استفاده'
+                              : 'Privacy Policy & Terms of Use',
+                          style: TextStyle(
+                            color: AppTok.textSoft(context),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
