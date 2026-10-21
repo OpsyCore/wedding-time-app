@@ -352,9 +352,9 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                 height: height,
                 child: Stack(
                   children: [
-                    Positioned.fill(
+                    const Positioned.fill(
                       child: DecoratedBox(
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
@@ -371,7 +371,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                         ),
                       ),
                     ),
-                    Positioned.fill(
+                    const Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
