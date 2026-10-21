@@ -652,7 +652,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) {
-        final surface = AppTok.surface(ctx);
+        final surface = AppTok.background(ctx);
         final text = AppTok.text(ctx);
         final textSoft = AppTok.textSoft(ctx);
         final card = AppTok.card(ctx);
