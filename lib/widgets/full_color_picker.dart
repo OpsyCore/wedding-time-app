@@ -11,7 +11,8 @@ class FullColorPickerDialog extends StatefulWidget {
   State<FullColorPickerDialog> createState() => _FullColorPickerDialogState();
 }
 
-class _FullColorPickerDialogState extends State<FullColorPickerDialog> with SingleTickerProviderStateMixin {
+class _FullColorPickerDialogState extends State<FullColorPickerDialog>
+    with SingleTickerProviderStateMixin {
   late TabController _tab;
   late HSVColor _hsv;
   double _opacity = 1.0;
@@ -21,16 +22,99 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
   // Grid preset - exactly like first screenshot top row grayscale + rainbow grid
   static const List<Color> _gridColors = [
     // grayscale row
-    Color(0xFFFFFFFF), Color(0xFFF2F2F2), Color(0xFFE5E5E5), Color(0xFFCCCCCC), Color(0xFFB3B3B3), Color(0xFF999999), Color(0xFF808080), Color(0xFF666666), Color(0xFF4D4D4D), Color(0xFF333333), Color(0xFF1A1A1A), Color(0xFF000000),
+    Color(0xFFFFFFFF),
+    Color(0xFFF2F2F2),
+    Color(0xFFE5E5E5),
+    Color(0xFFCCCCCC),
+    Color(0xFFB3B3B3),
+    Color(0xFF999999),
+    Color(0xFF808080),
+    Color(0xFF666666),
+    Color(0xFF4D4D4D),
+    Color(0xFF333333),
+    Color(0xFF1A1A1A),
+    Color(0xFF000000),
     // main grid - 8 rows x ~10 cols simplified
-    Color(0xFF0A3A4A), Color(0xFF1B2A5A), Color(0xFF3A1A6B), Color(0xFF6B1A3A), Color(0xFF8B1A1A), Color(0xFF8B3D1A), Color(0xFF8B6B1A), Color(0xFF6B7B1A), Color(0xFF2F6B1A), Color(0xFF1A6B4A),
-    Color(0xFF0F5A6B), Color(0xFF2A3A8B), Color(0xFF5A1A8B), Color(0xFF8B1A5A), Color(0xFFB71C1C), Color(0xFFBF360C), Color(0xFF8D6E00), Color(0xFF7A9A00), Color(0xFF3A8B1A), Color(0xFF1A8B6B),
-    Color(0xFF1496A6), Color(0xFF3A4DB3), Color(0xFF7B2AC4), Color(0xFFAB1A6B), Color(0xFFE53935), Color(0xFFEF6C00), Color(0xFFF9A825), Color(0xFF9CCC65), Color(0xFF66BB6A), Color(0xFF26A69A),
-    Color(0xFF2AC4D4), Color(0xFF5A6FE8), Color(0xFF9B4DFF), Color(0xFFD42A7A), Color(0xFFFF5252), Color(0xFFFF8A3D), Color(0xFFFFD54F), Color(0xFFB8D98C), Color(0xFF81C784), Color(0xFF4DB6AC),
-    Color(0xFF6ED8E8), Color(0xFF8BA0FF), Color(0xFFB98CFF), Color(0xFFE85AA0), Color(0xFFFF8A80), Color(0xFFFFB07A), Color(0xFFFFE57F), Color(0xFFCCDFB0), Color(0xFFA5D6A7), Color(0xFF80CBC4),
-    Color(0xFFA0E8F2), Color(0xFFB8C6FF), Color(0xFFD1B8FF), Color(0xFFF0A0C8), Color(0xFFFFB8B0), Color(0xFFFFCCB0), Color(0xFFFFECB3), Color(0xFFDDE8D0), Color(0xFFC8E6C9), Color(0xFFB2DFDB),
-    Color(0xFFD0F2F8), Color(0xFFDDE3FF), Color(0xFFE8DDFF), Color(0xFFF8D0E0), Color(0xFFFFD8D0), Color(0xFFFFE0CC), Color(0xFFFFF3C8), Color(0xFFEEF3E8), Color(0xFFE8F5E9), Color(0xFFE0F2F1),
-    Color(0xFFE8F8FC), Color(0xFFF0F2FF), Color(0xFFF5EEFF), Color(0xFFFCE8F0), Color(0xFFFFEDE8), Color(0xFFFFF0E0), Color(0xFFFFF8E0), Color(0xFFF5F8F0), Color(0xFFF1F8E9), Color(0xFFE0F7FA),
+    Color(0xFF0A3A4A),
+    Color(0xFF1B2A5A),
+    Color(0xFF3A1A6B),
+    Color(0xFF6B1A3A),
+    Color(0xFF8B1A1A),
+    Color(0xFF8B3D1A),
+    Color(0xFF8B6B1A),
+    Color(0xFF6B7B1A),
+    Color(0xFF2F6B1A),
+    Color(0xFF1A6B4A),
+    Color(0xFF0F5A6B),
+    Color(0xFF2A3A8B),
+    Color(0xFF5A1A8B),
+    Color(0xFF8B1A5A),
+    Color(0xFFB71C1C),
+    Color(0xFFBF360C),
+    Color(0xFF8D6E00),
+    Color(0xFF7A9A00),
+    Color(0xFF3A8B1A),
+    Color(0xFF1A8B6B),
+    Color(0xFF1496A6),
+    Color(0xFF3A4DB3),
+    Color(0xFF7B2AC4),
+    Color(0xFFAB1A6B),
+    Color(0xFFE53935),
+    Color(0xFFEF6C00),
+    Color(0xFFF9A825),
+    Color(0xFF9CCC65),
+    Color(0xFF66BB6A),
+    Color(0xFF26A69A),
+    Color(0xFF2AC4D4),
+    Color(0xFF5A6FE8),
+    Color(0xFF9B4DFF),
+    Color(0xFFD42A7A),
+    Color(0xFFFF5252),
+    Color(0xFFFF8A3D),
+    Color(0xFFFFD54F),
+    Color(0xFFB8D98C),
+    Color(0xFF81C784),
+    Color(0xFF4DB6AC),
+    Color(0xFF6ED8E8),
+    Color(0xFF8BA0FF),
+    Color(0xFFB98CFF),
+    Color(0xFFE85AA0),
+    Color(0xFFFF8A80),
+    Color(0xFFFFB07A),
+    Color(0xFFFFE57F),
+    Color(0xFFCCDFB0),
+    Color(0xFFA5D6A7),
+    Color(0xFF80CBC4),
+    Color(0xFFA0E8F2),
+    Color(0xFFB8C6FF),
+    Color(0xFFD1B8FF),
+    Color(0xFFF0A0C8),
+    Color(0xFFFFB8B0),
+    Color(0xFFFFCCB0),
+    Color(0xFFFFECB3),
+    Color(0xFFDDE8D0),
+    Color(0xFFC8E6C9),
+    Color(0xFFB2DFDB),
+    Color(0xFFD0F2F8),
+    Color(0xFFDDE3FF),
+    Color(0xFFE8DDFF),
+    Color(0xFFF8D0E0),
+    Color(0xFFFFD8D0),
+    Color(0xFFFFE0CC),
+    Color(0xFFFFF3C8),
+    Color(0xFFEEF3E8),
+    Color(0xFFE8F5E9),
+    Color(0xFFE0F2F1),
+    Color(0xFFE8F8FC),
+    Color(0xFFF0F2FF),
+    Color(0xFFF5EEFF),
+    Color(0xFFFCE8F0),
+    Color(0xFFFFEDE8),
+    Color(0xFFFFF0E0),
+    Color(0xFFFFF8E0),
+    Color(0xFFF5F8F0),
+    Color(0xFFF1F8E9),
+    Color(0xFFE0F7FA),
   ];
 
   @override
@@ -92,9 +176,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
     // The spectrum is a vertical rainbow: Y chooses hue. X moves from
     // white (left), through the pure hue (middle), to black (right).
     final saturation = x <= 0.55 ? (x / 0.55) : 1.0;
-    final value = x <= 0.55
-        ? 1.0
-        : ((1 - x) / 0.45).clamp(0.0, 1.0).toDouble();
+    final value = x <= 0.55 ? 1.0 : ((1 - x) / 0.45).clamp(0.0, 1.0).toDouble();
     final selectedHsv = HSVColor.fromAHSV(1, y * 360, saturation, value);
     final color = selectedHsv.toColor();
 
@@ -123,13 +205,15 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
               padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
               child: Row(
                 children: [
-                  const Icon(Icons.brush_rounded, color: Color(0xFF1E88E5), size: 20),
+                  const Icon(Icons.brush_rounded,
+                      color: Color(0xFF1E88E5), size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       isFa ? 'انتخاب رنگ' : 'Pick a color',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 16),
                     ),
                   ),
                   const SizedBox(width: 20),
@@ -150,13 +234,18 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                 indicator: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6)],
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 6)
+                  ],
                 ),
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
                 labelColor: Colors.black87,
                 unselectedLabelColor: Colors.black54,
-                labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+                labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 12.5),
                 tabs: [
                   Tab(text: isFa ? 'شبکه' : 'Grid'),
                   Tab(text: isFa ? 'طیف رنگ' : 'Spectrum'),
@@ -182,7 +271,12 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('OPACITY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.black45, letterSpacing: 0.8)),
+                  const Text('OPACITY',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black45,
+                          letterSpacing: 0.8)),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -209,7 +303,10 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                                   height: 28,
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: [Colors.transparent, _color.withValues(alpha: 1)],
+                                      colors: [
+                                        Colors.transparent,
+                                        _color.withValues(alpha: 1)
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -217,7 +314,8 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                               SliderTheme(
                                 data: SliderThemeData(
                                   trackHeight: 28,
-                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+                                  thumbShape: const RoundSliderThumbShape(
+                                      enabledThumbRadius: 12),
                                   overlayShape: SliderComponentShape.noOverlay,
                                   activeTrackColor: Colors.transparent,
                                   inactiveTrackColor: Colors.transparent,
@@ -227,7 +325,8 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                                   value: _opacity,
                                   min: 0,
                                   max: 1,
-                                  onChanged: (v) => setState(() => _opacity = v),
+                                  onChanged: (v) =>
+                                      setState(() => _opacity = v),
                                 ),
                               ),
                             ],
@@ -235,7 +334,9 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Text('${(_opacity * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                      Text('${(_opacity * 100).round()}%',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 13)),
                     ],
                   ),
                 ],
@@ -254,7 +355,11 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                       color: _color,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.black12),
-                      boxShadow: [BoxShadow(color: _color.withValues(alpha: 0.35), blurRadius: 10)],
+                      boxShadow: [
+                        BoxShadow(
+                            color: _color.withValues(alpha: 0.35),
+                            blurRadius: 10)
+                      ],
                     ),
                   ),
                   const Spacer(),
@@ -269,7 +374,8 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                         color: Color(0xFFE8E8EC),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.add_rounded, size: 22, color: Colors.black54),
+                      child: const Icon(Icons.add_rounded,
+                          size: 22, color: Colors.black54),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -278,10 +384,13 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTok.accent(context),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 22, vertical: 12),
                     ),
-                    child: Text(isFa ? 'تایید' : 'Done', style: const TextStyle(fontWeight: FontWeight.w800)),
+                    child: Text(isFa ? 'تایید' : 'Done',
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
                   ),
                 ],
               ),
@@ -296,7 +405,8 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 10, crossAxisSpacing: 4, mainAxisSpacing: 4),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 10, crossAxisSpacing: 4, mainAxisSpacing: 4),
         itemCount: _gridColors.length,
         itemBuilder: (context, i) {
           final c = _gridColors[i];
@@ -307,8 +417,16 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
               decoration: BoxDecoration(
                 color: c,
                 borderRadius: BorderRadius.circular(3),
-                border: Border.all(color: selected ? Colors.white : Colors.black12, width: selected ? 2 : 0.6),
-                boxShadow: selected ? [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 4)] : null,
+                border: Border.all(
+                    color: selected ? Colors.white : Colors.black12,
+                    width: selected ? 2 : 0.6),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 4)
+                      ]
+                    : null,
               ),
             ),
           );
@@ -330,12 +448,10 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
               ? _hsv.saturation * 0.55
               : 0.55 + (1 - _hsv.value) * 0.45;
           final maxLeft = (width - 16).clamp(0.0, double.infinity);
-          final markerLeft = (spectrumPosition * width - 8)
-              .clamp(0.0, maxLeft)
-              .toDouble();
-          final markerTop = (huePosition * height - 8)
-              .clamp(0.0, height - 16)
-              .toDouble();
+          final markerLeft =
+              (spectrumPosition * width - 8).clamp(0.0, maxLeft).toDouble();
+          final markerTop =
+              (huePosition * height - 8).clamp(0.0, height - 16).toDouble();
 
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -382,7 +498,7 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
                               Colors.transparent,
                               Colors.black,
                             ],
-                            stops: const [0, 0.55, 1],
+                            stops: [0, 0.55, 1],
                           ),
                         ),
                       ),
@@ -504,10 +620,14 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
     );
   }
 
-  Widget _sliderRow(String label, int value, Color col, ValueChanged<int> onChanged) {
+  Widget _sliderRow(
+      String label, int value, Color col, ValueChanged<int> onChanged) {
     return Row(
       children: [
-        SizedBox(width: 20, child: Text(label, style: TextStyle(color: col, fontWeight: FontWeight.w800))),
+        SizedBox(
+            width: 20,
+            child: Text(label,
+                style: TextStyle(color: col, fontWeight: FontWeight.w800))),
         Expanded(
           child: Slider(
             value: value.toDouble(),
@@ -517,7 +637,12 @@ class _FullColorPickerDialogState extends State<FullColorPickerDialog> with Sing
             onChanged: (v) => onChanged(v.round()),
           ),
         ),
-        SizedBox(width: 36, child: Text('$value', textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+        SizedBox(
+            width: 36,
+            child: Text('$value',
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 12))),
       ],
     );
   }
@@ -538,7 +663,9 @@ class _CheckerPainter extends CustomPainter {
     const s = 7.0;
     final light = Paint()..color = const Color(0xFFE8E8E8);
     final dark = Paint()..color = const Color(0xFFCFCFCF);
-    canvas.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(20)), light);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(20)),
+        light);
     for (double y = 0; y < size.height; y += s) {
       for (double x = 0; x < size.width; x += s) {
         final isDark = ((x / s).floor() + (y / s).floor()) % 2 == 1;
@@ -548,6 +675,7 @@ class _CheckerPainter extends CustomPainter {
       }
     }
   }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
