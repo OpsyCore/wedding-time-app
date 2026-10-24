@@ -69,12 +69,15 @@ jobs:
           if not gradle_file.is_file():
               raise SystemExit(f'Poolakey Gradle file not found: {gradle_file}')
           text = gradle_file.read_text()
-          if 'jcenter()' not in text:
-              raise SystemExit(f'Expected legacy jcenter() call was not found: {gradle_file}')
-          gradle_file.write_text(text.replace('jcenter()', 'mavenCentral()'))
+          if 'jcenter()' in text:
+              gradle_file.write_text(text.replace('jcenter()', 'mavenCentral()'))
+              print(f'Patched {gradle_file}')
+          elif 'mavenCentral()' in text:
+              print(f'Already patched: {gradle_file}')
+          else:
+              raise SystemExit(f'No compatible Maven repository declaration found: {gradle_file}')
           if 'jcenter()' in gradle_file.read_text():
               raise SystemExit(f'Could not remove jcenter() from {gradle_file}')
-          print(f'Patched {gradle_file}')
           PY
 
       - name: Run build regression tests
