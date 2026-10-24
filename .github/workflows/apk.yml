@@ -47,20 +47,35 @@ jobs:
         run: flutter pub get
 
       # flutter_poolakey 2.2.0+1.0.0 still calls the removed Gradle jcenter() DSL.
-      # Replace it in the CI pub cache until the upstream package releases a fix.
+      # Resolve its exact source through pub's package config and patch it until
+      # the upstream package releases a compatible Gradle build file.
       - name: Patch legacy Poolakey Gradle repository
         run: |
-          PLUGIN_GRADLE="$(find "$HOME/.pub-cache/hosted/pub.dev" -path '*/flutter_poolakey-*/android/build.gradle' -type f -print -quit)"
-          if [ -z "$PLUGIN_GRADLE" ]; then
-            echo "flutter_poolakey Android Gradle file was not found in the pub cache" >&2
-            exit 1
-          fi
-          sed -i 's/jcenter()/mavenCentral()/g' "$PLUGIN_GRADLE"
-          if grep -q 'jcenter()' "$PLUGIN_GRADLE"; then
-            echo "Could not remove the obsolete jcenter() call from $PLUGIN_GRADLE" >&2
-            exit 1
-          fi
-          echo "Patched $PLUGIN_GRADLE"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.parse import unquote, urlparse
+
+          config = json.loads(Path('.dart_tool/package_config.json').read_text())
+          package = next((item for item in config['packages']
+                          if item['name'] == 'flutter_poolakey'), None)
+          if package is None:
+              raise SystemExit('flutter_poolakey was not found in package_config.json')
+          root_uri = package['rootUri']
+          parsed = urlparse(root_uri)
+          root = (Path(unquote(parsed.path)) if parsed.scheme == 'file'
+                  else (Path('.dart_tool') / root_uri).resolve())
+          gradle_file = root / 'android' / 'build.gradle'
+          if not gradle_file.is_file():
+              raise SystemExit(f'Poolakey Gradle file not found: {gradle_file}')
+          text = gradle_file.read_text()
+          if 'jcenter()' not in text:
+              raise SystemExit(f'Expected legacy jcenter() call was not found: {gradle_file}')
+          gradle_file.write_text(text.replace('jcenter()', 'mavenCentral()'))
+          if 'jcenter()' in gradle_file.read_text():
+              raise SystemExit(f'Could not remove jcenter() from {gradle_file}')
+          print(f'Patched {gradle_file}')
+          PY
 
       - name: Run build regression tests
         run: flutter test test/build_regression_test.dart
