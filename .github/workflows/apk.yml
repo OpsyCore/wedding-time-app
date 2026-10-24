@@ -140,6 +140,26 @@ jobs:
               echo "::error::${line}"
             done
           fi
+          python3 - <<'PY'
+          from pathlib import Path
+
+          lines = Path('/tmp/build.log').read_text(errors='replace').splitlines()
+          for index, line in enumerate(lines):
+              if 'What went wrong:' not in line:
+                  continue
+              details = []
+              for candidate in lines[index + 1:index + 9]:
+                  text = candidate.strip()
+                  if not text:
+                      if details:
+                          break
+                      continue
+                  if text.startswith('Try:'):
+                      break
+                  details.append(text)
+              for detail in details:
+                  print(f'::error title=Build failure details::{detail}')
+          PY
 
       - name: Upload build log
         if: always()
