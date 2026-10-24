@@ -46,6 +46,22 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
+      # flutter_poolakey 2.2.0+1.0.0 still calls the removed Gradle jcenter() DSL.
+      # Replace it in the CI pub cache until the upstream package releases a fix.
+      - name: Patch legacy Poolakey Gradle repository
+        run: |
+          PLUGIN_GRADLE="$(find "$HOME/.pub-cache/hosted/pub.dev" -path '*/flutter_poolakey-*/android/build.gradle' -type f -print -quit)"
+          if [ -z "$PLUGIN_GRADLE" ]; then
+            echo "flutter_poolakey Android Gradle file was not found in the pub cache" >&2
+            exit 1
+          fi
+          sed -i 's/jcenter()/mavenCentral()/g' "$PLUGIN_GRADLE"
+          if grep -q 'jcenter()' "$PLUGIN_GRADLE"; then
+            echo "Could not remove the obsolete jcenter() call from $PLUGIN_GRADLE" >&2
+            exit 1
+          fi
+          echo "Patched $PLUGIN_GRADLE"
+
       - name: Run build regression tests
         run: flutter test test/build_regression_test.dart
 
