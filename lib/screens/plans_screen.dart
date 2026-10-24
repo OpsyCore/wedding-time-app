@@ -1233,7 +1233,7 @@ class _TrialCountdownBannerState extends State<_TrialCountdownBanner> {
               : (daysLeft == null
                   ? (isFa ? 'دسترسی پرو فعال است.' : 'Pro access is active.')
                   : (isFa
-                      ? 'تا پایان دسترسی پرو ${_PlansScreenState.dig(daysLeft < 1 ? 1 : daysLeft)} روز مانده است.'
+                      ? 'تا پایان دسترسی پرو ${_PlansScreenState.dig((daysLeft < 1 ? 1 : daysLeft).toString())} روز مانده است.'
                       : '${daysLeft < 1 ? 1 : daysLeft} days of Pro access remain.'));
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
