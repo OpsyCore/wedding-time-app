@@ -36,11 +36,10 @@ jobs:
       - name: Flutter doctor (diagnostics only)
         run: flutter doctor -v || true
 
-      - name: Validate Bazaar purchase backend
-        working-directory: functions
+      - name: Validate Netlify Bazaar verifier
         run: |
           npm ci --ignore-scripts
-          npm run lint
+          npm run lint:netlify
           npm audit --omit=dev --audit-level=moderate
 
       - name: Resolve Flutter dependencies
@@ -125,6 +124,7 @@ jobs:
         env:
           IMGBB_KEY: ${{ secrets.IMGBB_API_KEY }}
           BAZAAR_RSA_PUBLIC_KEY: ${{ vars.BAZAAR_RSA_PUBLIC_KEY }}
+          BAZAAR_VERIFY_URL: ${{ vars.BAZAAR_VERIFY_URL }}
         run: |
           set -o pipefail
           DEFINE_ARGS=()
@@ -133,6 +133,9 @@ jobs:
           fi
           if [ -n "${BAZAAR_RSA_PUBLIC_KEY}" ]; then
             DEFINE_ARGS+=(--dart-define=BAZAAR_RSA_PUBLIC_KEY="${BAZAAR_RSA_PUBLIC_KEY}")
+          fi
+          if [ -n "${BAZAAR_VERIFY_URL}" ]; then
+            DEFINE_ARGS+=(--dart-define=BAZAAR_VERIFY_URL="${BAZAAR_VERIFY_URL}")
           fi
           flutter build apk --release --split-per-abi --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee /tmp/build.log
           flutter build apk --release --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee -a /tmp/build.log

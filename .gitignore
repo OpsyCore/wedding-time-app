@@ -14,9 +14,14 @@ android/*.jks
 **/generated_plugin_registrant.*
 **/GeneratedPluginRegistrant.*
 
+# Node dependencies and local environment secrets
+node_modules/
+.env*
+*service-account*.json
+*serviceAccount*.json
+firebase-adminsdk-*.json
+
 # Firebase tooling logs / local state
-functions/node_modules/
-functions/.env*
 firebase-debug.log
 firebase-debug.*.log
 .firebase/

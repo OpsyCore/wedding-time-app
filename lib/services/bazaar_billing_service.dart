@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_poolakey/flutter_poolakey.dart';
+import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
+
+import '../core/app_config.dart';
 
 class BazaarPurchaseResult {
   const BazaarPurchaseResult({
@@ -23,15 +26,20 @@ class BazaarPurchaseResult {
 
 /// Café Bazaar billing bridge.
 ///
-/// Receipt signatures are checked locally by Poolakey and again by the
-/// `verifyBazaarPurchase` Firebase callable before any paid entitlement is
-/// written to Firestore. The RSA key is a public key, supplied at build time.
+/// Poolakey checks the receipt locally; a Netlify Function independently
+/// verifies the signed receipt and writes the paid entitlement to Firestore.
+/// The RSA key is public and supplied at build time.
 class BazaarBillingService {
   BazaarBillingService._();
   static final BazaarBillingService I = BazaarBillingService._();
 
   static const _rsaPublicKey =
       String.fromEnvironment('BAZAAR_RSA_PUBLIC_KEY', defaultValue: '');
+  static const _verifyEndpoint = String.fromEnvironment(
+    'BAZAAR_VERIFY_URL',
+    defaultValue:
+        '${AppConfig.defaultPublicBaseUrl}/.netlify/functions/verify-bazaar-purchase',
+  );
   static const _supportedProducts = {'pro', 'premium'};
 
   bool _connected = false;
@@ -97,17 +105,40 @@ class BazaarBillingService {
       throw StateError('اطلاعات خرید با محصول یا حساب کاربری هم‌خوانی ندارد.');
     }
 
-    final callable = FirebaseFunctions.instance.httpsCallable(
-      'verifyBazaarPurchase',
-      options: HttpsCallableOptions(timeout: const Duration(seconds: 30)),
-    );
-    final response = await callable.call<Map<String, dynamic>>({
-      'productId': purchase.productId,
-      'payload': purchase.payload,
-      'originalJson': purchase.originalJson,
-      'dataSignature': purchase.dataSignature,
-    });
-    final data = Map<String, dynamic>.from(response.data);
+    final idToken = await user.getIdToken();
+    if (idToken == null || idToken.isEmpty) {
+      throw StateError('نشست کاربری منقضی شده؛ دوباره وارد حساب شوید.');
+    }
+    final endpoint = Uri.tryParse(_verifyEndpoint);
+    if (endpoint == null || !endpoint.hasScheme || endpoint.host.isEmpty) {
+      throw StateError('نشانی سرور تأیید خرید تنظیم نشده است.');
+    }
+
+    final response = await http
+        .post(
+          endpoint,
+          headers: {
+            'Authorization': 'Bearer $idToken',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'productId': purchase.productId,
+            'payload': purchase.payload,
+            'originalJson': purchase.originalJson,
+            'dataSignature': purchase.dataSignature,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+    Map<String, dynamic> data;
+    try {
+      data = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+    } catch (_) {
+      throw StateError('پاسخ سرور تأیید خرید قابل خواندن نیست.');
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final error = (data['error'] ?? 'تأیید خرید از سرور انجام نشد.').toString();
+      throw StateError(error);
+    }
     final grantedPlan = (data['planId'] ?? '').toString();
     if (grantedPlan != 'pro' && grantedPlan != 'premium') {
       throw StateError('تأیید خرید از سرور نتیجهٔ معتبری برنگرداند.');
