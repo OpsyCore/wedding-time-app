@@ -147,16 +147,47 @@ class PlanLimits {
   }
 
   /// آیا تریال هنوز معتبر است؟ بر اساس trialEndsAt در سند کاربر/مراسم
+  static DateTime? trialExpiresAt(Map<String, dynamic>? data) {
+    final v = data?['trialEndsAt'];
+    if (v == null) return null;
+    try {
+      return v is Timestamp ? v.toDate() : DateTime.parse(v.toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
   static bool isTrialValid(Map<String, dynamic>? data) {
     if (data == null) return false;
-    final v = data['trialEndsAt'];
-    if (v == null) return true;
+    if (data['trialEndsAt'] == null) return true;
+    final ends = trialExpiresAt(data);
+    return ends != null && DateTime.now().isBefore(ends);
+  }
+
+  static DateTime? proExpiresAt(Map<String, dynamic>? data) {
+    final v = data?['planExpiresAt'];
+    if (v == null) return null;
     try {
-      final DateTime ends = v is Timestamp ? v.toDate() : DateTime.parse(v.toString());
-      return DateTime.now().isBefore(ends);
+      return v is Timestamp ? v.toDate() : DateTime.parse(v.toString());
     } catch (_) {
-      return false;
+      return null;
     }
+  }
+
+  /// Treat the annual Pro entitlement as free after its server-issued expiry.
+  /// Legacy admin grants without an expiry remain valid until migrated.
+  static bool isProValid(Map<String, dynamic>? data) {
+    if (data == null) return false;
+    if (data['planExpiresAt'] == null) return true;
+    final ends = proExpiresAt(data);
+    return ends != null && DateTime.now().isBefore(ends);
+  }
+
+  static String effectivePlanId(Map<String, dynamic>? data) {
+    final raw = (data?['planId'] ?? data?['plan'] ?? AppPlans.freeId).toString();
+    if (raw == AppPlans.trialId && !isTrialValid(data)) return AppPlans.freeId;
+    if (raw == AppPlans.proId && !isProValid(data)) return AppPlans.freeId;
+    return raw;
   }
 }
 
@@ -173,17 +204,54 @@ class PlanAccess {
   DocumentReference<Map<String, dynamic>> _userRef(String uid) =>
       _db.collection('users').doc(uid);
 
-  /// پلنِ یک مراسم — از سند مراسم (mirror شده هنگام فعال‌سازی) — تریال منقضی → free
-  Stream<String> watchWeddingPlanId(String weddingId) {
-    return _db
-        .collection('weddings')
-        .doc(weddingId)
-        .snapshots()
-        .map((s) {
-      final raw = (s.data()?['planId'] ?? AppPlans.freeId).toString();
-      if (raw == AppPlans.trialId && !PlanLimits.isTrialValid(s.data())) return AppPlans.freeId;
-      return raw;
-    });
+  /// پلنِ یک مراسم؛ پایان تریال/پلن سالانه حتی بدون تغییر تازه در Firestore اعمال می‌شود.
+  Stream<String> watchWeddingPlanId(String weddingId) =>
+      _watchPlanRef(_db.collection('weddings').doc(weddingId));
+
+  Stream<String> _watchPlanRef(
+    DocumentReference<Map<String, dynamic>> ref,
+  ) {
+    late final StreamController<String> controller;
+    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? subscription;
+    Timer? expiryTimer;
+    Map<String, dynamic>? latestData;
+
+    void emit() {
+      if (!controller.isClosed) {
+        controller.add(PlanLimits.effectivePlanId(latestData));
+      }
+    }
+
+    void scheduleExpiry() {
+      expiryTimer?.cancel();
+      final rawPlan = (latestData?['planId'] ?? latestData?['plan'] ?? '').toString();
+      final expiresAt = rawPlan == AppPlans.proId
+          ? PlanLimits.proExpiresAt(latestData)
+          : (rawPlan == AppPlans.trialId
+              ? PlanLimits.trialExpiresAt(latestData)
+              : null);
+      if (expiresAt == null) return;
+      final delay = expiresAt.difference(DateTime.now());
+      expiryTimer = Timer(delay.isNegative ? Duration.zero : delay, emit);
+    }
+
+    controller = StreamController<String>(
+      onListen: () {
+        subscription = ref.snapshots().listen(
+          (snapshot) {
+            latestData = snapshot.data();
+            scheduleExpiry();
+            emit();
+          },
+          onError: controller.addError,
+        );
+      },
+      onCancel: () async {
+        expiryTimer?.cancel();
+        await subscription?.cancel();
+      },
+    );
+    return controller.stream;
   }
 
   /// محدودیت‌ها = کد پایه + سوییچ‌های ادمین (app_config/plans).
@@ -261,8 +329,7 @@ class PlanAccess {
   Future<PlanLimits> weddingLimits(String weddingId) async {
     if (!PlansService.I.monetizationOn) return PlanLimits.everythingOpen;
     final s = await _db.collection('weddings').doc(weddingId).get();
-    final raw = (s.data()?['planId'] ?? '').toString();
-    final effective = (raw == AppPlans.trialId && !PlanLimits.isTrialValid(s.data())) ? AppPlans.freeId : raw;
+    final effective = PlanLimits.effectivePlanId(s.data());
     final plans = await PlansService.I.fetchPlans();
     return limitsFor(effective, plans);
   }
@@ -278,19 +345,13 @@ class PlanAccess {
     final u = uid;
     if (u == null) return AppPlans.freeId;
     final s = await _userRef(u).get();
-    final raw = (s.data()?['planId'] ?? AppPlans.freeId).toString();
-    if (raw == AppPlans.trialId && !PlanLimits.isTrialValid(s.data())) return AppPlans.freeId;
-    return raw;
+    return PlanLimits.effectivePlanId(s.data());
   }
 
   Stream<String> watchMyPlanId() {
     final u = uid;
     if (u == null) return Stream.value(AppPlans.freeId);
-    return _userRef(u).snapshots().map((s) {
-      final raw = (s.data()?['planId'] ?? AppPlans.freeId).toString();
-      if (raw == AppPlans.trialId && !PlanLimits.isTrialValid(s.data())) return AppPlans.freeId;
-      return raw;
-    });
+    return _watchPlanRef(_userRef(u));
   }
 
   /// تریال: هر کاربر جدید ۳۰ روز فول — تاریخ انقضا

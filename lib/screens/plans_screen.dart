@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -10,6 +11,7 @@ import '../core/app_plans.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../models/subscription_plan.dart';
+import '../services/bazaar_billing_service.dart';
 import '../services/plan_access.dart';
 import '../services/plans_service.dart';
 import '../widgets/async_state_views.dart';
@@ -319,6 +321,47 @@ class _PlansScreenState extends State<PlansScreen> {
       );
       return;
     }
+    final isBazaarAndroid =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    if (isBazaarAndroid && (plan.id == 'pro' || plan.id == 'premium')) {
+      try {
+        final result = await BazaarBillingService.I.purchasePlan(plan.id);
+        if (!mounted) return;
+        final message = result.planId == 'premium'
+            ? (AppLang.I.isFa
+                ? 'خرید موفق بود؛ پرمیوم مادام‌العمر فعال شد.'
+                : 'Purchase successful. Lifetime Premium is active.')
+            : (AppLang.I.isFa
+                ? 'خرید موفق بود؛ پرو برای یک سال فعال شد.'
+                : 'Purchase successful. Pro is active for one year.');
+        final consumeWarning = AppLang.I.isFa
+            ? 'برای تکمیل همگام‌سازی خرید با پشتیبانی تماس بگیر.'
+            : 'Contact support to finish purchase sync.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.annualProductConsumed
+                  ? message
+                  : '$message\n$consumeWarning',
+            ),
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        final detail = e.toString().replaceFirst('Bad state: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLang.I.isFa
+                  ? 'خرید کامل نشد: $detail'
+                  : 'Purchase could not be completed: $detail',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     final url = plan.paymentUrl?.trim() ?? '';
     if (url.isNotEmpty) {
       final uri = Uri.tryParse(url);
@@ -1173,9 +1216,7 @@ class _TrialCountdownBannerState extends State<_TrialCountdownBanner> {
             ? const <String, dynamic>{}
             : (snap.data?.data() ?? const <String, dynamic>{});
 
-        final rawPlan = (data['planId'] ?? data['plan'] ?? AppPlans.trialId)
-            .toString()
-            .trim();
+        final rawPlan = PlanLimits.effectivePlanId(data);
 
         // اگر کاربر پلن پرو یا پرمیوم خریده باشد، وضعیت پلن فعال را نشان بده
         if (rawPlan == AppPlans.proId ||
@@ -1184,7 +1225,16 @@ class _TrialCountdownBannerState extends State<_TrialCountdownBanner> {
           final isPremium = rawPlan == AppPlans.premiumId;
           final planLabel = isPremium
               ? (isFa ? 'پرمیوم مادام‌العمر' : 'Lifetime Premium')
-              : (isFa ? 'پرو (حرفه‌ای)' : 'Pro Plan');
+              : (isFa ? 'پرو یک‌ساله' : 'One-year Pro');
+          final expiresAt = isPremium ? null : _parseDate(data['planExpiresAt']);
+          final daysLeft = expiresAt?.difference(DateTime.now()).inDays;
+          final activeDetails = isPremium
+              ? (isFa ? 'دسترسی مادام‌العمر فعال است.' : 'Lifetime access is active.')
+              : (daysLeft == null
+                  ? (isFa ? 'دسترسی پرو فعال است.' : 'Pro access is active.')
+                  : (isFa
+                      ? 'تا پایان دسترسی پرو ${_PlansScreenState.dig(daysLeft < 1 ? 1 : daysLeft)} روز مانده است.'
+                      : '${daysLeft < 1 ? 1 : daysLeft} days of Pro access remain.'));
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
@@ -1219,9 +1269,7 @@ class _TrialCountdownBannerState extends State<_TrialCountdownBanner> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isFa
-                            ? 'تمام امکانات پلن شما بدون محدودیت زمانیِ تریال فعال است.'
-                            : 'All features of your plan are unlocked.',
+                        activeDetails,
                         style: TextStyle(color: textSoft, fontSize: 12),
                       ),
                     ],

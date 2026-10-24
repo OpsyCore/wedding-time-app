@@ -36,6 +36,16 @@ jobs:
       - name: Flutter doctor (diagnostics only)
         run: flutter doctor -v || true
 
+      - name: Validate Bazaar purchase backend
+        working-directory: functions
+        run: |
+          npm ci --ignore-scripts
+          npm run lint
+          npm audit --omit=dev --audit-level=moderate
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
       - name: Run build regression tests
         run: flutter test test/build_regression_test.dart
 
@@ -80,11 +90,15 @@ jobs:
         id: build
         env:
           IMGBB_KEY: ${{ secrets.IMGBB_API_KEY }}
+          BAZAAR_RSA_PUBLIC_KEY: ${{ vars.BAZAAR_RSA_PUBLIC_KEY }}
         run: |
           set -o pipefail
           DEFINE_ARGS=()
           if [ -n "${IMGBB_KEY}" ]; then
             DEFINE_ARGS+=(--dart-define=IMGBB_API_KEY="${IMGBB_KEY}")
+          fi
+          if [ -n "${BAZAAR_RSA_PUBLIC_KEY}" ]; then
+            DEFINE_ARGS+=(--dart-define=BAZAAR_RSA_PUBLIC_KEY="${BAZAAR_RSA_PUBLIC_KEY}")
           fi
           flutter build apk --release --split-per-abi --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee /tmp/build.log
           flutter build apk --release --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee -a /tmp/build.log

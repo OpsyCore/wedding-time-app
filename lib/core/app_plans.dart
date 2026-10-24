@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/subscription_plan.dart';
 
 /// پیش‌فرض پلن‌ها — ادمین از Firestore override می‌کند.
-/// ترتیب نمایش کارت‌ها: free | pro_monthly | pro | premium
+/// ترتیب نمایش کارت‌ها: free | pro (یک‌ساله) | premium (مادام‌العمر)
 /// + پلن مخفی trial: هر نصب جدید ۱ ماه فول رایگان (everythingOpen)، بعد از ۳۰ روز اتومات به free برمی‌گردد
 class AppPlans {
   AppPlans._();
@@ -14,8 +14,8 @@ class AppPlans {
   static const proId = 'pro';
   static const premiumId = 'premium';
 
-  /// ترتیب ثابت نمایش (trial مخفی — فقط سیستم)
-  static const displayOrder = [freeId, proMonthlyId, proId, premiumId];
+  /// ترتیب ثابت نمایش؛ پلن‌های فروش بازار فقط سالانه و مادام‌العمر هستند.
+  static const displayOrder = [freeId, proId, premiumId];
 
   static List<SubscriptionPlan> get defaults => [
         // ── TRIAL مخفی — ۱ ماه فول رایگان Auto (everythingOpen) — نمایش داده نمی‌شود ──
@@ -123,69 +123,6 @@ class AppPlans {
           ],
         ),
         SubscriptionPlan(
-          id: proMonthlyId,
-          nameFa: 'پرو ماهانه',
-          nameEn: 'Pro Monthly',
-          subtitleFa: 'همه‌چیز برای اجرا — ماه به ماه',
-          subtitleEn: 'Everything to run, monthly',
-          ctaFa: 'شروع پرو ماهانه',
-          ctaEn: 'Start Pro monthly',
-          iconCode: Icons.auto_awesome_rounded.codePoint,
-          priceToman: 298000,
-          priceUsd: 8,
-          periodFa: 'ماهانه',
-          periodEn: 'per month',
-          sortOrder: 1,
-          features: const [
-            PlanFeature(
-              id: 'all_free',
-              labelFa: 'تمام امکانات هدیه',
-              labelEn: 'Everything in gift',
-              included: true,
-            ),
-            PlanFeature(
-              id: 'guests',
-              labelFa: 'مهمان‌ها',
-              labelEn: 'Guests',
-              included: true,
-              valueFa: 'نامحدود',
-              valueEn: 'Unlimited',
-            ),
-            PlanFeature(
-              id: 'budget',
-              labelFa: 'بودجه + تأمین‌کننده‌ها + اقساط',
-              labelEn: 'Budget + vendors + payments',
-              included: true,
-            ),
-            PlanFeature(
-              id: 'seating',
-              labelFa: 'چیدمان نشیمن چندسالنه',
-              labelEn: 'Multi-hall seating',
-              included: true,
-            ),
-            PlanFeature(
-              id: 'camera',
-              labelFa: 'دوربین مهمان + گالری تأیید',
-              labelEn: 'Guest camera + approvals',
-              included: true,
-              valueFa: '۱۰ شات/مهمان',
-              valueEn: '10 shots/guest',
-            ),
-            PlanFeature(
-              id: 'qr',
-              labelFa: 'دعوت‌نامه کامل + QR',
-              labelEn: 'Full invite + QR',
-              included: true,
-            ),
-            PlanFeature(
-              id: 'support',
-              labelFa: 'پشتیبانی اولویت‌دار',
-              labelEn: 'Priority support',
-              included: true,
-            ),
-          ],
-        ),
-        SubscriptionPlan(
           id: proId,
           nameFa: 'پرو (۱ ساله)',
           nameEn: 'Pro (1 year)',
@@ -194,9 +131,9 @@ class AppPlans {
           ctaFa: 'انتخاب پرو',
           ctaEn: 'Choose Pro',
           iconCode: Icons.workspace_premium_rounded.codePoint,
-          priceToman: 1780000,
-          priceUsd: 38,
-          discountPercent: 50,
+          priceToman: 2327500,
+          priceUsd: 0,
+          discountPercent: 0,
           periodFa: 'سالانه',
           periodEn: 'per year',
           badgeFa: 'محبوب‌ترین انتخاب',
@@ -206,9 +143,9 @@ class AppPlans {
           sortOrder: 2,
           features: const [
             PlanFeature(
-              id: 'all_monthly',
-              labelFa: 'تمام امکانات پرو ماهانه',
-              labelEn: 'Everything in Pro monthly',
+              id: 'all_pro',
+              labelFa: 'تمام امکانات پرو',
+              labelEn: 'All Pro features',
               included: true,
             ),
             PlanFeature(
@@ -248,8 +185,8 @@ class AppPlans {
           ctaFa: 'انتخاب پرمیوم',
           ctaEn: 'Choose Premium',
           iconCode: Icons.diamond_rounded.codePoint,
-          priceToman: 3980000,
-          priceUsd: 98,
+          priceToman: 5220000,
+          priceUsd: 0,
           discountPercent: 0,
           periodFa: 'یک‌بار پرداخت',
           periodEn: 'one-time',
@@ -311,7 +248,7 @@ class AppPlans {
       if (p != null && p.enabled) out.add(p);
     }
     for (final p in input) {
-      if (p.id == trialId) continue; // تریال مخفی
+      if (p.id == trialId || p.id == proMonthlyId) continue; // تریال مخفی؛ ماهانه ارائه نمی‌شود
       if (!displayOrder.contains(p.id) && p.enabled) out.add(p);
     }
     return out;

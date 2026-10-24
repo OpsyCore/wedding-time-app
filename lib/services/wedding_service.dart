@@ -56,6 +56,7 @@ class WeddingService {
       DateTime.now().add(const Duration(days: 30)),
     );
     String initialPlan = 'trial';
+    Timestamp? paidPlanExpiresAt;
     bool hasCreatedAt = false;
     bool hasTrialStartedAt = false;
     try {
@@ -67,6 +68,9 @@ class WeddingService {
         final existingEnds = uData['trialEndsAt'];
         if (existingEnds is Timestamp) {
           trialEnds = existingEnds;
+        }
+        if (uData['planExpiresAt'] is Timestamp) {
+          paidPlanExpiresAt = uData['planExpiresAt'] as Timestamp;
         }
         final existingPlan = (uData['planId'] ?? uData['plan'] ?? '').toString();
         if (existingPlan == 'pro' ||
@@ -86,6 +90,8 @@ class WeddingService {
       if (role == 'bride') 'brideUid': uid,
       if (role == 'groom') 'groomUid': uid,
       'planId': initialPlan,
+      if (initialPlan == 'pro' && paidPlanExpiresAt != null)
+        'planExpiresAt': paidPlanExpiresAt,
       'trialStartedAt': FieldValue.serverTimestamp(),
       'trialEndsAt': trialEnds,
       'createdAt': FieldValue.serverTimestamp(),
@@ -277,10 +283,15 @@ class WeddingService {
   }) async {
     final userRef = _firestore.collection('users').doc(uid);
     String verifiedPlan = 'trial';
+    Timestamp? verifiedPlanExpiresAt;
     try {
       final snap = await userRef.get();
-      final p = (snap.data()?['planId'] ?? snap.data()?['plan'] ?? '').toString();
+      final userData = snap.data();
+      final p = (userData?['planId'] ?? userData?['plan'] ?? '').toString();
       if (p.isNotEmpty) verifiedPlan = p;
+      if (userData?['planExpiresAt'] is Timestamp) {
+        verifiedPlanExpiresAt = userData?['planExpiresAt'] as Timestamp;
+      }
     } catch (_) {}
     await userRef.set({
       'weddingId': weddingId,
@@ -289,6 +300,8 @@ class WeddingService {
     }, SetOptions(merge: true));
     await _firestore.collection('weddings').doc(weddingId).set({
       'planId': verifiedPlan,
+      if (verifiedPlan == 'pro' && verifiedPlanExpiresAt != null)
+        'planExpiresAt': verifiedPlanExpiresAt,
     }, SetOptions(merge: true));
   }
 
