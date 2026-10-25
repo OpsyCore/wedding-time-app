@@ -21,6 +21,7 @@ dependencies:
   firebase_auth: ^5.7.0
   cloud_firestore: ^5.4.4
   firebase_storage: ^12.3.7
+  flutter_poolakey: ^2.2.0+1.0.0
 
   shared_preferences: ^2.2.2
   table_calendar: ^3.0.9

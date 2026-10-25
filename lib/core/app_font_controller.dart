@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +28,7 @@ class AppFontController extends ChangeNotifier {
 
   String _family = defaultFamily;
   bool _loaded = false;
+  int _selectionRevision = 0;
 
   String get family => _family;
   bool get isLoaded => _loaded;
@@ -35,36 +38,56 @@ class AppFontController extends ChangeNotifier {
   bool get isVazirmatnFD => _family == 'VazirmatnFD';
 
   Future<void> load() async {
+    SharedPreferences? prefs;
     try {
-      final prefs = await SharedPreferences.getInstance();
+      prefs = await SharedPreferences.getInstance();
       final raw = (prefs.getString(_prefKey) ?? defaultFamily).trim();
       _family = _normalize(raw);
-      // اگر لاگین است و Firestore مقدار دارد، آن را ترجیح بده
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid != null) {
-        try {
-          final doc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(uid)
-              .get();
-          final remote = (doc.data()?[_field] ?? '').toString().trim();
-          if (remote.isNotEmpty) {
-            final norm = _normalize(remote);
-            if (supported.contains(norm)) {
-              _family = norm;
-              // همگام‌سازی لوکال
-              try {
-                await prefs.setString(_prefKey, _family);
-              } catch (_) {}
-            }
-          }
-        } catch (_) {}
-      }
     } catch (_) {
       _family = defaultFamily;
     }
+
+    // Load the local preference first so a blocked or offline Firebase
+    // connection can never hold the entire app before runApp().
     _loaded = true;
     notifyListeners();
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && prefs != null) {
+      unawaited(_syncRemoteFont(uid, prefs, _selectionRevision));
+    }
+  }
+
+  Future<void> _syncRemoteFont(
+    String uid,
+    SharedPreferences prefs,
+    int revisionAtStart,
+  ) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get()
+          .timeout(const Duration(seconds: 6));
+
+      // Do not let a delayed network response overwrite a newer local choice
+      // or a preference belonging to a different signed-in account.
+      if (revisionAtStart != _selectionRevision ||
+          FirebaseAuth.instance.currentUser?.uid != uid) {
+        return;
+      }
+
+      final remote = (doc.data()?[_field] ?? '').toString().trim();
+      if (remote.isEmpty) return;
+      final norm = _normalize(remote);
+      if (!supported.contains(norm)) return;
+
+      _family = norm;
+      await prefs.setString(_prefKey, norm);
+      notifyListeners();
+    } catch (_) {
+      // Network unavailable: keep using the saved local font.
+    }
   }
 
   static String _normalize(String raw) {
@@ -82,6 +105,7 @@ class AppFontController extends ChangeNotifier {
   }
 
   Future<void> setFont(String family) async {
+    _selectionRevision++;
     final next = _normalize(family);
     if (_family == next && _loaded) {
       notifyListeners();

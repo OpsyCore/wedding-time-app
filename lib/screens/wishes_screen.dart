@@ -117,6 +117,8 @@ class _WishesScreenState extends State<WishesScreen> {
           : name;
 
       final doc = await _ref.add({
+        'name': authorName,
+        'message': text,
         'text': text,
         'authorName': authorName,
         'authorUid': user?.uid,

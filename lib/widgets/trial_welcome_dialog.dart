@@ -15,8 +15,34 @@ class TrialWelcomeDialog {
     final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
     final snap = await userRef.get();
     final data = snap.data() ?? {};
-    if (data['hasSeenTrialWelcome'] == true) return;
     final planId = (data['planId'] ?? data['plan'] ?? '').toString();
+    final isPaid = planId == AppPlans.proId ||
+        planId == 'pro_monthly' ||
+        planId == AppPlans.premiumId;
+    if (!isPaid && data['trialEndsAt'] == null) {
+      try {
+        final endsTs = Timestamp.fromDate(
+          DateTime.now().add(const Duration(days: 30)),
+        );
+        await userRef.set({
+          'plan': AppPlans.trialId,
+          'planId': AppPlans.trialId,
+          'trialStartedAt': FieldValue.serverTimestamp(),
+          'trialEndsAt': endsTs,
+        }, SetOptions(merge: true));
+        if (weddingId.trim().isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('weddings')
+              .doc(weddingId.trim())
+              .set({
+            'planId': AppPlans.trialId,
+            'trialStartedAt': FieldValue.serverTimestamp(),
+            'trialEndsAt': endsTs,
+          }, SetOptions(merge: true));
+        }
+      } catch (_) {}
+    }
+    if (data['hasSeenTrialWelcome'] == true) return;
     // فقط اگر تریال یا کاربر جدید (بدون پلن) — نمایش بده
     final isTrial = planId == AppPlans.trialId || planId.isEmpty || planId == 'trial';
     // اگر کاربر قبلا پرمیوم خریده، نیازی نیست

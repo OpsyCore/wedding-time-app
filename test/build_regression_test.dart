@@ -90,9 +90,16 @@ void main() {
         }
       }
 
+      const intentionalSameOrEmpty = <String>{
+        'en/of',
+        'en/people_suffix',
+        'fa/days_since_wedding_prefix',
+        'en/days_since_wedding_prefix',
+      };
       final missing = <String>[];
       for (final key in used) {
         for (final code in AppLang.supported) {
+          if (intentionalSameOrEmpty.contains('$code/$key')) continue;
           final value = AppLang.I.tIn(code, key);
           if (value == key || value.trim().isEmpty) {
             missing.add('$code/$key');

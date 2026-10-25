@@ -142,19 +142,16 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     }).join();
   }
 
-  DateTime? get _target {
-    final d = widget.invitation.weddingDate;
-    if (d == null) return null;
-    final t = widget.invitation.eventTime.trim();
-    final parts = t.split(':');
-    if (parts.length >= 2) {
-      final h = int.tryParse(parts[0].trim());
-      final m = int.tryParse(parts[1].trim());
-      if (h != null && m != null && h >= 0 && h < 24 && m >= 0 && m < 60) {
-        return DateTime(d.year, d.month, d.day, h, m);
-      }
+  DateTime? _weddingDateFrom(Map<String, dynamic> weddingData) {
+    final raw = weddingData['weddingDate'];
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is DateTime) return raw;
+    if (raw is String) {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return parsed;
     }
-    return DateTime(d.year, d.month, d.day);
+    // Older invitations may have the date only on the invitation document.
+    return widget.invitation.weddingDate;
   }
 
   String _dateLine(DateTime d) {
@@ -378,9 +375,10 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                           ? inv.coupleTitle
                           : 'علی & دارا');
 
-              final dateStr = inv.weddingDate != null
-                  ? _dateLine(inv.weddingDate!)
-                  : (AppLang.I.isFa ? '۲۰۲۶/۰۸/۰۱' : '2026/08/01');
+                  final weddingDate = _weddingDateFrom(d);
+                  final dateStr = weddingDate != null
+                      ? _dateLine(weddingDate)
+                      : _t('wedding_date_not_set', 'تاریخ ثبت نشده', 'Date not set');
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -466,7 +464,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
                   const SizedBox(height: 16),
 
                   // ── بخش پایینی: ۴ کارت شمارش معکوس شیشه‌ای مطابق دقیق عکس ──
-                  _buildCountdownCards(context),
+                  _buildCountdownCards(context, weddingDate),
                 ],
               );
                 },
@@ -547,15 +545,14 @@ class _GuestHomeTabState extends State<GuestHomeTab>
   }
 
   /// ۴ کارت شمارش معکوس شیشه‌ای از چپ به راست: [ثانیه 📅] [دقیقه 🕒] [ساعت ♡] [روز ✦]
-  Widget _buildCountdownCards(BuildContext context) {
-    final target = _target ?? DateTime.now().add(const Duration(days: 4, hours: 21, minutes: 32, seconds: 46));
-    final diff = target.difference(_now);
-
-    final isPast = diff.isNegative || diff == Duration.zero;
-    final days = isPast ? 0 : diff.inDays;
-    final hours = isPast ? 0 : diff.inHours % 24;
-    final mins = isPast ? 0 : diff.inMinutes % 60;
-    final secs = isPast ? 0 : diff.inSeconds % 60;
+  Widget _buildCountdownCards(BuildContext context, DateTime? weddingDate) {
+    // Match the couple dashboard exactly: countdown from weddings/{id}.weddingDate.
+    final diff = weddingDate?.difference(_now);
+    final isPast = diff == null || diff.isNegative || diff == Duration.zero;
+    final days = diff == null ? null : (isPast ? 0 : diff.inDays);
+    final hours = diff == null ? null : (isPast ? 0 : diff.inHours % 24);
+    final mins = diff == null ? null : (isPast ? 0 : diff.inMinutes % 60);
+    final secs = diff == null ? null : (isPast ? 0 : diff.inSeconds % 60);
 
     // چیدمان افقی ثابت چپ به راست مطابق تصویر:
     // سمت چپ ۱: ثانیه (Calendar)
@@ -571,7 +568,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
             child: _countdownItemBox(
               context,
               icon: Icons.calendar_today_rounded,
-              value: secs.toString().padLeft(2, '0'),
+              value: secs?.toString().padLeft(2, '0') ?? '--',
               label: _t('guest_home_secs', 'ثانیه', 'SECS'),
               highlight: false,
             ),
@@ -583,7 +580,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
             child: _countdownItemBox(
               context,
               icon: Icons.access_time_rounded,
-              value: mins.toString().padLeft(2, '0'),
+              value: mins?.toString().padLeft(2, '0') ?? '--',
               label: _t('guest_home_mins', 'دقیقه', 'MINS'),
               highlight: true,
             ),
@@ -595,7 +592,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
             child: _countdownItemBox(
               context,
               icon: Icons.favorite_border_rounded,
-              value: hours.toString().padLeft(2, '0'),
+              value: hours?.toString().padLeft(2, '0') ?? '--',
               label: _t('guest_home_hours', 'ساعت', 'HOURS'),
               highlight: false,
             ),
@@ -607,7 +604,7 @@ class _GuestHomeTabState extends State<GuestHomeTab>
             child: _countdownItemBox(
               context,
               icon: Icons.auto_awesome_rounded,
-              value: days.toString(),
+              value: days?.toString() ?? '--',
               label: _t('guest_home_days', 'روز', 'DAYS'),
               highlight: false,
             ),
@@ -627,73 +624,116 @@ class _GuestHomeTabState extends State<GuestHomeTab>
     final accent = AppTok.accent(context);
     final dark = AppTok.isDark(context);
 
-    return Container(
-      height: 66,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-      decoration: BoxDecoration(
-        color: highlight
-            ? accent.withValues(alpha: dark ? 0.24 : 0.34)
-            : (dark ? const Color(0xFF221D2B).withValues(alpha: 0.85) : AppTok.cardSoft(context)),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: highlight
-              ? accent.withValues(alpha: 0.80)
-              : accent.withValues(alpha: 0.26),
-          width: highlight ? 1.4 : 1.0,
-        ),
-        boxShadow: highlight
-            ? [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.38),
-                  blurRadius: 14,
-                  offset: const Offset(0, 3),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: accent.withValues(alpha: 0.95),
-            size: 21,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // On phones each of the four cards is narrow; stack its contents
+        // instead of allowing the icon + value row to overflow horizontally.
+        final compact = constraints.maxWidth < 84;
+        return Container(
+          height: 66,
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 3 : 6,
+            vertical: compact ? 4 : 8,
           ),
-          const SizedBox(width: 6),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                _fa(value),
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.98),
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  height: 1.1,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  color: AppTok.textSoft(context).withValues(alpha: 0.85),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          decoration: BoxDecoration(
+            color: highlight
+                ? accent.withValues(alpha: dark ? 0.24 : 0.34)
+                : (dark
+                    ? const Color(0xFF221D2B).withValues(alpha: 0.85)
+                    : AppTok.cardSoft(context)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: highlight
+                  ? accent.withValues(alpha: 0.80)
+                  : accent.withValues(alpha: 0.26),
+              width: highlight ? 1.4 : 1.0,
+            ),
+            boxShadow: highlight
+                ? [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.38),
+                      blurRadius: 14,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
-        ],
-      ),
+          child: compact
+              ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, color: accent.withValues(alpha: 0.95), size: 15),
+                    const SizedBox(height: 1),
+                    Text(
+                      _fa(value),
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.98),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppTok.textSoft(context).withValues(alpha: 0.85),
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1,
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      color: accent.withValues(alpha: 0.95),
+                      size: 21,
+                    ),
+                    const SizedBox(width: 6),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          _fa(value),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.98),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            height: 1.1,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: AppTok.textSoft(context)
+                                .withValues(alpha: 0.85),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 

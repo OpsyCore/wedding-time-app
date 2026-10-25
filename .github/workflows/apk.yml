@@ -3,18 +3,20 @@ name: apk
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'arena/**'
 
 permissions:
   contents: write
 
 jobs:
   build-apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
@@ -34,18 +36,138 @@ jobs:
       - name: Flutter doctor (diagnostics only)
         run: flutter doctor -v || true
 
-      - name: Build release APK (split per ABI, debug-signed fallback)
+      - name: Validate Netlify Bazaar verifier
+        run: |
+          npm ci --ignore-scripts
+          npm run lint:netlify
+          npm audit --omit=dev --audit-level=moderate
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      # flutter_poolakey 2.2.0+1.0.0 still calls the removed Gradle jcenter() DSL.
+      # Resolve its exact source through pub's package config and patch it until
+      # the upstream package releases a compatible Gradle build file.
+      - name: Patch legacy Poolakey Gradle repository
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.parse import unquote, urlparse
+
+          config = json.loads(Path('.dart_tool/package_config.json').read_text())
+          package = next((item for item in config['packages']
+                          if item['name'] == 'flutter_poolakey'), None)
+          if package is None:
+              raise SystemExit('flutter_poolakey was not found in package_config.json')
+          root_uri = package['rootUri']
+          parsed = urlparse(root_uri)
+          root = (Path(unquote(parsed.path)) if parsed.scheme == 'file'
+                  else (Path('.dart_tool') / root_uri).resolve())
+          gradle_file = root / 'android' / 'build.gradle'
+          if not gradle_file.is_file():
+              raise SystemExit(f'Poolakey Gradle file not found: {gradle_file}')
+          text = gradle_file.read_text()
+          if 'jcenter()' in text:
+              gradle_file.write_text(text.replace('jcenter()', 'mavenCentral()'))
+              print(f'Patched {gradle_file}')
+          elif 'mavenCentral()' in text:
+              print(f'Already patched: {gradle_file}')
+          else:
+              raise SystemExit(f'No compatible Maven repository declaration found: {gradle_file}')
+          if 'jcenter()' in gradle_file.read_text():
+              raise SystemExit(f'Could not remove jcenter() from {gradle_file}')
+          PY
+
+      - name: Run build regression tests
+        run: flutter test test/build_regression_test.dart
+
+      - name: Cache Android release keystore for consistent store APK signing
+        uses: actions/cache@v6
+        with:
+          path: ~/.android/release-keystore
+          key: android-release-keystore-v1
+
+      - name: Ensure Android release keystore and key.properties exist
+        env:
+          KEYSTORE_B64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.UPLOAD_STORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          KEY_ALIAS_ENV: ${{ secrets.UPLOAD_KEY_ALIAS }}
+        run: |
+          mkdir -p ~/.android/release-keystore
+          KS_PATH="$HOME/.android/release-keystore/upload-keystore.jks"
+          SP="${STORE_PASS:-WeddingTimeRelease2026}"
+          KP="${KEY_PASS:-WeddingTimeRelease2026}"
+          KA="${KEY_ALIAS_ENV:-upload}"
+
+          if [ -n "${KEYSTORE_B64}" ]; then
+            echo "${KEYSTORE_B64}" | base64 --decode > "${KS_PATH}"
+          elif [ ! -f "${KS_PATH}" ]; then
+            keytool -genkeypair -v \
+              -keystore "${KS_PATH}" \
+              -storetype PKCS12 \
+              -storepass "${SP}" \
+              -alias "${KA}" \
+              -keypass "${KP}" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Wedding Time, OU=Mobile, O=OpsyCore, L=Tehran, S=Tehran, C=IR"
+          fi
+
+          cp "${KS_PATH}" android/upload-keystore.jks
+          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n" "${SP}" "${KP}" "${KA}" > android/key.properties
+
+      - name: Build release APK (split per ABI, signed with release key)
         id: build
         env:
           IMGBB_KEY: ${{ secrets.IMGBB_API_KEY }}
+          BAZAAR_RSA_PUBLIC_KEY: ${{ vars.BAZAAR_RSA_PUBLIC_KEY }}
+          BAZAAR_VERIFY_URL: ${{ vars.BAZAAR_VERIFY_URL }}
         run: |
           set -o pipefail
           DEFINE_ARGS=()
           if [ -n "${IMGBB_KEY}" ]; then
             DEFINE_ARGS+=(--dart-define=IMGBB_API_KEY="${IMGBB_KEY}")
           fi
-          flutter build apk --release --split-per-abi "${DEFINE_ARGS[@]}" 2>&1 | tee /tmp/build.log
-          ls -lh build/app/outputs/flutter-apk/app-*-release.apk
+          if [ -n "${BAZAAR_RSA_PUBLIC_KEY}" ]; then
+            DEFINE_ARGS+=(--dart-define=BAZAAR_RSA_PUBLIC_KEY="${BAZAAR_RSA_PUBLIC_KEY}")
+          fi
+          if [ -n "${BAZAAR_VERIFY_URL}" ]; then
+            DEFINE_ARGS+=(--dart-define=BAZAAR_VERIFY_URL="${BAZAAR_VERIFY_URL}")
+          fi
+          flutter build apk --release --split-per-abi --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee /tmp/build.log
+          flutter build apk --release --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee -a /tmp/build.log
+          flutter build appbundle --release --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee -a /tmp/build.log
+          BUNDLE_DIR="build/app/outputs/bundle/release"
+          AAB_PATH="${BUNDLE_DIR}/app-release.aab"
+          test -s "${AAB_PATH}"
+
+          BUNDLE_SIGNER_JAR="${RUNNER_TEMP}/bundlesigner-0.1.14.jar"
+          curl -fsSL --retry 3 \
+            "https://github.com/cafebazaar/bundle-signer/releases/download/v0.1.14/bundlesigner-0.1.14.jar" \
+            -o "${BUNDLE_SIGNER_JAR}"
+          echo "aef2c387f678558e3a4baddab9730fbdca64ef28a0e2e0245491e1088b4968f5  ${BUNDLE_SIGNER_JAR}" | sha256sum --check --status
+
+          STORE_PASS="$(sed -n 's/^storePassword=//p' android/key.properties)"
+          KEY_PASS="$(sed -n 's/^keyPassword=//p' android/key.properties)"
+          KEY_ALIAS="$(sed -n 's/^keyAlias=//p' android/key.properties)"
+          test -n "${STORE_PASS}" && test -n "${KEY_PASS}" && test -n "${KEY_ALIAS}"
+          BUNDLE_KS_PASS="${STORE_PASS}" BUNDLE_KEY_PASS="${KEY_PASS}" \
+            java -jar "${BUNDLE_SIGNER_JAR}" genbin -v \
+              --bundle "${AAB_PATH}" \
+              --bin "${BUNDLE_DIR}" \
+              --v2-signing-enabled true \
+              --v3-signing-enabled false \
+              --ks android/upload-keystore.jks \
+              --ks-key-alias "${KEY_ALIAS}" \
+              --ks-pass env:BUNDLE_KS_PASS \
+              --key-pass env:BUNDLE_KEY_PASS
+          test -s "${BUNDLE_DIR}/app-release.bin"
+          ls -lh build/app/outputs/flutter-apk/*.apk "${AAB_PATH}" "${BUNDLE_DIR}/app-release.bin"
+          echo "=== Verifying APK Release Signature ==="
+          keytool -printcert -jarfile build/app/outputs/flutter-apk/app-arm64-v8a-release.apk | head -n 15
 
       # خطاها را به‌صورت annotation در صفحهٔ Actions و در API قابل‌خواندن می‌کند
       # (لاگ خام آرتیفکت روی برخی شبکه‌ها در دسترس نیست)
@@ -65,10 +187,30 @@ jobs:
               echo "::error::${line}"
             done
           fi
+          python3 - <<'PY'
+          from pathlib import Path
+
+          lines = Path('/tmp/build.log').read_text(errors='replace').splitlines()
+          for index, line in enumerate(lines):
+              if 'What went wrong:' not in line:
+                  continue
+              details = []
+              for candidate in lines[index + 1:index + 9]:
+                  text = candidate.strip()
+                  if not text:
+                      if details:
+                          break
+                      continue
+                  if text.startswith('Try:'):
+                      break
+                  details.append(text)
+              for detail in details:
+                  print(f'::error title=Build failure details::{detail}')
+          PY
 
       - name: Upload build log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-log
           path: /tmp/build.log
@@ -77,19 +219,24 @@ jobs:
 
       - name: Publish APK as GitHub Release
         if: success()
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: apk-${{ github.run_number }}
-          name: "نصب روی اندروید — APK #${{ github.run_number }}"
+          name: "نسخهٔ اندروید — AAB، BIN و APK #${{ github.run_number }}"
           body: |
-            نسخهٔ Release کم‌حجم (تفکیک‌شده بر اساس پردازنده):
-            - **تقریباً همهٔ گوشی‌های اندرویدی جدید (۶۴ بیتی):** فایل `app-arm64-v8a-release.apk` را دانلود و نصب کنید.
-            - **گوشی‌های قدیمی‌تر ۳۲ بیتی:** فایل `app-armeabi-v7a-release.apk`
-            - **شبیه‌ساز کامپیوتر (x86_64):** فایل `app-x86_64-release.apk`
+            فایل‌های انتشار این نسخه:
+            - **برای بارگذاری در کافه‌بازار:** ابتدا `app-release.aab` را بارگذاری کنید؛ اگر پیشخان فایل امضای باندل خواست، فایل متناظر `app-release.bin` را از همین Release بارگذاری کنید.
+            - **برای نصب مستقیم روی بیشتر گوشی‌های جدید (۶۴ بیتی):** `app-arm64-v8a-release.apk`.
+            - **برای گوشی‌های قدیمی‌تر ۳۲ بیتی:** `app-armeabi-v7a-release.apk`.
+            - **برای شبیه‌ساز کامپیوتر (x86_64):** `app-x86_64-release.apk`.
+            - `app-release.apk` نیز نسخهٔ APK یکپارچه برای نصب مستقیم است.
 
-            (هنگام نصب، پیغام «منبع ناشناخته / Install unknown apps» را تأیید کنید.)
+            هنگام نصب مستقیم APK، پیام «منبع ناشناخته / Install unknown apps» را تأیید کنید.
           files: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/bundle/release/app-release.bin
             build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             build/app/outputs/flutter-apk/app-x86_64-release.apk
+            build/app/outputs/flutter-apk/app-release.apk
           make_latest: "true"

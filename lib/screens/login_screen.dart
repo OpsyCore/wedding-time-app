@@ -9,6 +9,7 @@ import '../core/app_theme_controller.dart';
 import '../main_navigation_screen.dart';
 import '../services/wedding_service.dart';
 import '../widgets/forgot_password_sheet.dart';
+import '../widgets/privacy_policy_sheet.dart';
 import 'wedding_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -125,16 +126,24 @@ class _LoginScreenState extends State<LoginScreen> {
           email: email,
           password: pass,
         );
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(credential.user!.uid)
-            .set({
-          'email': email,
-          'plan': 'free',
-          'language': AppLang.I.isFa ? 'fa' : 'en',
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        try {
+          final trialEnds = Timestamp.fromDate(
+            DateTime.now().add(const Duration(days: 30)),
+          );
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(credential.user!.uid)
+              .set({
+            'email': email,
+            'plan': 'trial',
+            'planId': 'trial',
+            'trialStartedAt': FieldValue.serverTimestamp(),
+            'trialEndsAt': trialEnds,
+            'language': AppLang.I.isFa ? 'fa' : 'en',
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        } catch (_) {}
       }
 
       final user = credential.user;
@@ -144,10 +153,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await _routeAfterAuth(user);
     } on FirebaseAuthException catch (e) {
+      final isFa = AppLang.I.isFa;
       String message = AppLang.tr('login_error');
-      if (e.code == 'user-not-found') {
-        message = AppLang.tr('user_not_found');
-      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+      if (e.code == 'user-not-found' ||
+          e.code == 'wrong-password' ||
+          e.code == 'invalid-credential') {
         message = AppLang.tr('wrong_credentials');
       } else if (e.code == 'email-already-in-use') {
         message = AppLang.tr('email_already_in_use');
@@ -155,6 +165,24 @@ class _LoginScreenState extends State<LoginScreen> {
         message = AppLang.tr('weak_password');
       } else if (e.code == 'invalid-email') {
         message = AppLang.tr('email_invalid');
+      } else if (e.code == 'network-request-failed') {
+        message = isFa
+            ? 'عدم دسترسی به سرور فایربیس (لطفاً اتصال اینترنت یا فیلترشکن را بررسی کنید).'
+            : 'Network error connecting to Firebase Auth. Check your connection/VPN.';
+      } else if (e.code == 'too-many-requests') {
+        message = isFa
+            ? 'تعداد تلاش‌ها بیش از حد مجاز است. لطفاً کمی بعد دوباره امتحان کنید.'
+            : 'Too many attempts. Please try again later.';
+      } else if (e.code == 'operation-not-allowed') {
+        message = isFa
+            ? 'ورود با ایمیل و رمز عبور در کنسول فایربیس غیرفعال است.'
+            : 'Email/password sign-in is disabled in Firebase Console.';
+      } else if (e.code == 'user-disabled') {
+        message = isFa
+            ? 'این حساب کاربری غیرفعال شده است.'
+            : 'This user account has been disabled.';
+      } else {
+        message = '$message (${e.code})';
       }
 
       if (mounted) {
@@ -639,6 +667,27 @@ class _LoginScreenState extends State<LoginScreen> {
                     _langSwitch(context),
                     const SizedBox(height: 18),
                     _themeSwitch(context),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () => PrivacyPolicySheet.show(context),
+                        icon: Icon(
+                          Icons.privacy_tip_outlined,
+                          size: 16,
+                          color: AppTok.textSoft(context),
+                        ),
+                        label: Text(
+                          AppLang.I.isFa
+                              ? 'حریم خصوصی و قوانین استفاده'
+                              : 'Privacy Policy & Terms of Use',
+                          style: TextStyle(
+                            color: AppTok.textSoft(context),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
