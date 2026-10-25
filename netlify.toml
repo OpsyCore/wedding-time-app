@@ -1,4 +1,5 @@
 [build]
+  command = "bash scripts/netlify-build.sh"
   publish = "build/web"
   functions = "netlify/functions"
 

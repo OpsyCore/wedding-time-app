@@ -28,7 +28,15 @@
 
 برای Service Account، در Google Cloud Console همان پروژه یک حساب خدماتی بسازید، نقش دسترسی Firestore با نام **Cloud Datastore User** را بدهید و یک JSON key بسازید. این JSON حاوی کلید خصوصی است: آن را فقط در Netlify به‌عنوان متغیر محرمانه قرار دهید؛ **هرگز در GitHub، مخزن، APK یا گفتگو قرار ندهید**. کلید RSA بازار عمومی است؛ کلید خصوصی Service Account محرمانه است.
 
-پس از افزودن متغیرها، از Netlify یک Deploy برای Production اجرا کنید تا تابع با تنظیمات تازه منتشر شود. اگر مخزن به Netlify متصل است، مطمئن شوید Deploy شامل شاخه/کدی است که تابع `netlify/functions/verify-bazaar-purchase.js` را دارد.
+## پیکربندی ساخت و استقرار Netlify
+
+در اتصال Git سایت، مخزن `OpsyCore/wedding-time-app` و شاخهٔ `arena/cbc763be-wedding-time-app` را انتخاب کنید تا تابع اعتبارسنجی Bazaar در Deploy باشد. تنظیمات ساخت در `netlify.toml` تعریف شده‌اند؛ اگر فرم اولیه آن‌ها را خودکار نخواند، این مقادیر را وارد کنید:
+
+- Build command: `bash scripts/netlify-build.sh`
+- Publish directory: `build/web`
+- Functions directory: `netlify/functions`
+
+اسکریپت Flutter stable را دریافت و برنامهٔ وب را در Netlify می‌سازد. پس از انتشار این تنظیمات و متغیرهای بالا، Deploy برای Production را اجرا کنید تا سایت و تابع با هم منتشر شوند.
 
 ## ساخت و تست برنامه
 
