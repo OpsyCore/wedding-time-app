@@ -140,8 +140,32 @@ jobs:
           flutter build apk --release --split-per-abi --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee /tmp/build.log
           flutter build apk --release --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee -a /tmp/build.log
           flutter build appbundle --release --build-number="${{ github.run_number }}" "${DEFINE_ARGS[@]}" 2>&1 | tee -a /tmp/build.log
-          test -s build/app/outputs/bundle/release/app-release.aab
-          ls -lh build/app/outputs/flutter-apk/*.apk build/app/outputs/bundle/release/app-release.aab
+          BUNDLE_DIR="build/app/outputs/bundle/release"
+          AAB_PATH="${BUNDLE_DIR}/app-release.aab"
+          test -s "${AAB_PATH}"
+
+          BUNDLE_SIGNER_JAR="${RUNNER_TEMP}/bundlesigner-0.1.14.jar"
+          curl -fsSL --retry 3 \
+            "https://github.com/cafebazaar/bundle-signer/releases/download/v0.1.14/bundlesigner-0.1.14.jar" \
+            -o "${BUNDLE_SIGNER_JAR}"
+          echo "aef2c387f678558e3a4baddab9730fbdca64ef28a0e2e0245491e1088b4968f5  ${BUNDLE_SIGNER_JAR}" | sha256sum --check --status
+
+          STORE_PASS="$(sed -n 's/^storePassword=//p' android/key.properties)"
+          KEY_PASS="$(sed -n 's/^keyPassword=//p' android/key.properties)"
+          KEY_ALIAS="$(sed -n 's/^keyAlias=//p' android/key.properties)"
+          test -n "${STORE_PASS}" && test -n "${KEY_PASS}" && test -n "${KEY_ALIAS}"
+          BUNDLE_KS_PASS="${STORE_PASS}" BUNDLE_KEY_PASS="${KEY_PASS}" \
+            java -jar "${BUNDLE_SIGNER_JAR}" genbin -v \
+              --bundle "${AAB_PATH}" \
+              --bin "${BUNDLE_DIR}" \
+              --v2-signing-enabled true \
+              --v3-signing-enabled false \
+              --ks android/upload-keystore.jks \
+              --ks-key-alias "${KEY_ALIAS}" \
+              --ks-pass env:BUNDLE_KS_PASS \
+              --key-pass env:BUNDLE_KEY_PASS
+          test -s "${BUNDLE_DIR}/app-release.bin"
+          ls -lh build/app/outputs/flutter-apk/*.apk "${AAB_PATH}" "${BUNDLE_DIR}/app-release.bin"
           echo "=== Verifying APK Release Signature ==="
           keytool -printcert -jarfile build/app/outputs/flutter-apk/app-arm64-v8a-release.apk | head -n 15
 
@@ -198,10 +222,10 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: apk-${{ github.run_number }}
-          name: "نسخهٔ اندروید — AAB و APK #${{ github.run_number }}"
+          name: "نسخهٔ اندروید — AAB، BIN و APK #${{ github.run_number }}"
           body: |
             فایل‌های انتشار این نسخه:
-            - **برای بارگذاری در کافه‌بازار:** `app-release.aab` (Android App Bundle).
+            - **برای بارگذاری در کافه‌بازار:** ابتدا `app-release.aab` را بارگذاری کنید؛ اگر پیشخان فایل امضای باندل خواست، فایل متناظر `app-release.bin` را از همین Release بارگذاری کنید.
             - **برای نصب مستقیم روی بیشتر گوشی‌های جدید (۶۴ بیتی):** `app-arm64-v8a-release.apk`.
             - **برای گوشی‌های قدیمی‌تر ۳۲ بیتی:** `app-armeabi-v7a-release.apk`.
             - **برای شبیه‌ساز کامپیوتر (x86_64):** `app-x86_64-release.apk`.
@@ -210,6 +234,7 @@ jobs:
             هنگام نصب مستقیم APK، پیام «منبع ناشناخته / Install unknown apps» را تأیید کنید.
           files: |
             build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/bundle/release/app-release.bin
             build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             build/app/outputs/flutter-apk/app-x86_64-release.apk
